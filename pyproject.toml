@@ -13,6 +13,7 @@ dependencies = [
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",
     "matplotlib>=3.5.0",
+    "requests>=2.28.0",
 ]
 
 [project.optional-dependencies]
@@ -71,3 +72,8 @@ addopts = "-v --strict-markers"
 [tool.coverage.run]
 source = ["src/lemonade_stand"]
 omit = ["*/tests/*", "*/__init__.py"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.1",
+]

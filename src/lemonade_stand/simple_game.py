@@ -1,7 +1,6 @@
 """Simplified price-only version of the lemonade stand game."""
 
 import logging
-import random
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class SimpleLemonadeGame:
         self.cash = 100.0  # Starting cash
         self.history: list[dict] = []
         self.game_over = False
-        
+
         # Prompt control flags (for experiments)
         self._use_suggested_price = False
         self._use_exploration_hint = False

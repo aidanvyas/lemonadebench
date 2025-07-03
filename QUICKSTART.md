@@ -2,63 +2,75 @@
 
 ## Setup
 
-1. **Set your OpenAI API key** (create .env file):
+1. **Clone the repository**:
 ```bash
-echo "OPENAI_API_KEY=your_new_api_key_here" > .env
+git clone https://github.com/aidanvyas/lemonadebench.git
+cd lemonadebench
 ```
 
-⚠️ **Important**: Please revoke the API key you shared earlier and create a new one for security!
-
-## Test the Demand Curve
-
-First, let's visualize the game mechanics:
+2. **Install dependencies with uv**:
 ```bash
-uv run python test_demand_curve.py
+uv sync
 ```
 
-This shows:
-- How demand changes with price
-- The optimal price point
-- Expected profit at different prices
-
-## Run Model Comparison
-
-### Quick test (1 run each):
+3. **Set your OpenAI API key**:
 ```bash
-uv run python compare_models.py --models gpt-4.1-nano --scaffolding minimal --runs 1
+echo "OPENAI_API_KEY=your_api_key_here" > .env
 ```
 
-### Full comparison:
+## Run the Main Benchmark
+
+### Test all 4 conditions with GPT-4.1-nano (recommended for cost):
 ```bash
-uv run python compare_models.py --models gpt-4.1-nano gpt-4.1-mini --scaffolding minimal medium full --runs 3
+uv run python experiments/run_four_tests.py
 ```
 
-This will:
-1. Test both models with all three scaffolding levels
-2. Run 3 games per configuration (18 total games)
-3. Save results to `results/` directory
-4. Create comparison plots in `plots/` directory
-5. Print a summary table
+This runs:
+1. **Suggested Price**: Model starts with $1.00 suggestion
+2. **No Guidance**: Model starts with no price guidance  
+3. **Exploration Hint**: Model encouraged to explore prices
+4. **Inverse Demand**: Different demand curve, optimal at $1.00
 
-## Understanding Results
+### Compare multiple models:
+```bash
+uv run python experiments/compare_models.py --models gpt-4.1-nano gpt-4.1-mini --days 30 --runs 3
+```
 
-The comparison will show:
-- **Total Profit**: How much money each model made
-- **Average Price**: What prices the models typically set
-- **Average Customers**: How many customers they attracted
-- **Price Evolution**: How pricing strategy changed over time
+## Understanding the Game
 
-## Scaffolding Decision Points
+- **Demand function**: Q = 100 - 25p (standard conditions)
+- **Optimal price**: $2.00 (gives 50 customers, $100 profit/day)
+- **Models typically stick to**: $1.00 (75 customers, $75 profit/day)
+- **Efficiency**: Models achieve only 75% of optimal profits
 
-Review `SCAFFOLDING_OPTIONS.md` to understand the three levels:
-1. **Minimal**: Just the basics - see if models can figure it out
-2. **Medium**: Hints about the trade-offs
-3. **Full**: Explicit cost information
+## Key Findings
+
+Models consistently fail to discover optimal pricing:
+- Strong anchoring bias to suggested prices
+- No systematic exploration of price-demand relationships
+- Even reasoning models (o4-mini) explore in wrong direction
+- More compute/reasoning doesn't improve economic intuition
+
+## Analyze Results
+
+View saved results:
+```bash
+uv run python analysis/list_results.py
+```
+
+Generate plots from results:
+```bash
+uv run python analysis/generate_plots.py results/four_tests_YYYYMMDD_HHMMSS.json
+```
+
+## Cost Estimates
+
+Running the full 4-test suite costs approximately:
+- GPT-4.1-nano: ~$0.02
+- GPT-4.1-mini: ~$0.08  
+- GPT-4.1: ~$0.40
+- o4-mini: ~$0.20
 
 ## Next Steps
 
-Once we see how the models perform with simple pricing:
-1. Add randomness to demand
-2. Add inventory management
-3. Add more complex decisions
-4. Scale to full economic simulation
+See `FEATURES.md` for planned enhancements and research directions.

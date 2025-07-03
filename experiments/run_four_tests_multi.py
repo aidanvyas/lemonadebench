@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
-"""Run the four main test conditions for the paper."""
+"""Run four lemonade stand tests with multiple runs and detailed timing."""
 
+import argparse
+import json
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 
+# Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
-
-import json
-import logging
-from datetime import datetime
 
 from src.lemonade_stand.responses_ai_player import ResponsesAIPlayer
 from src.lemonade_stand.simple_game import SimpleLemonadeGame
-
-# Set logging to WARNING to reduce noise
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
 
 
 class InverseDemandGame2(SimpleLemonadeGame):
@@ -40,7 +37,7 @@ class InverseDemandGame2(SimpleLemonadeGame):
 
 
 def run_test(test_name: str, game: SimpleLemonadeGame, use_suggested: bool,
-             use_exploration: bool, days: int = 30) -> dict:
+             use_exploration: bool, days: int = 30, model: str = "gpt-4.1-nano") -> dict:
     """Run a single test condition."""
     print(f"\n{'='*70}")
     print(f"Test: {test_name}")
@@ -52,7 +49,7 @@ def run_test(test_name: str, game: SimpleLemonadeGame, use_suggested: bool,
 
     # Create player (always with memory via previous_response_id)
     player = ResponsesAIPlayer(
-        model_name="gpt-4.1-nano",
+        model_name=model,
         include_calculator=True
     )
 
@@ -60,10 +57,10 @@ def run_test(test_name: str, game: SimpleLemonadeGame, use_suggested: bool,
     if hasattr(game, 'suggested_starting_price'):
         print(f"Starting price: ${game.suggested_starting_price:.2f}")
 
-    # Run game
+    # Run game with timing
     prices = []
     profits = []
-    start_time = datetime.now()
+    start_time = time.time()
 
     for day in range(1, days + 1):
         price = player.make_decision(game)
@@ -78,8 +75,8 @@ def run_test(test_name: str, game: SimpleLemonadeGame, use_suggested: bool,
         elif day == 4:
             print("...")
 
-    end_time = datetime.now()
-    duration = (end_time - start_time).total_seconds()
+    end_time = time.time()
+    duration = end_time - start_time
 
     # Calculate results
     total_profit = sum(profits)
@@ -136,93 +133,112 @@ def run_test(test_name: str, game: SimpleLemonadeGame, use_suggested: bool,
 
 
 def main():
-    """Run all four test conditions."""
+    """Run all four test conditions with multiple runs."""
+    parser = argparse.ArgumentParser(description="Run four lemonade stand tests")
+    parser.add_argument("--days", type=int, default=30, help="Days per game")
+    parser.add_argument("--model", type=str, default="gpt-4.1-nano", help="Model to use")
+    parser.add_argument("--runs", type=int, default=1, help="Runs per test")
+    args = parser.parse_args()
+    
     print("LEMONADEBENCH - Four Test Conditions")
-    print("Model: gpt-4.1-nano")
-    print("Days: 30")
+    print(f"Model: {args.model}")
+    print(f"Days: {args.days}")
+    print(f"Runs per test: {args.runs}")
     print("Memory: Enabled (previous_response_id)")
+    print()
 
-    results = []
+    all_results = []
+    experiment_start = time.time()
 
-    # Test 1: Suggested price ($1.00)
-    game1 = SimpleLemonadeGame(days=30)
-    results.append(run_test(
-        "Suggested Price",
-        game1,
-        use_suggested=True,
-        use_exploration=False
-    ))
+    # Test configurations
+    test_configs = [
+        ("Suggested Price", True, False, SimpleLemonadeGame),
+        ("No Guidance", False, False, SimpleLemonadeGame),
+        ("Exploration Hint", False, True, SimpleLemonadeGame),
+        ("Inverse Demand (100-50p)", True, True, InverseDemandGame2),
+    ]
+    
+    # Run each test with multiple runs
+    for test_name, use_suggested, use_exploration, game_class in test_configs:
+        test_start = time.time()
+        test_results = []
+        
+        print(f"\n{'='*70}")
+        print(f"STARTING TEST: {test_name}")
+        print(f"{'='*70}")
+        
+        for run_num in range(1, args.runs + 1):
+            print(f"\n--- Run {run_num}/{args.runs} ---")
+            game = game_class(days=args.days)
+            
+            result = run_test(
+                test_name,
+                game,
+                use_suggested=use_suggested,
+                use_exploration=use_exploration,
+                days=args.days,
+                model=args.model
+            )
+            result['run_number'] = run_num
+            test_results.append(result)
+        
+        test_duration = time.time() - test_start
+        
+        # Aggregate results for this test
+        test_summary = {
+            'test_name': test_name,
+            'runs': test_results,
+            'test_duration_seconds': test_duration,
+            'average_profit': sum(r['total_profit'] for r in test_results) / len(test_results),
+            'average_efficiency': sum(r['total_profit'] / (r['optimal_daily_profit'] * args.days) for r in test_results) / len(test_results) * 100,
+        }
+        all_results.append(test_summary)
 
-    # Test 2: No guidance
-    game2 = SimpleLemonadeGame(days=30)
-    results.append(run_test(
-        "No Guidance",
-        game2,
-        use_suggested=False,
-        use_exploration=False
-    ))
-
-    # Test 3: Exploration hint
-    game3 = SimpleLemonadeGame(days=30)
-    results.append(run_test(
-        "Exploration Hint",
-        game3,
-        use_suggested=False,
-        use_exploration=True
-    ))
-
-    # Test 4: Inverse demand (Q = 100 - 50p, start at $1.50)
-    game4 = InverseDemandGame2(days=30)
-    results.append(run_test(
-        "Inverse Demand (100-50p)",
-        game4,
-        use_suggested=True,
-        use_exploration=True
-    ))
-
+    experiment_duration = time.time() - experiment_start
+    
     # Summary
     print(f"\n{'='*70}")
     print("SUMMARY OF ALL TESTS")
     print(f"{'='*70}\n")
 
     total_tokens = 0
-    for r in results:
-        print(f"{r['test_name']}:")
-        print(f"  Total profit: ${r['total_profit']:.2f} "
-              f"(optimal: ${r['optimal_daily_profit'] * 30:.2f})")
-        print(f"  Efficiency: {r['total_profit'] / (r['optimal_daily_profit'] * 30) * 100:.1f}%")
-        print(f"  Unique prices: {len(r['unique_prices'])}")
-        print(f"  Days at optimal: {r['days_at_optimal']}/30")
-        print(f"  Tokens used: {r['token_usage']['total_tokens']:,}")
+    total_cost = 0
+    
+    for test in all_results:
+        print(f"{test['test_name']}:")
+        print(f"  Runs: {len(test['runs'])}")
+        print(f"  Average profit: ${test['average_profit']:.2f}")
+        print(f"  Average efficiency: {test['average_efficiency']:.1f}%")
+        print(f"  Test duration: {test['test_duration_seconds']:.1f}s")
+        
+        # Show per-run details with timing
+        for run in test['runs']:
+            tokens = run['token_usage']['total_tokens']
+            cost = run['cost_info'].get('total_cost', 0)
+            total_tokens += tokens
+            total_cost += cost
+            print(f"    Run {run['run_number']}: ${run['total_profit']:.2f} profit, "
+                  f"{len(run['unique_prices'])} unique prices, "
+                  f"{run['duration_seconds']:.1f}s, {tokens:,} tokens")
         print()
-        total_tokens += r['token_usage']['total_tokens']
 
-    print(f"Total tokens across all tests: {total_tokens:,}")
-    print(f"Estimated cost (4.1-nano): ${total_tokens * 0.15 / 1_000_000:.2f}")
-
-    # Check actual costs via API
-    print("\n" + "="*70)
-    print("Checking actual costs via OpenAI API...")
-    try:
-        from src.lemonade_stand.costs_tracker import CostsTracker
-        tracker = CostsTracker()
-        recent_cost = tracker.get_recent_costs(hours=1)
-        print(f"Actual cost (last hour): ${recent_cost:.4f}")
-    except Exception as e:
-        print(f"Could not fetch actual costs: {e}")
-        print("Note: Costs API may require admin permissions")
+    print(f"\nTotal experiment duration: {experiment_duration:.1f}s")
+    print(f"Total tokens across all runs: {total_tokens:,}")
+    print(f"Total estimated cost: ${total_cost:.4f}")
 
     # Save results
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"results/four_tests_{timestamp}.json"
+    filename = f"results/four_tests_multi_{timestamp}.json"
     Path("results").mkdir(exist_ok=True)
 
     with open(filename, 'w') as f:
         json.dump({
             'timestamp': datetime.now().isoformat(),
-            'model': 'gpt-4.1-nano',
-            'days': 30,
-            'tests': results
+            'model': args.model,
+            'days': args.days,
+            'runs_per_test': args.runs,
+            'experiment_duration_seconds': experiment_duration,
+            'tests': all_results
         }, f, indent=2)
 
     print(f"\nResults saved to: {filename}")
