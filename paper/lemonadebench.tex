@@ -1,0 +1,190 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{subfigure}
+
+\title{LemonadeBench 0.0: When Life Gives LLMs Lemons, They Can't Price Lemonade\\
+\large Evaluating the Economic Intuition of Large Language Models in Simple Markets}
+
+\author{
+    Aidan Vyas\\
+    \texttt{aidan.vyas@example.com}
+    \and
+    Claude Opus\\
+    Anthropic\\
+    \texttt{claude@anthropic.com}
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We introduce LemonadeBench, a minimal benchmark for evaluating economic reasoning in large language models (LLMs). 
+Despite its simplicity—models must only set daily prices to maximize profit from a lemonade stand with a known linear demand curve—we find that current LLMs consistently fail to discover optimal pricing strategies. 
+Models exhibit ritualistic tool usage patterns and anchor to suggested starting prices, achieving only 85-90\% of optimal profits.
+Our results reveal a fundamental gap in LLMs' ability to perform basic economic optimization, even when provided with perfect information and analytical tools.
+We release our benchmark and evaluation framework to support research into improving economic reasoning capabilities in AI systems.
+\end{abstract}
+
+\section{Introduction}
+
+% TODO: Write introduction
+% - Hook: LLMs can write poetry, code, and pass exams, but can they run a lemonade stand?
+% - Problem: Economic reasoning is fundamental to many real-world applications
+% - Our contribution: Simple benchmark that reveals surprising weaknesses
+% - Key finding: Models fail at basic price optimization
+% - Structure of paper
+
+\section{Related Work}
+
+% TODO: Add related work
+% - LLM benchmarks (MMLU, BigBench, etc.)
+% - Economic reasoning in AI
+% - Game-playing and optimization tasks
+% - Tool use in LLMs
+
+\section{The LemonadeBench Benchmark}
+
+\subsection{Game Design}
+
+The lemonade stand operates for 100 days with the following mechanics:
+\begin{itemize}
+    \item Linear demand function: $\text{customers} = \max(0, 150 - 10 \times \text{price})$
+    \item Revenue: $\text{price} \times \text{customers}$
+    \item No costs in v0.0 (profit = revenue)
+    \item Random variation: $\pm 10\%$ on daily profit
+    \item Starting cash: \$100 (for context, though irrelevant without costs)
+    \item Suggested starting price: \$5.00
+\end{itemize}
+
+The optimal price is \$7.50, yielding 75 customers and \$562.50 base profit per day.
+
+\subsection{AI Interface}
+
+Models interact through two tools:
+\begin{itemize}
+    \item \texttt{get\_historical\_data(days)}: Retrieve past pricing and profit data
+    \item \texttt{set\_price(price)}: Set today's lemonade price (required daily)
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+\begin{itemize}
+    \item Total profit over 100 days
+    \item Price discovery: Does the model find \$7.50?
+    \item Exploration behavior: Price variance over time
+    \item Tool usage patterns: Frequency and timing of historical data requests
+    \item Efficiency: Profit per API token spent
+\end{itemize}
+
+\section{Experimental Setup}
+
+\subsection{Models Tested}
+
+% TODO: Add all 5 models
+\begin{itemize}
+    \item GPT-4.1-nano: Smallest, most efficient model
+    \item GPT-4.1-mini: Larger capacity, moderate cost
+    \item o4-mini: Optimized reasoning model
+    \item GPT-4.1: Full-scale model (planned)
+    \item o3: Advanced reasoning model (planned)
+\end{itemize}
+
+\subsection{Experimental Protocol}
+
+\begin{itemize}
+    \item Each model runs 10 games of 100 days
+    \item Temperature: Not specified (model default)
+    \item Consistent random seeds for reproducibility
+    \item Full conversation history maintained
+    \item All tool calls logged and analyzed
+\end{itemize}
+
+\section{Results}
+
+\subsection{Overall Performance}
+
+% TODO: Add results table
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+Model & Avg Profit & Optimal \% & Avg Price & Tool Calls & Time (s) \\
+\midrule
+GPT-4.1-nano & \$50,527 & 89.8\% & \$5.00 & 200 & 84 \\
+GPT-4.1-mini & TBD & TBD & TBD & TBD & TBD \\
+o4-mini & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabular}
+\caption{Performance comparison across models (100-day games)}
+\label{tab:results}
+\end{table}
+
+\subsection{Behavioral Analysis}
+
+\subsubsection{GPT-4.1-nano}
+\begin{itemize}
+    \item Never deviated from \$5.00 suggested price
+    \item Ritualistic tool use: exactly 2 calls per day
+    \item Always checked history despite no price changes
+    \item No exploration or optimization attempts
+\end{itemize}
+
+% TODO: Add behavioral analysis for other models
+
+\subsection{Tool Usage Patterns}
+
+% TODO: Add visualization of tool usage
+
+\section{Discussion}
+
+\subsection{Why Do Models Fail?}
+
+\begin{enumerate}
+    \item \textbf{Anchoring bias}: Strong adherence to suggested starting price
+    \item \textbf{Lack of exploration}: No systematic price testing
+    \item \textbf{Ritualistic behavior}: Tool use for form rather than function
+    \item \textbf{Missing economic intuition}: No understanding that higher prices might increase profit
+\end{enumerate}
+
+\subsection{Implications}
+
+% TODO: Discuss implications for:
+% - AI deployment in economic contexts
+% - Need for better training on optimization tasks
+% - Tool use vs actual reasoning
+
+\section{Future Work}
+
+\begin{itemize}
+    \item LemonadeBench 1.0: Add inventory, weather, and variable costs
+    \item LemonadeBench 2.0: Full economic simulation with competition
+    \item Test non-OpenAI models (Anthropic, DeepSeek, Grok)
+    \item Human baseline performance
+    \item Fine-tuning experiments
+\end{itemize}
+
+\section{Conclusion}
+
+LemonadeBench reveals that current LLMs struggle with basic economic optimization tasks. Despite having perfect information and analytical tools, models fail to discover optimal pricing strategies, instead exhibiting anchoring bias and ritualistic tool usage. This simple benchmark exposes a fundamental gap in AI reasoning capabilities and provides a foundation for improving economic decision-making in future models.
+
+\section*{Code and Data Availability}
+
+The LemonadeBench benchmark, evaluation code, and experimental results are available at \url{https://github.com/aidanvyas/lemonadebench}.
+
+\section*{Acknowledgments}
+
+% TODO: Add acknowledgments
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

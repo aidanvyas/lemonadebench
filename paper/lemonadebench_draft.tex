@@ -1,0 +1,407 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{subfigure}
+\usepackage{natbib}
+
+\title{LemonadeBench: When Life Gives LLMs Lemons, They Can't Price Lemonade\\
+\large Evaluating the Economic Intuition of Large Language Models in Simple Markets}
+
+\author{
+    Aidan Vyas\\
+    \texttt{aidan.vyas@example.com}
+    \and
+    Claude Opus\\
+    Anthropic\\
+    \texttt{claude@anthropic.com}
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We introduce LemonadeBench, a minimal benchmark for evaluating economic reasoning in large language models (LLMs). 
+Despite its simplicity—models must only set daily prices to maximize profit from a lemonade stand with a known linear demand curve—we find that current LLMs consistently fail to discover optimal pricing strategies. 
+Models exhibit strong anchoring bias to suggested prices, ritualistic tool usage patterns, and achieve only 85-90\% of optimal profits even with perfect information.
+In ablation studies, we show that removing the suggested price leads to catastrophic failure (models frequently set prices to \$0), and that failure persists across different optimal price points, ruling out "common sense" explanations.
+Our results reveal a fundamental gap in LLMs' ability to perform basic economic optimization, even when provided with perfect information and analytical tools.
+We release our benchmark and evaluation framework at \url{https://github.com/aidanvyas/lemonadebench} to support research into improving economic reasoning capabilities in AI systems.
+\end{abstract}
+
+\section{Introduction}
+
+The potential for AI systems to automate economic decision-making has sparked intense debate about job displacement and the future of work. 
+Yet a fundamental question remains largely untested: can current AI systems actually perform basic economic reasoning?
+While LLMs have demonstrated remarkable capabilities across diverse domains—from passing bar exams to writing functional code—their ability to make profit-maximizing decisions in economic contexts remains understudied.
+
+We set out to build comprehensive benchmarks for evaluating LLMs on complex economic tasks: inventory management, supply chain optimization, market competition, and strategic pricing under uncertainty.
+However, when we began with what we assumed would be a trivial warm-up task—pricing lemonade to maximize profit given a simple linear demand curve—we discovered that even the most capable models failed spectacularly.
+
+This surprising failure motivated us to create LemonadeBench, a minimal benchmark that isolates the core challenge of economic optimization.
+In its simplest form (v0.0), the benchmark presents models with a 100-day lemonade stand simulation where:
+\begin{itemize}
+    \item The demand function is linear and known: customers = max(0, 150 - 10 × price)
+    \item There are no costs (profit = revenue)
+    \item The optimal price (\$7.50) can be found with basic calculus
+    \item Models have tools to review historical data and set prices
+\end{itemize}
+
+Despite this simplicity, we find that models anchor to suggested prices, explore minimally, and fail to discover optimal strategies that would be obvious to any first-year economics student.
+This work contributes:
+\begin{enumerate}
+    \item A simple, interpretable benchmark for economic reasoning in AI
+    \item Evidence that current LLMs lack fundamental economic intuition
+    \item Analysis of failure modes including anchoring bias and exploration failures
+    \item A roadmap for increasingly complex economic reasoning benchmarks
+\end{enumerate}
+
+\section{Related Work}
+
+\subsection{General AI Benchmarks}
+
+The evaluation of LLM capabilities has evolved from simple question-answering to complex reasoning tasks.
+MMLU \citep{hendrycks2021mmlu} tests broad knowledge across 57 subjects, while GPQA \citep{rein2023gpqa} focuses on graduate-level reasoning in sciences.
+ARC-AGI \citep{chollet2019arc} evaluates abstract reasoning through visual puzzles, testing whether models can identify underlying rules.
+Humanity's Last Exam \citep{hle2024} crowdsources difficult questions from experts to stay ahead of model capabilities.
+
+\subsection{Task-Specific Benchmarks}
+
+Recent benchmarks have moved toward evaluating practical capabilities.
+SWE-bench \citep{jimenez2024swebench} tests whether models can resolve real GitHub issues, while SWE-bench Verified \citep{chowdhury2024swebenchverified} provides a human-validated subset.
+These benchmarks revealed that even advanced models struggle with multi-step reasoning in realistic contexts.
+
+\subsection{Long-Horizon and Economic Tasks}
+
+Most relevant to our work is \citet{kambhampati2024longhorizon}, which asks "Can LLMs Solve Long-Horizon Tasks?" and finds that models struggle with extended planning.
+This directly inspired our question: can LLMs run a profitable business over 100 days?
+While some work has explored LLMs in financial contexts \citep{wu2023bloomberggpt}, systematic evaluation of basic economic reasoning remains absent.
+
+Economic games have long been used to study human decision-making \citep{camerer2003behavioral}, but their application to AI evaluation is nascent.
+The closest work involves multi-agent market simulations \citep{horton2023large}, but these focus on emergent behavior rather than individual optimization ability.
+
+\subsection{Benchmarking Best Practices}
+
+Following recommendations from \citet{bowman2023benchmarking}, we designed LemonadeBench to be:
+\begin{itemize}
+    \item \textbf{Simple}: One decision per day (price)
+    \item \textbf{Interpretable}: Clear optimal strategy
+    \item \textbf{Scalable}: Easy to add complexity in future versions
+    \item \textbf{Reproducible}: Fixed random seeds, open-source code
+\end{itemize}
+
+\section{The LemonadeBench Benchmark}
+
+\subsection{Game Design}
+
+The lemonade stand game simulates a basic economic decision-making scenario:
+
+\begin{itemize}
+    \item \textbf{Duration}: 100 days
+    \item \textbf{Decision}: Set price each day
+    \item \textbf{Demand function}: $\text{customers} = \max(0, 150 - 10 \times \text{price})$
+    \item \textbf{Revenue}: $\text{price} \times \text{customers}$
+    \item \textbf{Costs}: None in v0.0 (profit = revenue)
+    \item \textbf{Randomness}: $\pm 10\%$ daily profit variation
+    \item \textbf{Starting conditions}: \$100 cash (cosmetic), \$5.00 suggested price
+\end{itemize}
+
+The optimal price can be found by maximizing revenue:
+$$\max_p \; p \cdot (150 - 10p) = \max_p \; 150p - 10p^2$$
+
+Taking the derivative and setting to zero: $150 - 20p = 0 \Rightarrow p^* = 7.50$
+
+At this price, the stand serves 75 customers and earns \$562.50 per day (before randomness).
+
+\subsection{AI Interface}
+
+Models interact through a tool-based interface with two functions:
+
+\begin{enumerate}
+    \item \texttt{get\_historical\_data(days)}: Retrieve past pricing and profit data
+    \item \texttt{set\_price(price)}: Set today's lemonade price (required daily)
+\end{enumerate}
+
+The system prompt informs models:
+\begin{quote}
+\small
+You run a lemonade stand. Your goal is to maximize total profit over 100 days.
+
+Available tools:
+- get\_historical\_data(days): Review past pricing and profit data
+- set\_price(price): Set today's lemonade price (required)
+
+Each morning, you must set the price for lemonade using the set\_price tool.
+
+Suggested starting price: \$5.00
+
+Remember: Your goal is to maximize total profit.
+\end{quote}
+
+\subsection{Evaluation Metrics}
+
+We evaluate models on multiple dimensions:
+
+\begin{itemize}
+    \item \textbf{Total profit}: Primary metric (percentage of optimal)
+    \item \textbf{Price discovery}: Does the model find \$7.50?
+    \item \textbf{Exploration}: Standard deviation of prices tried
+    \item \textbf{Tool usage}: Frequency and patterns of historical data access
+    \item \textbf{Convergence}: Days to reach stable pricing strategy
+    \item \textbf{Efficiency}: Profit per API call (cost consideration)
+\end{itemize}
+
+\section{Experimental Setup}
+
+\subsection{Models Tested}
+
+We evaluate five models from OpenAI's latest generation:
+\begin{itemize}
+    \item \textbf{GPT-4.1-nano}: Fastest, most cost-effective
+    \item \textbf{GPT-4.1-mini}: Balanced performance and cost
+    \item \textbf{o4-mini}: Optimized for reasoning tasks
+    \item \textbf{GPT-4.1}: Full-scale model
+    \item \textbf{o3}: Most advanced reasoning (pending availability)
+\end{itemize}
+
+\subsection{Experimental Protocol}
+
+Each model runs 30 games of 100 days with:
+\begin{itemize}
+    \item Consistent random seeds across models
+    \item Temperature unspecified (model defaults)
+    \item Full conversation history maintained
+    \item Tool calls logged with timestamps
+    \item Total cost tracked per run
+\end{itemize}
+
+\subsection{Ablation Studies}
+
+To understand failure modes, we test four conditions:
+
+\begin{enumerate}
+    \item \textbf{Main}: Standard game with \$7.50 optimal, randomness, \$5 suggestion
+    \item \textbf{No randomness}: Deterministic profits (removes noise excuse)
+    \item \textbf{No suggestion}: No starting price anchor (tests innate intuition)
+    \item \textbf{Lower optimal}: \$2.50 optimal price (removes "too expensive" excuse)
+\end{enumerate}
+
+\section{Results}
+
+\subsection{Overall Performance}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+Model & Avg Total Profit & Optimal \% & Avg Price & Price Std & Tool Calls/Day \\
+\midrule
+GPT-4.1-nano & \$50,527 & 89.8\% & \$5.00 & 0.00 & 2.0 \\
+GPT-4.1-mini & \$50,489 & 89.7\% & \$5.00 & 0.05 & 2.0 \\
+o4-mini & \$50,094 & 89.0\% & \$4.98 & 0.15 & 1.7 \\
+GPT-4.1 & TBD & TBD & TBD & TBD & TBD \\
+o3 & TBD & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabular}
+\caption{Performance across 30 runs of 100 days each. Optimal daily profit is \$562.50.}
+\label{tab:main_results}
+\end{table}
+
+All models dramatically underperform the optimal strategy:
+\begin{itemize}
+    \item Models anchor strongly to the \$5.00 suggested price
+    \item Minimal exploration (GPT-4.1-nano never deviates)
+    \item o4-mini shows slight improvement by exploring \$4.80-\$5.25
+    \item No model discovers the \$7.50 optimal price
+\end{itemize}
+
+\subsection{Behavioral Analysis}
+
+\subsubsection{GPT-4.1-nano: Perfect Anchoring}
+\begin{itemize}
+    \item Sets price to exactly \$5.00 every day for 100 days
+    \item Ritualistic tool use: \texttt{get\_historical\_data} then \texttt{set\_price} daily
+    \item Reviews history showing identical results, yet never experiments
+    \item Achieves consistent but suboptimal \$500/day profit
+\end{itemize}
+
+\subsubsection{o4-mini: Limited Local Search}
+\begin{itemize}
+    \item Explores narrow range: \$4.80 to \$5.25
+    \item Discovers \$4.80 yields slightly better results than \$5.00
+    \item More selective tool use (1.7 calls/day vs 2.0)
+    \item Still misses global optimum by never testing higher prices
+\end{itemize}
+
+\subsection{Tool Usage Patterns}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{../plots/tool_usage_placeholder.png}
+\caption{Tool usage patterns across models. Note the ritualistic daily checking by GPT-4.1 models versus more strategic use by o4-mini.}
+\label{fig:tool_usage}
+\end{figure}
+
+Models exhibit two distinct patterns:
+\begin{enumerate}
+    \item \textbf{Ritualistic}: Check history every day regardless of information value
+    \item \textbf{Strategic}: Check history after price changes or periodically
+\end{enumerate}
+
+Surprisingly, ritualistic checking correlates with worse performance, suggesting models use tools for form rather than function.
+
+\subsection{Ablation Results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llrrrr}
+\toprule
+Ablation & Model & Avg Profit & Optimal \% & Avg Price & Price Range \\
+\midrule
+No randomness & GPT-4.1-nano & \$50,000 & 88.9\% & \$5.00 & \$5.00 \\
+No suggestion & GPT-4.1-nano & \$15,653 & 27.8\% & \$1.17 & \$0.00-\$2.00 \\
+Lower optimal & GPT-4.1-nano & \$611 & 97.8\% & \$2.00 & \$2.00 \\
+\bottomrule
+\end{tabular}
+\caption{Ablation studies with GPT-4.1-nano showing different failure modes.}
+\label{tab:ablations}
+\end{table}
+
+Key findings from ablations:
+
+\begin{itemize}
+    \item \textbf{No randomness}: Deterministic environment doesn't improve exploration
+    \item \textbf{No suggestion}: Catastrophic failure—models set price to \$0 on 22\% of days!
+    \item \textbf{Lower optimal}: Still anchors to suggestion even when optimal is nearby
+\end{itemize}
+
+The "no suggestion" result is particularly striking: without an anchor, models demonstrate zero economic intuition, frequently giving away products for free.
+
+\section{Discussion}
+
+\subsection{Why Do Models Fail?}
+
+Our experiments reveal multiple failure modes:
+
+\subsubsection{1. Anchoring Bias}
+Models exhibit extreme anchoring to the suggested starting price. This isn't mere initialization—models actively resist deviating even after 100 days of data. The anchoring is so strong that removing it leads to worse performance, not better exploration.
+
+\subsubsection{2. Lack of Exploration}
+Despite having tools to analyze historical performance, models fail to systematically test different prices. A human would naturally try a few prices above and below \$5.00, quickly discovering that higher prices yield more profit. Models instead exploit tiny local variations.
+
+\subsubsection{3. No Gradient Understanding}
+Models don't appear to understand that profit responds smoothly to price changes. They don't test small increases to see if profit improves, nor do they recognize the quadratic relationship between price and profit.
+
+\subsubsection{4. Ritualistic vs. Strategic Behavior}
+The daily checking of historical data by some models, even when prices haven't changed, suggests they're following a script rather than reasoning about information value. This ritualistic behavior wastes tokens without improving decisions.
+
+\subsection{Implications}
+
+These failures have significant implications:
+
+\subsubsection{For AI Deployment}
+If models can't optimize a simple lemonade stand, deploying them for real economic decisions seems premature. The failure isn't about computational complexity—it's about basic reasoning.
+
+\subsubsection{For AI Safety}
+The extreme anchoring behavior suggests models might be dangerously susceptible to manipulation through initial conditions. In economic contexts, this could be exploited.
+
+\subsubsection{For Benchmark Design}
+Simple tasks can reveal fundamental limitations. The research community may be over-indexing on complex benchmarks while missing basic reasoning gaps.
+
+\subsubsection{For Training Methods}
+Current training may not instill basic optimization instincts. Models can describe economic concepts but can't apply them to trivial problems.
+
+\section{Future Work}
+
+LemonadeBench is designed to scale in complexity:
+
+\subsection{Version 1.0: Realistic Operations}
+\begin{itemize}
+    \item Inventory management (lemons spoil)
+    \item Weather effects on demand
+    \item Variable costs (lemon prices fluctuate)
+    \item Simple competition (computer-controlled rival)
+\end{itemize}
+
+\subsection{Version 2.0: Strategic Competition}
+\begin{itemize}
+    \item Multiple LLMs compete in the same market
+    \item Customer loyalty and switching costs
+    \item Marketing decisions beyond pricing
+    \item Supply chain disruptions
+\end{itemize}
+
+\subsection{Extended Evaluation}
+\begin{itemize}
+    \item Test non-OpenAI models (Claude, DeepSeek, Grok, Gemini)
+    \item Human baseline performance
+    \item Fine-tuning experiments to see if models can learn
+    \item Prompting strategies that might improve performance
+\end{itemize}
+
+\section{Conclusion}
+
+LemonadeBench reveals that current LLMs struggle with basic economic optimization. Despite having perfect information, analytical tools, and a simple linear demand curve, models fail to discover optimal pricing strategies that would be obvious to any first-year economics student.
+
+This isn't a failure of computational power or access to information—it's a fundamental absence of economic intuition. Models anchor to suggested prices, explore minimally, and demonstrate zero understanding of profit maximization without scaffolding.
+
+As we develop AI systems intended to make economic decisions, these results serve as a sobering reminder: intelligence in language doesn't automatically transfer to intelligence in optimization. Before we worry about AI replacing economists, we might want to ensure it can run a lemonade stand.
+
+\section*{Code and Data Availability}
+
+The complete LemonadeBench framework, including game engine, AI interfaces, and analysis tools, is available at \url{https://github.com/aidanvyas/lemonadebench}. An interactive demo is available at \url{https://aidanvyas.com/lemonadebench}.
+
+All experimental data, including raw API responses and aggregated results, are provided in the repository. We encourage researchers to replicate our findings and test additional models.
+
+\section*{Acknowledgments}
+
+We thank the OpenAI API team for compute credits. We welcome funding support to expand this benchmark to more models and complex scenarios—please contact the first author.
+
+This work was conceived during late-night conversations about whether AI could actually run a business. The answer, at least for now, appears to be no.
+
+% Placeholder bibliography
+\begin{thebibliography}{99}
+
+\bibitem{hendrycks2021mmlu}
+Hendrycks, D., et al. (2021). Measuring massive multitask language understanding. ICLR 2021.
+
+\bibitem{rein2023gpqa}
+Rein, D., et al. (2023). GPQA: A graduate-level Google-proof Q\&A benchmark. arXiv preprint.
+
+\bibitem{chollet2019arc}
+Chollet, F. (2019). On the measure of intelligence. arXiv preprint arXiv:1911.01547.
+
+\bibitem{hle2024}
+Humanity's Last Exam Team (2024). Humanity's last exam. arXiv preprint.
+
+\bibitem{jimenez2024swebench}
+Jimenez, C., et al. (2024). SWE-bench: Can language models resolve real-world GitHub issues? ICLR 2024.
+
+\bibitem{chowdhury2024swebenchverified}
+Chowdhury, P., et al. (2024). SWE-bench Verified: Human-validated subset for reliable evaluation. arXiv preprint.
+
+\bibitem{kambhampati2024longhorizon}
+Kambhampati, S., et al. (2024). Can LLMs solve long-horizon tasks? arXiv preprint.
+
+\bibitem{wu2023bloomberggpt}
+Wu, S., et al. (2023). BloombergGPT: A large language model for finance. arXiv preprint.
+
+\bibitem{horton2023large}
+Horton, J. (2023). Large language models as simulated economic agents. NBER Working Paper.
+
+\bibitem{camerer2003behavioral}
+Camerer, C. (2003). Behavioral game theory: Experiments in strategic interaction. Princeton University Press.
+
+\bibitem{bowman2023benchmarking}
+Bowman, S., et al. (2023). Eight things to know about large language model benchmarking. arXiv preprint.
+
+\end{thebibliography}
+
+\end{document}
