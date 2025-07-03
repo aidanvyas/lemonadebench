@@ -45,13 +45,17 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
         model_conditions[model][condition] = avg_profit
 
     # Plot grouped bar chart
-    conditions = comparison_data.get("conditions", ["suggested", "no_guidance", "exploration"])
+    conditions = comparison_data.get(
+        "conditions", ["suggested", "no_guidance", "exploration"]
+    )
     x = range(len(model_conditions))
     width = 0.25
 
     for i, condition in enumerate(conditions):
-        profits = [model_conditions[model].get(condition, 0) for model in model_conditions]
-        ax1.bar([xi + i*width for xi in x], profits, width, label=condition)
+        profits = [
+            model_conditions[model].get(condition, 0) for model in model_conditions
+        ]
+        ax1.bar([xi + i * width for xi in x], profits, width, label=condition)
 
     ax1.set_title("Average Profit by Model and Condition")
     ax1.set_xlabel("Model")
@@ -59,11 +63,11 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
     ax1.set_xticks([xi + width for xi in x])
     ax1.set_xticklabels(list(model_conditions.keys()))
     ax1.legend()
-    ax1.grid(True, alpha=0.3, axis='y')
+    ax1.grid(True, alpha=0.3, axis="y")
 
     # Plot 2: Price evolution for suggested condition
     ax2 = axes[0, 1]
-    for _, runs in grouped.items():
+    for key, runs in grouped.items():
         if "suggested" in key and runs:
             model = runs[0]["model"]
             # Average across all runs
@@ -80,7 +84,7 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
                 avg_prices.append(sum(day_prices) / len(day_prices))
 
             days = list(range(1, len(avg_prices) + 1))
-            ax2.plot(days, avg_prices, label=model, marker='o', markersize=4, alpha=0.7)
+            ax2.plot(days, avg_prices, label=model, marker="o", markersize=4, alpha=0.7)
 
     ax2.set_title("Average Price Evolution - Suggested Condition")
     ax2.set_xlabel("Day")
@@ -102,16 +106,18 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
         avg_tokens = 0
         count = 0
         for run in runs:
-            if 'token_usage' in run:
-                avg_tokens += run['token_usage'].get('total_tokens', 0)
+            if "token_usage" in run:
+                avg_tokens += run["token_usage"].get("total_tokens", 0)
                 count += 1
 
         if count > 0:
             model_token_usage[model][condition] = avg_tokens / count
 
     for i, condition in enumerate(conditions):
-        tokens = [model_token_usage[model].get(condition, 0) for model in model_token_usage]
-        ax3.bar([xi + i*width for xi in x], tokens, width, label=condition)
+        tokens = [
+            model_token_usage[model].get(condition, 0) for model in model_token_usage
+        ]
+        ax3.bar([xi + i * width for xi in x], tokens, width, label=condition)
 
     ax3.set_title("Average Total Token Usage by Model and Condition")
     ax3.set_xlabel("Model")
@@ -119,7 +125,7 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
     ax3.set_xticks([xi + width for xi in x])
     ax3.set_xticklabels(list(model_token_usage.keys()))
     ax3.legend()
-    ax3.grid(True, alpha=0.3, axis='y')
+    ax3.grid(True, alpha=0.3, axis="y")
 
     # Plot 4: Profit distribution boxplot
     ax4 = axes[1, 1]
@@ -133,14 +139,14 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
         profits = [r["total_profit"] for r in runs]
         if profits:  # Only add if there's data
             plot_data.append(profits)
-            plot_labels.append(key.replace('_', '\n'))
+            plot_labels.append(key.replace("_", "\n"))
 
     if plot_data:
         ax4.boxplot(plot_data, labels=plot_labels)
         ax4.set_title("Profit Distribution by Model and Condition")
         ax4.set_ylabel("Total Profit ($)")
-        ax4.tick_params(axis='x', rotation=45)
-        ax4.grid(True, alpha=0.3, axis='y')
+        ax4.tick_params(axis="x", rotation=45)
+        ax4.grid(True, alpha=0.3, axis="y")
 
     plt.tight_layout()
 
@@ -164,21 +170,15 @@ def generate_plots(comparison_data: dict, output_dir: Path = None) -> None:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Generate plots from saved results")
-    parser.add_argument(
-        "results_file",
-        type=Path,
-        help="Path to results JSON file"
-    )
+    parser.add_argument("results_file", type=Path, help="Path to results JSON file")
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
-        help="Output directory for plots (default: plots/)"
+        help="Output directory for plots (default: plots/)",
     )
     parser.add_argument(
-        "--show",
-        action="store_true",
-        help="Show plots after generating"
+        "--show", action="store_true", help="Show plots after generating"
     )
 
     args = parser.parse_args()
