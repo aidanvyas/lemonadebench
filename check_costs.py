@@ -14,8 +14,12 @@ from src.lemonade_stand.costs_tracker import CostsTracker
 
 def main():
     parser = argparse.ArgumentParser(description="Check OpenAI API costs")
-    parser.add_argument("--days", type=int, default=7, help="Number of days to look back")
-    parser.add_argument("--hourly", action="store_true", help="Show hourly breakdown for today")
+    parser.add_argument(
+        "--days", type=int, default=7, help="Number of days to look back"
+    )
+    parser.add_argument(
+        "--hourly", action="store_true", help="Show hourly breakdown for today"
+    )
     parser.add_argument("--models", nargs="+", help="Filter by specific models")
 
     args = parser.parse_args()
@@ -38,7 +42,6 @@ def main():
             start_time=start_time,
             bucket_width="1h",
             group_by=["model"] if not args.models else None,
-            models=args.models
         )
 
         if "error" in data:
@@ -48,7 +51,9 @@ def main():
             return
 
         for bucket in data.get("data", []):
-            hour = datetime.fromtimestamp(bucket["start_time"]).strftime("%Y-%m-%d %H:00")
+            hour = datetime.fromtimestamp(bucket["start_time"]).strftime(
+                "%Y-%m-%d %H:00"
+            )
             total = 0
 
             for result in bucket.get("results", []):
@@ -72,6 +77,7 @@ def main():
     # Compare with our tracked estimates
     print("\nNote: Compare with cost estimates from run_four_tests.py")
     print("to verify our token-based calculations are accurate.")
+
 
 if __name__ == "__main__":
     main()
