@@ -191,6 +191,9 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
         model_name=model,
         include_calculator=True
     )
+    
+    # Always enable comprehensive recording
+    player.enable_recording()
 
     # Run game
     prices = []
@@ -273,6 +276,11 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
     logger.info(f"Completed: {test_name} - Run {run_number} "
                 f"(${total_profit:.2f}, {duration:.1f}s, {len(errors)} errors)")
 
+    # Get comprehensive recording data
+    comprehensive_data = None
+    if player.recorder:
+        comprehensive_data = player.recorder.records
+    
     return {
         'test_name': test_name,
         'run_number': run_number,
@@ -287,10 +295,12 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
         'token_usage': player.total_token_usage,
         'tool_calls': player.tool_call_count,
         'tool_call_breakdown': tool_call_breakdown,
+        'calculator_history': player.calculator_history,  # Add calculator expressions
         'cost_info': cost_info,
         'duration_seconds': duration,
         'efficiency': total_profit / (optimal_profit * days) if optimal_profit > 0 else 0,
-        'errors': errors
+        'errors': errors,
+        'comprehensive_recording': comprehensive_data  # Full API interaction details
     }
 
 

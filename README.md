@@ -1,103 +1,113 @@
 # LemonadeBench: Economic Reasoning Benchmark for LLMs
 
-A simple benchmark to test whether Large Language Models can discover optimal pricing strategies through experimentation.
+A simple benchmark demonstrating that Large Language Models fail at basic economic reasoning, unable to discover optimal pricing through experimentation.
 
 ## Key Finding
 
-LLMs fail at basic economic reasoning. Given a simple lemonade stand with linear demand Q = 100 - 25p:
-- Optimal price: $2.00 (50 customers, $100 profit/day)
-- Models anchor to suggested price ($1.00) achieving only 75% efficiency
-- Even with exploration hints and full conversation memory, models don't discover the optimum
-- In inverse scenarios (starting above optimal), models explore in the wrong direction
+**LLMs achieve only 75% efficiency on a trivial economic task.** Given a lemonade stand with linear demand Q = 100 - 25p:
+- **Optimal strategy**: Price at $2.00 → 50 customers → $100 profit/day
+- **What LLMs do**: Anchor to $1.00 → 75 customers → $75 profit/day
+- **The failure**: Despite having perfect memory, calculator access, and profit feedback, models never discover the optimal price through experimentation
+
+## Quick Start
+
+### 1. Clone and Install
+```bash
+git clone https://github.com/aidanvyas/lemonadebench.git
+cd lemonadebench
+uv sync  # Install dependencies with uv
+```
+
+### 2. Set OpenAI API Key
+```bash
+echo "OPENAI_API_KEY=your_api_key_here" > .env
+```
+
+### 3. Run Benchmark
+```bash
+uv run python experiments/run_benchmark.py  # Runs 5 iterations of 4 test conditions
+```
+
+## Test Conditions
+
+1. **Suggested Price**: Model starts with $1.00 suggestion (tests anchoring bias)
+2. **No Guidance**: No price suggestion (tests autonomous exploration)
+3. **Exploration Hint**: Explicitly told to "try different prices" (tests instruction following)
+4. **Inverse Demand**: Q = 100 - 50p with optimal at $1.00 (tests exploration direction)
+
+## Results Summary
+
+Across all models and conditions:
+- **Efficiency**: ~74-76% (vs 100% optimal)
+- **Price exploration**: 1-2 unique prices tried (out of infinite possibilities)
+- **Days at optimal**: 0/30 in almost all cases
+- **Pattern**: Strong anchoring to initial prices, no systematic exploration
+
+## Cost Estimates
+
+Full benchmark (5 runs × 4 conditions × 30 days):
+- **gpt-4.1-nano**: ~$0.17
+- **gpt-4.1-mini**: ~$2.00
+- **gpt-4.1**: ~$10.00
+- **o4-mini**: ~$5.50
 
 ## Project Structure
 
 ```
 lemonade_stand/
-├── src/
-│   └── lemonade_stand/
-│       ├── __init__.py
-│       ├── simple_game.py          # Core game engine
-│       └── responses_ai_player.py  # AI player using OpenAI Responses API
-├── experiments/
-│   ├── run_benchmark.py          # Main benchmark runner (5 runs per test by default)
-│   ├── compare_models.py          # Compare multiple models
-│   └── test_inverse_demand.py     # Test inverse demand scenarios
-├── analysis/
-│   ├── generate_plots.py          # Generate plots from results
-│   └── list_results.py            # List and summarize results
-├── tests/
-│   └── test_simple_game.py        # Unit tests for game mechanics
-├── results/                        # JSON results from experiments
-├── plots/                          # Generated visualization plots
-└── archive/                        # Old implementations (deprecated)
+├── src/lemonade_stand/        # Core game and AI implementation
+│   ├── simple_game.py         # Economic simulation (Q = 100 - 25p)
+│   ├── responses_ai_player.py # OpenAI Responses API integration
+│   └── comprehensive_recorder.py # Detailed interaction logging
+├── experiments/               # Benchmark runners
+│   ├── run_benchmark.py       # Main benchmark (adaptive rate limiting)
+│   └── compare_models.py      # Multi-model comparison
+├── analysis/                  # Results analysis
+│   ├── analyze_results.py     # Generate tables (text/LaTeX/detailed)
+│   └── generate_plots.py      # Visualization
+├── paper/                     # LaTeX paper and tables
+└── results/paper/            # Publication-ready results
 ```
 
-## Quick Start
+## Analysis
 
-1. Install dependencies using [uv](https://github.com/astral-sh/uv):
+View results:
 ```bash
-uv sync
+uv run python analysis/analyze_results.py --latest               # Text summary
+uv run python analysis/analyze_results.py --latest --format latex # LaTeX tables
+uv run python analysis/generate_plots.py results/latest.json      # Visualizations
 ```
 
-2. Set your OpenAI API key:
-```bash
-export OPENAI_API_KEY="your-key-here"
+## Technical Details
+
+- **Game Engine**: Configurable demand function with daily profit tracking
+- **AI Integration**: OpenAI Responses API with conversation memory (`previous_response_id`)
+- **Tools Available**: `get_historical_data`, `set_price`, `calculate`
+- **Recording**: Comprehensive capture of all API interactions and calculations
+- **Rate Limiting**: Adaptive system to handle API limits gracefully
+
+## Key Insights
+
+This benchmark reveals that current LLMs:
+1. **Lack economic intuition**: Don't understand price-demand relationships
+2. **Exhibit strong anchoring**: Stick to suggested prices despite poor performance
+3. **Fail to explore**: Even when told to experiment, exploration is minimal
+4. **Can't learn from feedback**: Have all data needed but don't infer the pattern
+
+The failure is universal across model sizes and types, suggesting a fundamental limitation in economic reasoning capabilities.
+
+## Citation
+
+If you use LemonadeBench in your research:
+```bibtex
+@misc{lemonadebench2025,
+  title={LemonadeBench: Revealing Large Language Models' Failure at Basic Economic Reasoning},
+  author={Vyas, Aidan},
+  year={2025},
+  url={https://github.com/aidanvyas/lemonadebench}
+}
 ```
 
-3. Run the four main test conditions (5 runs each by default):
-```bash
-uv run python experiments/run_benchmark.py
-```
+## License
 
-## Test Conditions
-
-1. **Suggested Price**: Model starts with $1.00 suggestion (suboptimal)
-2. **No Guidance**: Model starts with no price suggestion
-3. **Exploration Hint**: Model encouraged to "try different prices"
-4. **Inverse Demand**: Different demand function where optimal requires moving down from starting price
-
-## Results Summary
-
-With GPT-4.1-nano over 30 days:
-- **Suggested Price**: Anchored at $1.00 (75.0% efficiency)
-- **No Guidance**: Stuck at $1.00 (75.0% efficiency)
-- **Exploration Hint**: Brief exploration to $1.25, then back to $1.00 (75.3% efficiency)
-- **Inverse Demand**: Explored wrong direction ($1.50→$1.65→$1.82→$4.17), never found $1.00 optimal (70.5% efficiency)
-
-Total cost: ~$0.02 for all tests with conversation memory enabled.
-
-## Key Components
-
-### SimpleLemonadeGame
-- Simulates demand with Q = 100 - 25p (customizable)
-- Tracks daily profits and game state
-- Configurable prompts and hints
-
-### ResponsesAIPlayer
-- Uses OpenAI's new Responses API
-- Maintains conversation continuity with `previous_response_id`
-- Includes calculator tool and historical data access
-- Tracks token usage
-
-## Analysis Tools
-
-View saved results:
-```bash
-python analysis/list_results.py
-```
-
-Generate plots from results:
-```bash
-python analysis/generate_plots.py results/four_tests_YYYYMMDD_HHMMSS.json
-```
-
-## Paper
-
-This benchmark demonstrates that current LLMs:
-1. Exhibit strong anchoring bias to suggested prices
-2. Fail to infer demand curves from profit feedback
-3. Don't engage in systematic price exploration
-4. Lack basic economic intuition about price-demand relationships
-
-Even with perfect memory and computational tools, models achieve only 70-75% of optimal performance on this trivial economic task.
+MIT License - see LICENSE file for details.

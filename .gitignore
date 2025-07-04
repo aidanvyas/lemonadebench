@@ -60,4 +60,8 @@ archive/
 results/*.json
 plots/*.png
 
+# But keep paper results
+!results/paper/
+!plots/paper/
+
 # Don't ignore FEATURES.md - it's our roadmap!

@@ -1,7 +1,6 @@
 """Lemonade Stand Economic Reasoning Benchmark."""
 
 from .comprehensive_recorder import ComprehensiveRecorder
-from .costs_tracker import CostsTracker
 from .responses_ai_player import ResponsesAIPlayer
 from .simple_game import SimpleLemonadeGame
 
@@ -10,5 +9,4 @@ __all__ = [
     "SimpleLemonadeGame",
     "ResponsesAIPlayer",
     "ComprehensiveRecorder",
-    "CostsTracker",
 ]

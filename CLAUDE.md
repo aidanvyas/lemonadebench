@@ -68,9 +68,9 @@ uv run ruff check
 uv run ruff format
 
 # Analyze results
-uv run python analysis/analyze_results.py --latest
-uv run python analysis/analyze_results.py --latest --format latex
-uv run python analysis/generate_plots.py results/latest.json
+uv run python analysis/analyze_results.py --latest                # Text summary
+uv run python analysis/analyze_results.py --latest --format latex  # LaTeX tables
+uv run python analysis/generate_plots.py results/latest.json       # Visualizations
 ```
 
 ## Research Focus

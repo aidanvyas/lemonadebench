@@ -62,6 +62,7 @@
 - [ ] Parallel model testing
 - [ ] Result database integration
 - [ ] Web interface for human testing
+- [ ] OpenAI Costs API integration (requires admin API keys for actual cost verification)
 
 ## Research Applications
 
