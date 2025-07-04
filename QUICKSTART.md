@@ -22,8 +22,9 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 
 ### Test all 4 conditions with GPT-4.1-nano (recommended for cost):
 ```bash
-uv run python experiments/run_four_tests.py
+uv run python experiments/run_benchmark.py
 ```
+By default this runs each test **5** times.
 
 This runs:
 1. **Suggested Price**: Model starts with $1.00 suggestion

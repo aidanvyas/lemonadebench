@@ -20,10 +20,9 @@ lemonade_stand/
 │       ├── simple_game.py          # Core game engine
 │       └── responses_ai_player.py  # AI player using OpenAI Responses API
 ├── experiments/
-│   ├── run_four_tests.py          # Run the 4 main test conditions
+│   ├── run_benchmark.py          # Main benchmark runner (5 runs per test by default)
 │   ├── compare_models.py          # Compare multiple models
-│   ├── test_inverse_demand.py     # Test inverse demand scenarios
-│   └── run_main_experiment.py     # Full experiment runner
+│   └── test_inverse_demand.py     # Test inverse demand scenarios
 ├── analysis/
 │   ├── generate_plots.py          # Generate plots from results
 │   └── list_results.py            # List and summarize results
@@ -46,9 +45,9 @@ uv sync
 export OPENAI_API_KEY="your-key-here"
 ```
 
-3. Run the four main test conditions:
+3. Run the four main test conditions (5 runs each by default):
 ```bash
-uv run python experiments/run_four_tests.py
+uv run python experiments/run_benchmark.py
 ```
 
 ## Test Conditions
