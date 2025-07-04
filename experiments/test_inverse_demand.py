@@ -2,9 +2,14 @@
 """Test inverse demand scenario where optimal is $1 but we start at $2."""
 
 import logging
+import sys
+from pathlib import Path
 
-from ..src.lemonade_stand.responses_ai_player import ResponsesAIPlayer
-from ..src.lemonade_stand.simple_game import SimpleLemonadeGame
+# Add repository root to path so `src` package can be imported when run directly
+sys.path.append(str(Path(__file__).parent.parent))
+
+from src.lemonade_stand.responses_ai_player import ResponsesAIPlayer
+from src.lemonade_stand.simple_game import SimpleLemonadeGame
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,7 +45,9 @@ class InverseDemandGame(SimpleLemonadeGame):
         )
 
         if self._use_suggested_price:
-            base_prompt += f"Suggested starting price: ${self.suggested_starting_price:.2f}\n\n"
+            base_prompt += (
+                f"Suggested starting price: ${self.suggested_starting_price:.2f}\n\n"
+            )
 
         if self._use_exploration_hint:
             base_prompt += "Try different prices to discover which price maximizes your daily profit.\n\n"
@@ -52,21 +59,18 @@ class InverseDemandGame(SimpleLemonadeGame):
 
 def test_inverse_demand():
     """Test with inverse demand where we start high and optimal is low."""
-    print("="*60)
+    print("=" * 60)
     print("INVERSE DEMAND TEST")
     print("Demand: Q = 50 - 25p (optimal at $1.00)")
     print("Starting at $2.00 (above optimal)")
-    print("="*60)
+    print("=" * 60)
 
     # Test configuration
     game = InverseDemandGame(days=30)
     game._use_suggested_price = True
     game._use_exploration_hint = True
 
-    player = ResponsesAIPlayer(
-        model_name="gpt-4.1-nano",
-        include_calculator=True
-    )
+    player = ResponsesAIPlayer(model_name="gpt-4.1-nano", include_calculator=True)
 
     print(f"\nSystem Prompt:\n{player.get_system_prompt(game)}\n")
 
@@ -78,17 +82,19 @@ def test_inverse_demand():
         price = player.make_decision(game)
         result = game.play_turn(price)
         prices.append(price)
-        total_profit += result['profit']
+        total_profit += result["profit"]
 
         if day <= 5 or day > 25:  # Show first 5 and last 5 days
-            print(f"Day {day}: Price=${price:.2f}, Customers={result['customers']}, Profit=${result['profit']:.2f}")
+            print(
+                f"Day {day}: Price=${price:.2f}, Customers={result['customers']}, Profit=${result['profit']:.2f}"
+            )
         elif day == 6:
             print("...")
 
     # Analysis
     print(f"\nTotal profit: ${total_profit:.2f}")
     print("Optimal daily profit at $1.00: $25.00")
-    print(f"Actual average daily profit: ${total_profit/30:.2f}")
+    print(f"Actual average daily profit: ${total_profit / 30:.2f}")
 
     # Check if model discovered optimal
     optimal_days = sum(1 for p in prices if abs(p - 1.00) < 0.01)

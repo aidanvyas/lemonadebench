@@ -36,9 +36,9 @@ lemonade_stand/
 
 ## Quick Start
 
-1. Install dependencies:
+1. Install dependencies using [uv](https://github.com/astral-sh/uv):
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 2. Set your OpenAI API key:
@@ -48,7 +48,7 @@ export OPENAI_API_KEY="your-key-here"
 
 3. Run the four main test conditions:
 ```bash
-python experiments/run_four_tests.py
+uv run python experiments/run_four_tests.py
 ```
 
 ## Test Conditions
