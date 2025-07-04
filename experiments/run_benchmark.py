@@ -3,14 +3,14 @@
 
 import argparse
 import json
+import logging
+import statistics
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import statistics
-from threading import Lock, Event
-import logging
+from threading import Lock
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -50,82 +50,82 @@ class InverseDemandGame(SimpleLemonadeGame):
 
 class AdaptiveRateLimiter:
     """Adaptive rate limiter that adjusts based on API responses."""
-    
+
     def __init__(self, initial_rpm=100, initial_tpm=150000):
         """Initialize with conservative defaults."""
         self.lock = Lock()
-        
+
         # Request rate limiting
         self.requests_per_minute = initial_rpm
         self.request_tokens = initial_rpm
         self.request_rate = initial_rpm / 60.0
         self.last_request_update = time.time()
-        
+
         # Token rate limiting
         self.tokens_per_minute = initial_tpm
         self.token_window = []  # List of (timestamp, token_count) tuples
         self.window_duration = 60  # 1 minute window
-        
+
         # Adaptive parameters
         self.consecutive_successes = 0
         self.consecutive_failures = 0
         self.last_rate_limit_time = 0
         self.rate_limit_events = []  # Track rate limit events
-        
+
         # Stats
         self.total_requests = 0
         self.successful_requests = 0
         self.rate_limit_errors = 0
-        
+
     def acquire(self, expected_tokens=2000):
         """Wait until we can safely make a request."""
         with self.lock:
             while True:
                 now = time.time()
-                
+
                 # Update request tokens
                 elapsed = now - self.last_request_update
-                self.request_tokens = min(self.requests_per_minute, 
+                self.request_tokens = min(self.requests_per_minute,
                                         self.request_tokens + elapsed * self.request_rate)
                 self.last_request_update = now
-                
+
                 # Clean old token entries
                 cutoff = now - self.window_duration
                 self.token_window = [(ts, tokens) for ts, tokens in self.token_window if ts > cutoff]
-                
+
                 # Calculate current token usage
                 current_token_usage = sum(tokens for _, tokens in self.token_window)
-                
+
                 # Check if we have capacity
-                if (self.request_tokens >= 1 and 
+                if (self.request_tokens >= 1 and
                     current_token_usage + expected_tokens < self.tokens_per_minute):
                     self.request_tokens -= 1
                     self.token_window.append((now, expected_tokens))
                     self.total_requests += 1
                     return
-                
+
                 # Calculate wait time
                 if self.request_tokens < 1:
                     request_wait = (1 - self.request_tokens) / self.request_rate
                 else:
                     request_wait = 0
-                
+
                 if current_token_usage + expected_tokens >= self.tokens_per_minute:
                     # Wait for some tokens to expire
                     token_wait = 0.5
                 else:
                     token_wait = 0
-                
+
                 wait_time = max(request_wait, token_wait, 0.1)
                 time.sleep(wait_time)
-    
+
     def report_success(self):
         """Report a successful request."""
         with self.lock:
             self.successful_requests += 1
             self.consecutive_successes += 1
             self.consecutive_failures = 0
-            
+
             # Gradually increase limits after consecutive successes
             if self.consecutive_successes >= 10 and time.time() - self.last_rate_limit_time > 60:
                 self.requests_per_minute = min(int(self.requests_per_minute * 1.1), 400)
@@ -133,7 +133,7 @@ class AdaptiveRateLimiter:
                 self.tokens_per_minute = min(int(self.tokens_per_minute * 1.1), 180000)
                 self.consecutive_successes = 0
                 logger.info(f"Increased limits: {self.requests_per_minute} RPM, {self.tokens_per_minute/1000:.0f}k TPM")
-    
+
     def report_rate_limit(self, error_msg):
         """Report a rate limit error and adjust limits."""
         with self.lock:
@@ -142,7 +142,7 @@ class AdaptiveRateLimiter:
             self.consecutive_successes = 0
             self.last_rate_limit_time = time.time()
             self.rate_limit_events.append((time.time(), error_msg))
-            
+
             # Reduce limits based on error type
             if "TPM" in error_msg or "tokens" in error_msg:
                 self.tokens_per_minute = int(self.tokens_per_minute * 0.7)
@@ -151,10 +151,10 @@ class AdaptiveRateLimiter:
                 self.requests_per_minute = int(self.requests_per_minute * 0.7)
                 self.request_rate = self.requests_per_minute / 60.0
                 logger.warning(f"Request limit hit, reducing to {self.requests_per_minute} RPM")
-            
+
             # Wait before continuing
             time.sleep(5.0)
-    
+
     def get_stats(self):
         """Get current rate limiter statistics."""
         with self.lock:
@@ -178,10 +178,10 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
                     inter_day_delay: float = 0.5) -> dict:
     """Run a single game instance."""
     logger.info(f"Starting: {test_name} - Run {run_number}")
-    
+
     # Create game instance
     game = game_class(days=days)
-    
+
     # Configure game
     game._use_suggested_price = use_suggested
     game._use_exploration_hint = use_exploration
@@ -202,30 +202,30 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
         # Add delay between days to smooth out API usage
         if day > 1 and inter_day_delay > 0:
             time.sleep(inter_day_delay)
-        
+
         try:
             # Estimate tokens for this request
             estimated_tokens = 3000 if day == 1 else 2000
-            
+
             # Acquire rate limit slot
             rate_limiter.acquire(estimated_tokens)
-            
+
             price = player.make_decision(game)
             result = game.play_turn(price)
             prices.append(price)
             profits.append(result['profit'])
-            
+
             # Report success
             rate_limiter.report_success()
-            
+
         except Exception as e:
             error_msg = str(e)
             errors.append({'day': day, 'error': error_msg[:200]})
-            
+
             # Handle rate limit errors
             if "rate_limit_exceeded" in error_msg:
                 rate_limiter.report_rate_limit(error_msg)
-                
+
                 # Retry once after rate limit adjustment
                 try:
                     rate_limiter.acquire(estimated_tokens)
@@ -248,7 +248,7 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
 
     # Calculate results
     total_profit = sum(profits)
-    unique_prices = sorted(set(p for p in prices if p > 0))
+    unique_prices = sorted({p for p in prices if p > 0})
     avg_price = sum(prices) / len(prices) if prices else 0
 
     # Find optimal for this game
@@ -297,7 +297,7 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
 def aggregate_runs(runs: list[dict]) -> dict:
     """Aggregate results from multiple runs of the same test."""
     test_name = runs[0]['test_name']
-    
+
     # Extract key metrics
     efficiencies = [r['efficiency'] for r in runs]
     total_profits = [r['total_profit'] for r in runs]
@@ -306,7 +306,7 @@ def aggregate_runs(runs: list[dict]) -> dict:
     durations = [r['duration_seconds'] for r in runs]
     total_tokens = sum(r['token_usage']['total_tokens'] for r in runs)
     total_errors = sum(len(r.get('errors', [])) for r in runs)
-    
+
     return {
         'test_name': test_name,
         'num_runs': len(runs),
@@ -343,7 +343,7 @@ def aggregate_runs(runs: list[dict]) -> dict:
 
 def main():
     """Run LemonadeBench with adaptive rate limiting.
-    
+
     Default of 5 runs per test is sufficient due to very low variability in results:
     - Standard deviation ~1% across runs
     - Clear failure mode (75% vs 100% efficiency)
@@ -356,7 +356,7 @@ def main():
     parser.add_argument('--model', type=str, default='gpt-4.1-nano', help='Model to use')
     parser.add_argument('--workers', type=int, default=3, help='Number of parallel workers')
     parser.add_argument('--delay', type=float, default=0.5, help='Delay between days in seconds')
-    parser.add_argument('--tests', nargs='+', default=['all'], 
+    parser.add_argument('--tests', nargs='+', default=['all'],
                        choices=['all', 'suggested', 'no-guidance', 'exploration', 'inverse'],
                        help='Which tests to run')
     args = parser.parse_args()
@@ -369,7 +369,7 @@ def main():
     logger.info(f"Inter-day delay: {args.delay}s")
     logger.info(f"Tests: {args.tests}")
     logger.info(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
+
     # Define test configurations
     all_test_configs = {
         'suggested': ("Suggested Price", SimpleLemonadeGame, True, False),
@@ -377,26 +377,26 @@ def main():
         'exploration': ("Exploration Hint", SimpleLemonadeGame, False, True),
         'inverse': ("Inverse Demand (100-50p)", InverseDemandGame, True, True),
     }
-    
+
     # Select tests to run
     if 'all' in args.tests:
         test_configs = list(all_test_configs.values())
     else:
         test_configs = [all_test_configs[test] for test in args.tests if test in all_test_configs]
-    
+
     # Calculate expected workload
     total_games = args.runs * len(test_configs)
     total_api_calls = total_games * args.days
     logger.info(f"Total games: {total_games}")
     logger.info(f"Total API calls: {total_api_calls:,}")
     logger.info("")
-    
+
     # Run all tests and runs in parallel
     all_results = []
     start_time = datetime.now()
     completed_count = 0
     total_count = args.runs * len(test_configs)
-    
+
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         # Submit all tasks
         futures = []
@@ -409,24 +409,24 @@ def main():
                     args.days, args.model, args.delay
                 )
                 futures.append((future, test_name, run_num))
-        
+
         # Collect results as they complete
         for future, test_name, run_num in futures:
             try:
                 result = future.result()
                 all_results.append(result)
                 completed_count += 1
-                
+
                 # Progress update every 5 completions
                 if completed_count % 5 == 0 or completed_count == total_count:
                     elapsed = (datetime.now() - start_time).total_seconds()
                     rate = completed_count / elapsed * 60 if elapsed > 0 else 0
                     eta = (total_count - completed_count) / rate * 60 if rate > 0 else 0
                     api_rate = completed_count * args.days / elapsed * 60  # API calls per minute
-                    
+
                     # Get rate limiter stats
                     rl_stats = rate_limiter.get_stats()
-                    
+
                     logger.info(f"\n[PROGRESS] {completed_count}/{total_count} games "
                                f"({completed_count/total_count*100:.0f}%)")
                     logger.info(f"  Game rate: {rate:.1f}/min")
@@ -436,15 +436,15 @@ def main():
                     logger.info(f"  Success rate: {rl_stats['success_rate']:.1%}")
                     if eta > 0:
                         logger.info(f"  ETA: {eta/60:.1f} minutes")
-                    
+
             except Exception as e:
                 logger.error(f"\n[FATAL ERROR] {test_name} - Run {run_num}:")
                 logger.error(f"  {str(e)}")
                 import traceback
                 traceback.print_exc()
-    
+
     total_duration = (datetime.now() - start_time).total_seconds()
-    
+
     # Group results by test
     grouped_results = {}
     for result in all_results:
@@ -452,7 +452,7 @@ def main():
         if test_name not in grouped_results:
             grouped_results[test_name] = []
         grouped_results[test_name].append(result)
-    
+
     # Aggregate results
     aggregated_results = []
     for test_name, _, _, _ in test_configs:
@@ -513,7 +513,7 @@ def main():
         }, f, indent=2)
 
     logger.info(f"\nResults saved to: {filename}")
-    
+
     # Print efficiency summary
     logger.info(f"\n{'='*70}")
     logger.info("EFFICIENCY SUMMARY (Key Finding)")
