@@ -1,5 +1,12 @@
 """Tests for the simplified price-only game."""
 
+from pathlib import Path
+import sys
+
+# Add the ``src`` directory to ``sys.path`` so the package can be imported
+# without installation.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
 from lemonade_stand.simple_game import SimpleLemonadeGame
 
 
