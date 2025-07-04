@@ -1,6 +1,12 @@
 """Tests for the simplified price-only game."""
 
-from lemonade_stand.simple_game import SimpleLemonadeGame
+import sys
+from pathlib import Path
+
+# Add repository root to path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from src.lemonade_stand.simple_game import SimpleLemonadeGame
 
 
 def test_game_initialization():
@@ -11,7 +17,10 @@ def test_game_initialization():
     assert game.current_day == 1
     assert game.cash == 100.0
     assert not game.game_over
-    assert game.suggested_starting_price == 1.00
+    assert game.demand_intercept == 100
+    assert game.demand_slope == 25
+    assert game.optimal_price == 2.00
+    assert game.suggested_starting_price is None
 
 
 def test_demand_calculation():
@@ -28,6 +37,21 @@ def test_demand_calculation():
     # Edge cases
     assert game.calculate_demand(0) == 100  # Max customers at $0
     assert game.calculate_demand(-1.00) == 0  # Negative price returns 0
+
+
+def test_custom_demand_parameters():
+    """Test game with custom demand parameters."""
+    # Test inverse demand: Q = 50 - 25p, optimal at $1
+    game = SimpleLemonadeGame(demand_intercept=50, demand_slope=25)
+    
+    assert game.demand_intercept == 50
+    assert game.demand_slope == 25
+    assert game.optimal_price == 1.00  # 50 / (2 * 25)
+    
+    # Test demand calculation
+    assert game.calculate_demand(0.50) == 37  # 50 - 25*0.5 = 37.5 -> 37
+    assert game.calculate_demand(1.00) == 25  # 50 - 25*1 (optimal)
+    assert game.calculate_demand(2.00) == 0   # 50 - 50 = 0
 
 
 def test_play_turn():

@@ -204,7 +204,7 @@ class ResponsesAIPlayer:
         )
 
         # Add prompt variations
-        if hasattr(game, '_use_suggested_price') and game._use_suggested_price:
+        if hasattr(game, '_use_suggested_price') and game._use_suggested_price and game.suggested_starting_price is not None:
             base_prompt += f"Suggested starting price: ${game.suggested_starting_price:.2f}\n\n"
         elif hasattr(game, '_use_exploration_hint') and game._use_exploration_hint:
             base_prompt += "Try different prices to discover which price maximizes your daily profit.\n\n"
@@ -397,10 +397,11 @@ class ResponsesAIPlayer:
                     f"Tools: {day_tools}"
                 )
 
-            # If price wasn't set, use suggested price as fallback
+            # If price wasn't set, use suggested price as fallback (or 1.00 if None)
             if not price_was_set:
-                logger.warning(f"Day {game.current_day}: set_price not called, using suggested price")
-                price = game.suggested_starting_price
+                fallback_price = game.suggested_starting_price if game.suggested_starting_price is not None else 1.00
+                logger.warning(f"Day {game.current_day}: set_price not called, using fallback price ${fallback_price}")
+                price = fallback_price
 
             return round(price, 2)
 
@@ -418,7 +419,8 @@ class ResponsesAIPlayer:
             })
             # Clear pending outputs on error
             self.pending_function_outputs = []
-            return game.suggested_starting_price
+            # Return suggested price or fallback to 1.00
+            return game.suggested_starting_price if game.suggested_starting_price is not None else 1.00
 
     def play_game(self, game: SimpleLemonadeGame) -> list[dict]:
         """Play a full game using the Responses API."""

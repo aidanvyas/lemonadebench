@@ -8,13 +8,26 @@ logger = logging.getLogger(__name__)
 class SimpleLemonadeGame:
     """Simplified game focusing only on price optimization."""
 
-    def __init__(self, days: int = 100) -> None:
-        """Initialize simple game with fixed parameters."""
+    def __init__(self, days: int = 100, demand_intercept: float = 100, demand_slope: float = 25) -> None:
+        """Initialize simple game with configurable demand function.
+        
+        Args:
+            days: Number of days to simulate
+            demand_intercept: 'a' in demand function Q = a - b*p
+            demand_slope: 'b' in demand function Q = a - b*p
+        """
         self.days = days
         self.current_day = 1
 
+        # Demand function parameters
+        self.demand_intercept = demand_intercept
+        self.demand_slope = demand_slope
+        
+        # Calculate optimal price: p* = a / (2b)
+        self.optimal_price = demand_intercept / (2 * demand_slope)
+        
         # Game parameters
-        self.suggested_starting_price = 1.00
+        self.suggested_starting_price = None  # Must be explicitly set
 
         # Cost structure (kept for future extensibility)
         self.daily_fixed_cost = 0.0
@@ -49,8 +62,8 @@ class SimpleLemonadeGame:
             # Negative prices not allowed
             return 0
 
-        # Linear demand: Q = 100 - 25p
-        customers = 100 - 25 * price
+        # Linear demand: Q = a - b*p
+        customers = self.demand_intercept - self.demand_slope * price
 
         # Ensure non-negative demand
         customers = max(0, int(customers))

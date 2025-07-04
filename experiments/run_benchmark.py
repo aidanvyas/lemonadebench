@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 
+import matplotlib.pyplot as plt
+
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -27,25 +29,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class InverseDemandGame(SimpleLemonadeGame):
-    """Lemonade game with Q = 100 - 50p (optimal at $1.00)."""
-
-    def __init__(self, days: int = 100):
-        super().__init__(days)
-        self.suggested_starting_price = 1.50  # Start above optimal
-
-    def calculate_demand(self, price: float) -> int:
-        """Calculate demand based on price.
-
-        Uses demand function: Q = 100 - 50p
-        This gives optimal price at $1.00 (50 customers, $50 revenue)
-        At $1.50: 25 customers, $37.50 revenue
-        """
-        if price < 0:
-            return 0
-        customers = 100 - 50 * price
-        customers = max(0, int(customers))
-        return customers
+def create_game(days: int = 100, demand_intercept: float = 100, demand_slope: float = 25, 
+                suggested_price: float = None) -> SimpleLemonadeGame:
+    """Create game instance with specified parameters.
+    
+    Args:
+        days: Number of days to simulate
+        demand_intercept: 'a' in demand function Q = a - b*p
+        demand_slope: 'b' in demand function Q = a - b*p
+        suggested_price: Suggested starting price (None for no suggestion)
+        
+    Returns:
+        Configured game instance
+    """
+    game = SimpleLemonadeGame(days=days, demand_intercept=demand_intercept, demand_slope=demand_slope)
+    game.suggested_starting_price = suggested_price
+    return game
 
 
 class AdaptiveRateLimiter:
@@ -173,14 +172,14 @@ class AdaptiveRateLimiter:
 rate_limiter = AdaptiveRateLimiter()
 
 
-def run_single_game(test_name: str, run_number: int, game_class, use_suggested: bool,
+def run_single_game(test_name: str, run_number: int, game_config: dict, use_suggested: bool,
                     use_exploration: bool, days: int = 30, model: str = "gpt-4.1-nano",
                     inter_day_delay: float = 0.5) -> dict:
     """Run a single game instance."""
     logger.info(f"Starting: {test_name} - Run {run_number}")
 
     # Create game instance
-    game = game_class(days=days)
+    game = create_game(days=days, **game_config)
 
     # Configure game
     game._use_suggested_price = use_suggested
@@ -254,13 +253,12 @@ def run_single_game(test_name: str, run_number: int, game_class, use_suggested: 
     unique_prices = sorted({p for p in prices if p > 0})
     avg_price = sum(prices) / len(prices) if prices else 0
 
-    # Find optimal for this game
-    if game_class == InverseDemandGame:
-        optimal_price = 1.00
-        optimal_profit = 50.00
-    else:
-        optimal_price = 2.00
-        optimal_profit = 100.00
+    # Calculate optimal values for this game based on demand function
+    # For Q = a - bp, optimal price = a/(2b), giving Q* = a/2
+    # Revenue = p* × Q* = (a/2b) × (a/2) = a²/(4b)
+    optimal_price = game.optimal_price
+    optimal_quantity = game.demand_intercept / 2
+    optimal_profit = (game.demand_intercept ** 2) / (4 * game.demand_slope)
 
     days_at_optimal = sum(1 for p in prices if abs(p - optimal_price) < 0.01)
 
@@ -363,16 +361,25 @@ def main():
     parser = argparse.ArgumentParser(description='Run LemonadeBench experiments')
     parser.add_argument('--runs', type=int, default=5, help='Number of runs per test (5 runs provides sufficient statistical power given low variability)')
     parser.add_argument('--days', type=int, default=30, help='Number of days per game')
-    parser.add_argument('--model', type=str, default='gpt-4.1-nano', help='Model to use')
+    parser.add_argument('--model', type=str, help='Single model to use (deprecated, use --models)')
+    parser.add_argument('--models', nargs='+', default=['gpt-4.1-nano'], help='Models to test (e.g., gpt-4.1-nano gpt-4.1-mini o4-mini)')
     parser.add_argument('--workers', type=int, default=3, help='Number of parallel workers')
     parser.add_argument('--delay', type=float, default=0.5, help='Delay between days in seconds')
     parser.add_argument('--tests', nargs='+', default=['all'],
                        choices=['all', 'suggested', 'no-guidance', 'exploration', 'inverse'],
                        help='Which tests to run')
+    parser.add_argument('--plots', action='store_true', help='Generate comparison plots after running experiments')
     args = parser.parse_args()
+    
+    # Handle backward compatibility: --model overrides --models
+    if args.model:
+        logger.warning("--model is deprecated, use --models instead")
+        models = [args.model]
+    else:
+        models = args.models
 
     logger.info("LEMONADEBENCH - Adaptive Rate Limiting")
-    logger.info(f"Model: {args.model}")
+    logger.info(f"Models: {', '.join(models)}")
     logger.info(f"Days: {args.days}")
     logger.info(f"Runs per test: {args.runs}")
     logger.info(f"Workers: {args.workers}")
@@ -381,11 +388,28 @@ def main():
     logger.info(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Define test configurations
+    # Each config: (name, game_params, use_suggested, use_exploration)
     all_test_configs = {
-        'suggested': ("Suggested Price", SimpleLemonadeGame, True, False),
-        'no-guidance': ("No Guidance", SimpleLemonadeGame, False, False),
-        'exploration': ("Exploration Hint", SimpleLemonadeGame, False, True),
-        'inverse': ("Inverse Demand (100-50p)", InverseDemandGame, True, True),
+        'suggested': (
+            "Suggested Price", 
+            {"demand_intercept": 100, "demand_slope": 25, "suggested_price": 1.00},
+            True, False
+        ),
+        'no-guidance': (
+            "No Guidance",
+            {"demand_intercept": 100, "demand_slope": 25, "suggested_price": None},
+            False, False
+        ),
+        'exploration': (
+            "Exploration Hint",
+            {"demand_intercept": 100, "demand_slope": 25, "suggested_price": None},
+            False, True
+        ),
+        'inverse': (
+            "Inverse Demand",
+            {"demand_intercept": 50, "demand_slope": 25, "suggested_price": 2.00},
+            True, True
+        ),
     }
 
     # Select tests to run
@@ -395,33 +419,38 @@ def main():
         test_configs = [all_test_configs[test] for test in args.tests if test in all_test_configs]
 
     # Calculate expected workload
-    total_games = args.runs * len(test_configs)
+    total_games = args.runs * len(test_configs) * len(models)
     total_api_calls = total_games * args.days
     logger.info(f"Total games: {total_games}")
     logger.info(f"Total API calls: {total_api_calls:,}")
     logger.info("")
 
+    # Initialize rate limiter
+    global rate_limiter
+    rate_limiter = AdaptiveRateLimiter()
+
     # Run all tests and runs in parallel
     all_results = []
     start_time = datetime.now()
     completed_count = 0
-    total_count = args.runs * len(test_configs)
+    total_count = args.runs * len(test_configs) * len(models)
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         # Submit all tasks
         futures = []
-        for test_name, game_class, use_suggested, use_exploration in test_configs:
-            for run_num in range(1, args.runs + 1):
-                future = executor.submit(
-                    run_single_game,
-                    test_name, run_num, game_class,
-                    use_suggested, use_exploration,
-                    args.days, args.model, args.delay
-                )
-                futures.append((future, test_name, run_num))
+        for model in models:
+            for test_name, game_config, use_suggested, use_exploration in test_configs:
+                for run_num in range(1, args.runs + 1):
+                    future = executor.submit(
+                        run_single_game,
+                        test_name, run_num, game_config,
+                        use_suggested, use_exploration,
+                        args.days, model, args.delay
+                    )
+                    futures.append((future, model, test_name, run_num))
 
         # Collect results as they complete
-        for future, test_name, run_num in futures:
+        for future, model, test_name, run_num in futures:
             try:
                 result = future.result()
                 all_results.append(result)
@@ -455,20 +484,25 @@ def main():
 
     total_duration = (datetime.now() - start_time).total_seconds()
 
-    # Group results by test
+    # Group results by model and test
     grouped_results = {}
     for result in all_results:
+        model = result['model']
         test_name = result['test_name']
-        if test_name not in grouped_results:
-            grouped_results[test_name] = []
-        grouped_results[test_name].append(result)
+        key = (model, test_name)
+        if key not in grouped_results:
+            grouped_results[key] = []
+        grouped_results[key].append(result)
 
     # Aggregate results
     aggregated_results = []
-    for test_name, _, _, _ in test_configs:
-        if test_name in grouped_results:
-            aggregated = aggregate_runs(grouped_results[test_name])
-            aggregated_results.append(aggregated)
+    for model in models:
+        for test_name, _, _, _ in test_configs:
+            key = (model, test_name)
+            if key in grouped_results:
+                aggregated = aggregate_runs(grouped_results[key])
+                aggregated['model'] = model
+                aggregated_results.append(aggregated)
 
     # Summary
     logger.info(f"\n{'='*70}")
@@ -476,7 +510,13 @@ def main():
     logger.info(f"{'='*70}\n")
 
     total_tokens = 0
+    current_model = None
     for r in aggregated_results:
+        # Add model header when switching models
+        if r['model'] != current_model:
+            current_model = r['model']
+            logger.info(f"\n--- {current_model} ---")
+        
         logger.info(f"{r['test_name']} ({r['num_runs']} runs):")
         logger.info(f"  Efficiency: {r['efficiency']['mean']:.1%} ± {r['efficiency']['std']:.1%}")
         logger.info(f"    Range: {r['efficiency']['min']:.1%} - {r['efficiency']['max']:.1%}")
@@ -492,7 +532,8 @@ def main():
     rl_stats = rate_limiter.get_stats()
     logger.info(f"Total games completed: {completed_count}/{total_count}")
     logger.info(f"Total tokens used: {total_tokens:,}")
-    logger.info(f"Estimated cost ({args.model}): ${total_tokens * 0.15 / 1_000_000:.2f}")
+    # Note: This is rough estimate - actual costs vary by model
+    logger.info(f"Estimated cost (assuming nano pricing): ${total_tokens * 0.15 / 1_000_000:.2f}")
     logger.info(f"Total duration: {total_duration/60:.1f} minutes")
     logger.info(f"Average API rate: {total_api_calls / (total_duration/60):.0f}/min")
     logger.info(f"Rate limit errors: {rl_stats['rate_limit_errors']}")
@@ -501,13 +542,14 @@ def main():
     # Save results with descriptive filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     test_names = "-".join(args.tests) if 'all' not in args.tests else "all"
-    filename = f"results/{args.model}_{test_names}_{args.runs}runs_{args.days}days_{args.workers}workers_{timestamp}.json"
+    model_names = "-".join(models) if len(models) > 1 else models[0]
+    filename = f"results/{model_names}_{test_names}_{args.runs}runs_{args.days}days_{args.workers}workers_{timestamp}.json"
     Path("results").mkdir(exist_ok=True)
 
     with open(filename, 'w') as f:
         json.dump({
             'timestamp': datetime.now().isoformat(),
-            'model': args.model,
+            'models': models,
             'days': args.days,
             'runs_per_test': args.runs,
             'workers': args.workers,
@@ -529,7 +571,118 @@ def main():
     logger.info("EFFICIENCY SUMMARY (Key Finding)")
     logger.info(f"{'='*70}")
     for r in aggregated_results:
-        logger.info(f"{r['test_name']:25} {r['efficiency']['mean']:6.1%}")
+        model_label = f"{r['model']}/" if len(models) > 1 else ""
+        logger.info(f"{model_label}{r['test_name']:25} {r['efficiency']['mean']:6.1%}")
+    
+    # Generate plots if requested
+    if args.plots and all_results:
+        logger.info("\nGenerating comparison plots...")
+        generate_plots(all_results, models, test_configs, filename)
+
+
+def generate_plots(all_results, models, test_configs, results_filename):
+    """Generate comparison plots for multiple models."""
+    # Create figure with subplots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    fig.suptitle(f"LemonadeBench Results - {', '.join(models)}", fontsize=16)
+    
+    # Prepare data structure
+    model_conditions = {}
+    for result in all_results:
+        model = result['model']
+        condition = result['test_name']
+        if model not in model_conditions:
+            model_conditions[model] = {}
+        if condition not in model_conditions[model]:
+            model_conditions[model][condition] = []
+        model_conditions[model][condition].append(result['total_profit'])
+    
+    # Plot 1: Average profit by model and condition
+    ax1 = axes[0, 0]
+    conditions = [tc[0] for tc in test_configs]
+    x = range(len(models))
+    width = 0.8 / len(conditions)
+    
+    for i, condition in enumerate(conditions):
+        profits = []
+        for model in models:
+            if model in model_conditions and condition in model_conditions[model]:
+                avg_profit = sum(model_conditions[model][condition]) / len(model_conditions[model][condition])
+                profits.append(avg_profit)
+            else:
+                profits.append(0)
+        ax1.bar([xi + i*width for xi in x], profits, width, label=condition)
+    
+    ax1.set_title("Average Profit by Model and Condition")
+    ax1.set_xlabel("Model")
+    ax1.set_ylabel("Average Profit ($)")
+    ax1.set_xticks([xi + width*len(conditions)/2 for xi in x])
+    ax1.set_xticklabels(models, rotation=45 if len(models) > 3 else 0)
+    ax1.legend()
+    ax1.grid(True, alpha=0.3, axis='y')
+    
+    # Plot 2: Price evolution for suggested condition
+    ax2 = axes[0, 1]
+    for result in all_results:
+        if result['test_name'] == "Suggested Price" and result['run'] == 1:
+            prices = result['prices']
+            days = list(range(1, len(prices) + 1))
+            ax2.plot(days, prices, label=result['model'], alpha=0.7)
+    
+    ax2.axhline(y=2.0, color='red', linestyle='--', alpha=0.5, label='Optimal ($2.00)')
+    ax2.set_title("Price Evolution - Suggested Price Condition")
+    ax2.set_xlabel("Day")
+    ax2.set_ylabel("Price ($)")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    # Plot 3: Token usage by model
+    ax3 = axes[1, 0]
+    model_tokens = {}
+    for result in all_results:
+        model = result['model']
+        if model not in model_tokens:
+            model_tokens[model] = []
+        if 'token_usage' in result:
+            model_tokens[model].append(result['token_usage'].get('total_tokens', 0))
+    
+    avg_tokens = [sum(model_tokens[m])/len(model_tokens[m]) if m in model_tokens else 0 for m in models]
+    ax3.bar(models, avg_tokens)
+    ax3.set_title("Average Token Usage per Game")
+    ax3.set_xlabel("Model")
+    ax3.set_ylabel("Tokens")
+    ax3.set_xticklabels(models, rotation=45 if len(models) > 3 else 0)
+    ax3.grid(True, alpha=0.3, axis='y')
+    
+    # Plot 4: Profit distribution
+    ax4 = axes[1, 1]
+    profit_data = []
+    labels = []
+    for model in models:
+        if model in model_conditions:
+            for condition in model_conditions[model]:
+                if model_conditions[model][condition]:
+                    profit_data.append(model_conditions[model][condition])
+                    label = f"{model[:10]}/{condition[:10]}" if len(models) > 1 else condition
+                    labels.append(label)
+    
+    if profit_data:
+        ax4.boxplot(profit_data, labels=labels)
+        ax4.set_title("Profit Distribution")
+        ax4.set_xlabel("Model/Condition")
+        ax4.set_ylabel("Total Profit ($)")
+        ax4.set_xticklabels(labels, rotation=45, ha='right')
+        ax4.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    
+    # Save plot
+    plot_dir = Path("plots")
+    plot_dir.mkdir(exist_ok=True)
+    plot_filename = plot_dir / f"{Path(results_filename).stem}_plots.png"
+    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
+    logger.info(f"Plots saved to: {plot_filename}")
+    plt.close()
 
 
 if __name__ == "__main__":
