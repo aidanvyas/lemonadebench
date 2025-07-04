@@ -75,7 +75,7 @@ def main():
     print(f"  ${recent_cost:.6f}")
 
     # Compare with our tracked estimates
-    print("\nNote: Compare with cost estimates from run_four_tests.py")
+    print("\nNote: Compare with cost estimates from run_benchmark.py")
     print("to verify our token-based calculations are accurate.")
 
 
