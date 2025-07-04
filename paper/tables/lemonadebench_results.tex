@@ -1,0 +1,68 @@
+% LEMONADEBENCH DETAILED RESULTS
+% Model: gpt-4.1-nano
+% Games per condition: 30
+% Days per game: 30
+
+% Table 1: Suggested Price
+\begin{table}[h]
+\centering
+\small
+\caption{Suggested Price}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\multirow{2}{*}{Model} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Default\\Profit\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Optimal\\Profit\end{tabular}} & \multicolumn{4}{c|}{Profit} & \multicolumn{3}{c|}{Tool Calls} & \multicolumn{3}{c|}{Tokens} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Cost\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Time\end{tabular}} \\
+\cline{4-13}
+& & & Mean & Std & Min & Max & set\_price & calculate & get\_history & Input & Reason & Output & & \\
+\hline
+gpt-4.1-nano & \$2,250 & \$3,000 & \$2,223 & \$97 & \$1,780 & \$2,303 & 11.2 & 10.5 & 10.2 & 56.3k & 0 & 968 & \$0.0060 & 78.4s \\
+\hline
+\end{tabular}
+\end{table}
+
+% Table 2: No Guidance
+\begin{table}[h]
+\centering
+\small
+\caption{No Guidance}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\multirow{2}{*}{Model} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Default\\Profit\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Optimal\\Profit\end{tabular}} & \multicolumn{4}{c|}{Profit} & \multicolumn{3}{c|}{Tool Calls} & \multicolumn{3}{c|}{Tokens} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Cost\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Time\end{tabular}} \\
+\cline{4-13}
+& & & Mean & Std & Min & Max & set\_price & calculate & get\_history & Input & Reason & Output & & \\
+\hline
+gpt-4.1-nano & N/A & \$3,000 & \$2,214 & \$103 & \$2,025 & \$2,555 & 13.3 & 3.9 & 14.7 & 65.4k & 0 & 797 & \$0.0069 & 74.7s \\
+\hline
+\end{tabular}
+\end{table}
+
+% Table 3: Exploration Hint
+\begin{table}[h]
+\centering
+\small
+\caption{Exploration Hint}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\multirow{2}{*}{Model} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Default\\Profit\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Optimal\\Profit\end{tabular}} & \multicolumn{4}{c|}{Profit} & \multicolumn{3}{c|}{Tool Calls} & \multicolumn{3}{c|}{Tokens} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Cost\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Time\end{tabular}} \\
+\cline{4-13}
+& & & Mean & Std & Min & Max & set\_price & calculate & get\_history & Input & Reason & Output & & \\
+\hline
+gpt-4.1-nano & N/A & \$3,000 & \$2,272 & \$60 & \$2,175 & \$2,499 & 12.7 & 12.1 & 6.7 & 49.0k & 0 & 800 & \$0.0052 & 159.5s \\
+\hline
+\end{tabular}
+\end{table}
+
+% Table 4: Inverse Demand (100-50p)
+\begin{table}[h]
+\centering
+\small
+\caption{Inverse Demand (100-50p)}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\multirow{2}{*}{Model} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Default\\Profit\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Optimal\\Profit\end{tabular}} & \multicolumn{4}{c|}{Profit} & \multicolumn{3}{c|}{Tool Calls} & \multicolumn{3}{c|}{Tokens} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Cost\end{tabular}} & \multirow{2}{*}{\begin{tabular}[c]{@{}c@{}}Avg\\Time\end{tabular}} \\
+\cline{4-13}
+& & & Mean & Std & Min & Max & set\_price & calculate & get\_history & Input & Reason & Output & & \\
+\hline
+gpt-4.1-nano & \$1,125 & \$1,500 & \$1,120 & \$15 & \$1,050 & \$1,125 & 13.1 & 9.8 & 9.8 & 56.6k & 0 & 878 & \$0.0060 & 455.3s \\
+\hline
+\end{tabular}
+\end{table}

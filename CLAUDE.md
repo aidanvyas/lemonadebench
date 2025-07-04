@@ -56,15 +56,20 @@ lemonade_stand/
 # Setup
 uv sync
 
-# Run main benchmark
-uv run python experiments/run_four_tests.py
+# Run main benchmark (5 runs per condition, ~30 min, ~$0.17)
+uv run python experiments/run_benchmark.py
+
+# Run with more statistical power (30 runs, ~3 hours, ~$1)
+uv run python experiments/run_benchmark.py --runs 30
 
 # Run tests and linting
 uv run pytest
 uv run ruff check
 uv run ruff format
 
-# Generate analysis
+# Analyze results
+uv run python analysis/analyze_results.py --latest
+uv run python analysis/analyze_results.py --latest --format latex
 uv run python analysis/generate_plots.py results/latest.json
 ```
 
