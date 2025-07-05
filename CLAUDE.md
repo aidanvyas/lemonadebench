@@ -70,7 +70,7 @@ uv run ruff format
 # Analyze results
 uv run python analysis/analyze_results.py --latest                # Text summary
 uv run python analysis/analyze_results.py --latest --format latex  # LaTeX tables
-uv run python analysis/generate_plots.py results/latest.json       # Visualizations
+uv run python analysis/analyze_results.py --latest --plots         # Generate visualizations
 ```
 
 ## Research Focus

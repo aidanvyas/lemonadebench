@@ -63,8 +63,7 @@ lemonade_stand/
 │   ├── run_benchmark.py       # Main benchmark (adaptive rate limiting)
 │   └── compare_models.py      # Multi-model comparison
 ├── analysis/                  # Results analysis
-│   ├── analyze_results.py     # Generate tables (text/LaTeX/detailed)
-│   └── generate_plots.py      # Visualization
+│   └── analyze_results.py     # Statistical analysis, tables, and visualization
 ├── paper/                     # LaTeX paper and tables
 └── results/paper/            # Publication-ready results
 ```
@@ -73,9 +72,9 @@ lemonade_stand/
 
 View results:
 ```bash
-uv run python analysis/analyze_results.py --latest               # Text summary
-uv run python analysis/analyze_results.py --latest --format latex # LaTeX tables
-uv run python analysis/generate_plots.py results/latest.json      # Visualizations
+uv run python analysis/analyze_results.py --latest                # Text summary
+uv run python analysis/analyze_results.py --latest --format latex  # LaTeX tables
+uv run python analysis/analyze_results.py --latest --plots         # Generate visualizations
 ```
 
 ## Technical Details

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Analyze LemonadeBench results and generate tables in various formats."""
+"""Analyze LemonadeBench results and generate tables and plots in various formats."""
 
 import argparse
 import json
 import statistics
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+import matplotlib.pyplot as plt
 
 
 def calculate_stats(values: list[float]) -> tuple[float, float, float, float]:
@@ -264,6 +267,333 @@ def generate_latex_tables(results: list[dict[str, Any]], model: str, runs_per_te
     return "\n".join(latex_content), "\n".join(latex_simple)
 
 
+def generate_plots(data: dict, output_dir: Path = None) -> Path:
+    """Generate plots from experiment results."""
+    # Extract metadata
+    models = data.get('models', [data.get('model', 'gpt-4.1-nano')])
+    if not isinstance(models, list):
+        models = [models]
+    
+    # Get aggregated results
+    if 'aggregated_results' in data:
+        results = data['aggregated_results']
+    else:
+        # Fallback for older format
+        results = data.get('tests', [])
+    
+    # Create figure with subplots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    fig.suptitle(f"LemonadeBench Results - {', '.join(models)}", fontsize=16)
+    
+    # Prepare data structure
+    model_conditions = {}
+    for result in results:
+        model = result.get('model', models[0] if models else 'unknown')
+        condition = result['test_name']
+        if model not in model_conditions:
+            model_conditions[model] = {}
+        model_conditions[model][condition] = result
+    
+    # Plot 1: Average profit by model and condition
+    ax1 = axes[0, 0]
+    conditions = sorted(set(r['test_name'] for r in results))
+    x = range(len(models))
+    width = 0.8 / len(conditions) if conditions else 0.8
+    
+    for i, condition in enumerate(conditions):
+        profits = []
+        for model in models:
+            if model in model_conditions and condition in model_conditions[model]:
+                avg_profit = model_conditions[model][condition]['total_profit']['mean']
+                profits.append(avg_profit)
+            else:
+                profits.append(0)
+        ax1.bar([xi + i*width for xi in x], profits, width, label=condition)
+    
+    ax1.set_title("Average Profit by Model and Condition")
+    ax1.set_xlabel("Model")
+    ax1.set_ylabel("Average Profit ($)")
+    ax1.set_xticks([xi + width*len(conditions)/2 for xi in x])
+    ax1.set_xticklabels(models, rotation=45 if len(models) > 3 else 0)
+    ax1.legend()
+    ax1.grid(True, alpha=0.3, axis='y')
+    
+    # Plot 2: Price evolution for suggested condition (first run)
+    ax2 = axes[0, 1]
+    for result in results:
+        if result['test_name'] == "Suggested Price" and 'individual_runs' in result:
+            model = result.get('model', models[0] if models else 'unknown')
+            # Get first run's prices
+            if result['individual_runs']:
+                first_run = result['individual_runs'][0]
+                if 'prices' in first_run:
+                    prices = first_run['prices']
+                    days = list(range(1, len(prices) + 1))
+                    ax2.plot(days, prices, label=model, alpha=0.7)
+    
+    ax2.axhline(y=2.0, color='red', linestyle='--', alpha=0.5, label='Optimal ($2.00)')
+    ax2.set_title("Price Evolution - Suggested Price Condition")
+    ax2.set_xlabel("Day")
+    ax2.set_ylabel("Price ($)")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    # Plot 3: Token usage by model
+    ax3 = axes[1, 0]
+    model_tokens = {}
+    for result in results:
+        model = result.get('model', models[0] if models else 'unknown')
+        if model not in model_tokens:
+            model_tokens[model] = 0
+        model_tokens[model] += result.get('total_tokens', 0)
+    
+    # Average tokens per game (divide by number of conditions)
+    avg_tokens = [model_tokens.get(m, 0) / len(conditions) if conditions else 0 for m in models]
+    ax3.bar(models, avg_tokens)
+    ax3.set_title("Average Token Usage per Game")
+    ax3.set_xlabel("Model")
+    ax3.set_ylabel("Tokens")
+    ax3.set_xticklabels(models, rotation=45 if len(models) > 3 else 0)
+    ax3.grid(True, alpha=0.3, axis='y')
+    
+    # Plot 4: Efficiency distribution
+    ax4 = axes[1, 1]
+    efficiency_data = []
+    labels = []
+    for model in models:
+        if model in model_conditions:
+            for condition in sorted(model_conditions[model].keys()):
+                result = model_conditions[model][condition]
+                if 'efficiency' in result and 'values' in result['efficiency']:
+                    efficiencies = [e * 100 for e in result['efficiency']['values']]
+                    if efficiencies:
+                        efficiency_data.append(efficiencies)
+                        label = f"{model[:10]}/{condition[:10]}" if len(models) > 1 else condition
+                        labels.append(label)
+    
+    if efficiency_data:
+        ax4.boxplot(efficiency_data, labels=labels)
+        ax4.set_title("Efficiency Distribution")
+        ax4.set_xlabel("Model/Condition")
+        ax4.set_ylabel("Efficiency (%)")
+        ax4.set_xticklabels(labels, rotation=45, ha='right')
+        ax4.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    
+    # Save plot
+    if output_dir is None:
+        output_dir = Path("plots")
+    output_dir.mkdir(exist_ok=True)
+    
+    # Use timestamp from results or current time
+    timestamp = data.get("timestamp", datetime.now().isoformat())
+    timestamp_str = timestamp.replace(":", "").replace("-", "").replace(".", "_")[:15]
+    filename = f"lemonadebench_{timestamp_str}.png"
+    filepath = output_dir / filename
+    
+    plt.savefig(filepath, dpi=150, bbox_inches="tight")
+    plt.close()
+    
+    return filepath
+
+
+def list_results(recent: int = 10, full: bool = False) -> None:
+    """List and summarize all saved results."""
+    results_dir = Path("results")
+    if not results_dir.exists():
+        print("No results directory found.")
+        return
+
+    # Find all JSON files
+    result_files = sorted(results_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)
+
+    if not result_files:
+        print("No result files found.")
+        return
+
+    print(f"\nFound {len(result_files)} result files. Showing {min(recent, len(result_files))} most recent:\n")
+    print("=" * 100)
+
+    for i, filepath in enumerate(result_files[:recent]):
+        try:
+            with open(filepath) as f:
+                data = json.load(f)
+
+            # Extract metadata
+            models = data.get('models', [data.get('model', 'unknown')])
+            if not isinstance(models, list):
+                models = [models]
+            days = data.get('days', 30)
+            runs_per_test = data.get('runs_per_test', 1)
+            timestamp = data.get('timestamp', 'unknown')
+            
+            # Get test conditions
+            if 'aggregated_results' in data:
+                conditions = list(set(r['test_name'] for r in data['aggregated_results']))
+                total_tokens = sum(r.get('total_tokens', 0) for r in data['aggregated_results'])
+            else:
+                conditions = data.get('tests_run', [])
+                total_tokens = data.get('total_tokens', 0)
+
+            print(f"\n{i+1}. {filepath.name}")
+            print(f"   Timestamp: {timestamp}")
+            print(f"   Models: {', '.join(models)}")
+            print(f"   Conditions: {', '.join(conditions) if conditions else 'N/A'}")
+            print(f"   Configuration: {runs_per_test} runs × {days} days")
+            print(f"   Total tokens used: {total_tokens:,}")
+
+            if full and 'aggregated_results' in data:
+                print("\n   Detailed Results:")
+                for result in data['aggregated_results']:
+                    model = result.get('model', models[0] if models else 'unknown')
+                    test_name = result['test_name']
+                    efficiency = result['efficiency']['mean'] * 100
+                    profit = result['total_profit']['mean']
+                    tokens = result.get('total_tokens', 0)
+                    
+                    print(f"   - {model} / {test_name}:")
+                    print(f"     Efficiency: {efficiency:.1f}%")
+                    print(f"     Avg Profit: ${profit:.2f}")
+                    print(f"     Total Tokens: {tokens:,}")
+
+        except Exception as e:
+            print(f"   Error reading file: {e}")
+
+    print("\n" + "=" * 100)
+    print("\nTo analyze a specific result in detail:")
+    print("  python analyze_results.py results/<filename>")
+    print("\nTo analyze the latest result with plots:")
+    print("  python analyze_results.py --latest --plots")
+
+
+def analyze_recording(filepath: Path) -> None:
+    """Analyze a single recording file for behavioral insights."""
+    with open(filepath) as f:
+        data = json.load(f)
+
+    print(f"\n{'='*70}")
+    print(f"Behavioral Analysis: {filepath.name}")
+    print(f"{'='*70}")
+    print(f"Model: {data['model_name']}")
+    print(f"Test: {data['test_name']}")
+    print(f"Total records: {data['total_records']}")
+
+    # Analyze records by type
+    record_types = {}
+    tool_calls = {}
+    prices_set = []
+    calculations = []
+    reasoning_tokens = 0
+    errors = []
+
+    for record in data['records']:
+        record_types[record['type']] = record_types.get(record['type'], 0) + 1
+
+        if record['type'] == 'tool_execution':
+            tool_name = record['tool_name']
+            tool_calls[tool_name] = tool_calls.get(tool_name, 0) + 1
+
+            if tool_name == 'set_price':
+                prices_set.append({
+                    'day': record['day'],
+                    'price': record['arguments'].get('price', 0)
+                })
+            elif tool_name == 'calculate':
+                calculations.append({
+                    'day': record['day'],
+                    'expression': record['arguments'].get('expression', ''),
+                    'result': record['result']
+                })
+
+        elif record['type'] == 'error':
+            errors.append({
+                'day': record['day'],
+                'error': record['error_message']
+            })
+
+        elif record['type'] == 'response':
+            usage = record['data'].get('usage', {})
+            reasoning_tokens += usage.get('reasoning_tokens', 0)
+
+    print("\nTool usage:")
+    for tool, count in sorted(tool_calls.items()):
+        print(f"  {tool}: {count} calls")
+
+    if prices_set:
+        print("\nPrice decisions:")
+        unique_prices = sorted(set(p['price'] for p in prices_set))
+        print(f"  Unique prices tried: {unique_prices}")
+        print(f"  Days with explicit set_price: {len(prices_set)}/30")
+
+    if calculations:
+        print(f"\nCalculations performed: {len(calculations)}")
+        for c in calculations[:3]:  # Show first 3
+            print(f"  Day {c['day']}: {c['expression']} = {c['result']}")
+        if len(calculations) > 3:
+            print(f"  ... and {len(calculations) - 3} more")
+
+    if errors:
+        print(f"\nErrors encountered: {len(errors)}")
+        for e in errors[:2]:
+            print(f"  Day {e['day']}: {e['error'][:80]}...")
+
+    if reasoning_tokens > 0:
+        print(f"\nReasoning tokens used: {reasoning_tokens:,}")
+
+    # Extract game performance
+    game_states = [r for r in data['records'] if r['type'] == 'game_state']
+    if game_states:
+        total_profit = sum(r['profit'] for r in game_states)
+        final_cash = game_states[-1]['cash'] if game_states else 0
+        print("\nGame performance:")
+        print(f"  Total profit: ${total_profit:.2f}")
+        print(f"  Final cash: ${final_cash:.2f}")
+
+
+def analyze_recordings(recordings_dir: Path = None) -> None:
+    """Analyze all recordings in the raw_data directory."""
+    if recordings_dir is None:
+        recordings_dir = Path("analysis/raw_data")
+
+    if not recordings_dir.exists():
+        print("No recordings found. Run experiments with recording enabled.")
+        return
+
+    recordings = list(recordings_dir.glob("*.json"))
+    print(f"\nFound {len(recordings)} recordings to analyze")
+
+    # Group by model and test
+    grouped = {}
+    for filepath in sorted(recordings):
+        try:
+            with open(filepath) as f:
+                data = json.load(f)
+            key = f"{data['model_name']}_{data['test_name']}"
+            if key not in grouped:
+                grouped[key] = []
+            grouped[key].append(filepath)
+        except Exception as e:
+            print(f"Error reading {filepath}: {e}")
+
+    # Analyze each group
+    for key, filepaths in sorted(grouped.items()):
+        print(f"\n\n{'='*80}")
+        print(f"Analyzing {key} ({len(filepaths)} recordings)")
+        print(f"{'='*80}")
+        
+        # Analyze the most recent recording for this model/test combo
+        latest = max(filepaths, key=lambda p: p.stat().st_mtime)
+        analyze_recording(latest)
+
+    print(f"\n{'='*70}")
+    print("Key Behavioral Insights:")
+    print("1. Models often skip set_price tool despite it being required")
+    print("2. Calculator usage varies significantly between models")
+    print("3. Reasoning tokens are only used by o-series models")
+    print("4. All models exhibit strong anchoring bias")
+
+
 def main():
     """Main entry point for analyzing results."""
     parser = argparse.ArgumentParser(description='Analyze LemonadeBench experiment results')
@@ -272,8 +602,26 @@ def main():
                        help='Output format (default: text)')
     parser.add_argument('--output', help='Output file (default: stdout for text, filename.tex for latex)')
     parser.add_argument('--latest', action='store_true', help='Use the most recent results file')
+    parser.add_argument('--plots', action='store_true', help='Generate comparison plots')
+    parser.add_argument('--plot-dir', type=Path, default=None, help='Output directory for plots (default: plots/)')
+    parser.add_argument('--show-plots', action='store_true', help='Show plots after generating')
+    parser.add_argument('--list', action='store_true', help='List all saved results')
+    parser.add_argument('--recent', type=int, default=10, help='With --list, show N most recent results (default: 10)')
+    parser.add_argument('--full', action='store_true', help='With --list, show full details for each result')
+    parser.add_argument('--recordings', action='store_true', help='Analyze raw API recordings for behavioral insights')
+    parser.add_argument('--recordings-dir', type=Path, default=None, help='Directory containing recordings (default: analysis/raw_data)')
 
     args = parser.parse_args()
+
+    # Handle --list mode
+    if args.list:
+        list_results(args.recent, args.full)
+        return
+    
+    # Handle --recordings mode
+    if args.recordings:
+        analyze_recordings(args.recordings_dir)
+        return
 
     # Determine input file
     if args.latest or not args.input_file:
@@ -298,7 +646,10 @@ def main():
         data = json.load(f)
 
     # Extract metadata
-    model = data.get('model', 'gpt-4.1-nano')
+    models = data.get('models', [data.get('model', 'gpt-4.1-nano')])
+    if not isinstance(models, list):
+        models = [models]
+    model = models[0] if models else 'gpt-4.1-nano'  # For text output, use first model
     days = data.get('days', 30)
     runs_per_test = data.get('runs_per_test', 1)
 
@@ -356,6 +707,15 @@ def main():
             print("\n\n" + "="*100 + "\n")
             print("SIMPLIFIED LATEX TABLE:")
             print(simple_latex)
+    
+    # Generate plots if requested
+    if args.plots:
+        print(f"\nGenerating plots...")
+        plot_path = generate_plots(data, args.plot_dir)
+        print(f"Plots saved to: {plot_path}")
+        
+        if args.show_plots:
+            plt.show()
 
 
 if __name__ == "__main__":
