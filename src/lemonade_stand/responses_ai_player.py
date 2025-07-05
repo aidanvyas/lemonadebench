@@ -90,16 +90,11 @@ class ResponsesAIPlayer:
             {
                 "type": "function",
                 "name": "get_historical_data",
-                "description": "Get historical pricing and profit data for past days",
+                "description": "Get all historical pricing and profit data",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "days": {
-                            "type": "integer",
-                            "description": "Number of past days to retrieve (0 for all history)",
-                        }
-                    },
-                    "required": ["days"],
+                    "properties": {},
+                    "required": [],
                     "additionalProperties": False,
                 },
                 "strict": True,
@@ -153,11 +148,7 @@ class ResponsesAIPlayer:
     ) -> str:
         """Execute a tool call and return the result."""
         if tool_name == "get_historical_data":
-            days = arguments.get("days", 0)
             history = game.history
-
-            if days > 0 and len(history) > days:
-                history = history[-days:]
 
             if not history:
                 return "No historical data available yet."
@@ -193,7 +184,7 @@ class ResponsesAIPlayer:
     def get_system_prompt(self, game: SimpleLemonadeGame) -> str:
         """Get system prompt for the game."""
         tools_list = [
-            "- get_historical_data(days): Review past pricing and profit data",
+            "- get_historical_data(): Review all past pricing and profit data",
             "- set_price(price): Set today's lemonade price",
             "- calculate(expression): Perform arithmetic calculations",
         ]
@@ -201,10 +192,9 @@ class ResponsesAIPlayer:
         tools_text = "\n".join(tools_list)
 
         base_prompt = (
-            "You run a lemonade stand. Your goal is to maximize total profit over 100 days.\n\n"
+            f"You run a lemonade stand. Your goal is to maximize total profit over {game.days} days.\n\n"
             f"Available tools:\n{tools_text}\n\n"
-            "Each morning, you should set the price for lemonade using the set_price tool.\n"
-            "If you don't set a price, it will default to yesterday's price.\n\n"
+            "Each morning, you should set the price for lemonade using the set_price tool.\n\n"
         )
 
         # Add prompt variations
@@ -485,7 +475,6 @@ class ResponsesAIPlayer:
                     result["price"],
                     result["customers"],
                     result["profit"],
-                    result["cash"],
                 )
 
             # Get tools used for this day

@@ -15,7 +15,6 @@ def test_game_initialization():
 
     assert game.days == 50
     assert game.current_day == 1
-    assert game.cash == 100.0
     assert not game.game_over
     assert game.demand_intercept == 100
     assert game.demand_slope == 25
@@ -65,10 +64,7 @@ def test_play_turn():
     assert result["customers"] == 75  # 100 - 25*1
     assert result["revenue"] == 75.0  # 75 * $1
     assert result["costs"] == 0.0  # No costs
-    # Profit should be 75 ± 10%
-    assert 67.5 <= result["profit"] <= 82.5
-    # Cash should be $100 start + profit
-    assert 167.5 <= result["cash"] <= 182.5
+    assert result["profit"] == 75.0  # No randomness, profit = revenue
     assert game.current_day == 2
 
 
@@ -78,24 +74,24 @@ def test_profit_calculation():
 
     # At suggested price
     result = game.play_turn(price=1.00)
-    # 75 customers * $1 = $75 base profit
+    # 75 customers * $1 = $75 profit
     assert result["customers"] == 75  # 100 - 25*1
-    assert 67.5 <= result["profit"] <= 82.5  # $75 ± 10%
+    assert result["profit"] == 75.0  # No randomness
 
     # Reset game
     game = SimpleLemonadeGame()
 
     # At optimal price
     result = game.play_turn(price=2.00)
-    # 50 customers * $2.00 = $100 base profit
+    # 50 customers * $2.00 = $100 profit
     assert result["customers"] == 50  # 100 - 25*2
-    assert 90.0 <= result["profit"] <= 110.0  # $100 ± 10%
+    assert result["profit"] == 100.0  # No randomness
 
     # High price - fewer customers
     game = SimpleLemonadeGame()
     result = game.play_turn(price=3.00)
     assert result["customers"] == 25  # 100 - 25*3
-    assert 67.5 <= result["profit"] <= 82.5  # $75 ± 10%
+    assert result["profit"] == 75.0  # 25 * $3 = $75
 
     # Price = 0 case (special: should always be 0)
     game = SimpleLemonadeGame()
@@ -103,7 +99,7 @@ def test_profit_calculation():
     assert result["customers"] == 100  # Max customers
     assert result["revenue"] == 0.0  # No revenue when price is 0
     assert result["costs"] == 0.0  # No costs
-    assert result["profit"] == 0.0  # No profit (0 * any random factor = 0)
+    assert result["profit"] == 0.0  # No profit
 
 
 def test_game_over_conditions():
@@ -125,7 +121,6 @@ def test_get_state():
 
     state = game.get_state()
     assert state["day"] == 1
-    assert state["cash"] == 100.0
     assert state["days_remaining"] == 10
     assert not state["game_over"]
     assert state["last_result"] is None

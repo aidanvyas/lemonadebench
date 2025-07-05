@@ -31,12 +31,7 @@ class SimpleLemonadeGame:
         # Game parameters
         self.suggested_starting_price = None  # Must be explicitly set
 
-        # Cost structure (kept for future extensibility)
-        self.daily_fixed_cost = 0.0
-        self.cost_per_lemonade = 0.0
-
         # Game state
-        self.cash = 100.0  # Starting cash
         self.history: list[dict] = []
         self.game_over = False
 
@@ -90,19 +85,9 @@ class SimpleLemonadeGame:
         # Calculate demand
         customers = self.calculate_demand(price)
 
-        # Calculate financials
+        # Calculate financials (no costs, no randomness)
         revenue = customers * price
-        variable_costs = customers * self.cost_per_lemonade
-        total_costs = self.daily_fixed_cost + variable_costs
-        base_profit = revenue - total_costs
-
-        # Add random variation (-10% to +10%)
-        # random_factor = random.uniform(-10, 10)
-        # profit = base_profit * (1 + random_factor / 100)
-        profit = base_profit  # Randomness disabled for testing
-
-        # Update cash
-        self.cash += profit
+        profit = revenue  # No costs or randomness
 
         # Record results (round financial values for display)
         result = {
@@ -110,16 +95,15 @@ class SimpleLemonadeGame:
             "price": round(price, 2),
             "customers": customers,
             "revenue": round(revenue, 2),
-            "costs": round(total_costs, 2),
+            "costs": 0.0,
             "profit": round(profit, 2),
-            "cash": round(self.cash, 2),
         }
 
         self.history.append(result)
 
         # Check game over conditions
         self.current_day += 1
-        if self.current_day > self.days or self.cash < 0:
+        if self.current_day > self.days:
             self.game_over = True
 
         return result
@@ -133,7 +117,6 @@ class SimpleLemonadeGame:
         """
         return {
             "day": self.current_day,
-            "cash": self.cash,
             "days_remaining": self.days - self.current_day + 1,
             "game_over": self.game_over,
             "last_result": self.history[-1] if self.history else None,

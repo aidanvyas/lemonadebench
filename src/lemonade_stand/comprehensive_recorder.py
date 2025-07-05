@@ -134,7 +134,7 @@ class ComprehensiveRecorder:
         )
 
     def record_game_state(
-        self, day: int, price: float, customers: int, profit: float, cash: float
+        self, day: int, price: float, customers: int, profit: float
     ):
         """Record game state after each turn."""
         self.records.append(
@@ -145,7 +145,6 @@ class ComprehensiveRecorder:
                 "price": price,
                 "customers": customers,
                 "profit": profit,
-                "cash": cash,
             }
         )
 
