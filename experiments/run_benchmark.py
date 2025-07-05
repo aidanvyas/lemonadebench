@@ -451,14 +451,7 @@ def aggregate_runs(runs: list[dict]) -> dict:
 
 
 def main():
-    """Run LemonadeBench with header-based rate limiting.
-
-    Default of 5 runs per test is sufficient due to very low variability in results:
-    - Standard deviation ~1% across runs
-    - Clear failure mode (75% vs 100% efficiency)
-    - Cost-effective: ~$0.17 for full benchmark
-    - Time-efficient: ~30 minutes total
-    """
+    """Run LemonadeBench with header-based rate limiting."""
     parser = argparse.ArgumentParser(description="Run LemonadeBench experiments")
     parser.add_argument(
         "--runs",
