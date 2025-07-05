@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 
-import matplotlib.pyplot as plt
+# Plotting imports removed - now in analyze_results.py
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -543,8 +543,8 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     test_names = "-".join(args.tests) if 'all' not in args.tests else "all"
     model_names = "-".join(models) if len(models) > 1 else models[0]
-    filename = f"results/{model_names}_{test_names}_{args.runs}runs_{args.days}days_{args.workers}workers_{timestamp}.json"
-    Path("results").mkdir(exist_ok=True)
+    filename = f"results/json/{model_names}_{test_names}_{args.runs}runs_{args.days}days_{args.workers}workers_{timestamp}.json"
+    Path("results/json").mkdir(parents=True, exist_ok=True)
 
     with open(filename, 'w') as f:
         json.dump({
@@ -575,114 +575,11 @@ def main():
         logger.info(f"{model_label}{r['test_name']:25} {r['efficiency']['mean']:6.1%}")
     
     # Generate plots if requested
-    if args.plots and all_results:
-        logger.info("\nGenerating comparison plots...")
-        generate_plots(all_results, models, test_configs, filename)
+    if args.plots:
+        logger.info("\nNote: Use 'python analysis/analyze_results.py --latest --plots' to generate plots")
 
 
-def generate_plots(all_results, models, test_configs, results_filename):
-    """Generate comparison plots for multiple models."""
-    # Create figure with subplots
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    fig.suptitle(f"LemonadeBench Results - {', '.join(models)}", fontsize=16)
-    
-    # Prepare data structure
-    model_conditions = {}
-    for result in all_results:
-        model = result['model']
-        condition = result['test_name']
-        if model not in model_conditions:
-            model_conditions[model] = {}
-        if condition not in model_conditions[model]:
-            model_conditions[model][condition] = []
-        model_conditions[model][condition].append(result['total_profit'])
-    
-    # Plot 1: Average profit by model and condition
-    ax1 = axes[0, 0]
-    conditions = [tc[0] for tc in test_configs]
-    x = range(len(models))
-    width = 0.8 / len(conditions)
-    
-    for i, condition in enumerate(conditions):
-        profits = []
-        for model in models:
-            if model in model_conditions and condition in model_conditions[model]:
-                avg_profit = sum(model_conditions[model][condition]) / len(model_conditions[model][condition])
-                profits.append(avg_profit)
-            else:
-                profits.append(0)
-        ax1.bar([xi + i*width for xi in x], profits, width, label=condition)
-    
-    ax1.set_title("Average Profit by Model and Condition")
-    ax1.set_xlabel("Model")
-    ax1.set_ylabel("Average Profit ($)")
-    ax1.set_xticks([xi + width*len(conditions)/2 for xi in x])
-    ax1.set_xticklabels(models, rotation=45 if len(models) > 3 else 0)
-    ax1.legend()
-    ax1.grid(True, alpha=0.3, axis='y')
-    
-    # Plot 2: Price evolution for suggested condition
-    ax2 = axes[0, 1]
-    for result in all_results:
-        if result['test_name'] == "Suggested Price" and result['run'] == 1:
-            prices = result['prices']
-            days = list(range(1, len(prices) + 1))
-            ax2.plot(days, prices, label=result['model'], alpha=0.7)
-    
-    ax2.axhline(y=2.0, color='red', linestyle='--', alpha=0.5, label='Optimal ($2.00)')
-    ax2.set_title("Price Evolution - Suggested Price Condition")
-    ax2.set_xlabel("Day")
-    ax2.set_ylabel("Price ($)")
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    
-    # Plot 3: Token usage by model
-    ax3 = axes[1, 0]
-    model_tokens = {}
-    for result in all_results:
-        model = result['model']
-        if model not in model_tokens:
-            model_tokens[model] = []
-        if 'token_usage' in result:
-            model_tokens[model].append(result['token_usage'].get('total_tokens', 0))
-    
-    avg_tokens = [sum(model_tokens[m])/len(model_tokens[m]) if m in model_tokens else 0 for m in models]
-    ax3.bar(models, avg_tokens)
-    ax3.set_title("Average Token Usage per Game")
-    ax3.set_xlabel("Model")
-    ax3.set_ylabel("Tokens")
-    ax3.set_xticklabels(models, rotation=45 if len(models) > 3 else 0)
-    ax3.grid(True, alpha=0.3, axis='y')
-    
-    # Plot 4: Profit distribution
-    ax4 = axes[1, 1]
-    profit_data = []
-    labels = []
-    for model in models:
-        if model in model_conditions:
-            for condition in model_conditions[model]:
-                if model_conditions[model][condition]:
-                    profit_data.append(model_conditions[model][condition])
-                    label = f"{model[:10]}/{condition[:10]}" if len(models) > 1 else condition
-                    labels.append(label)
-    
-    if profit_data:
-        ax4.boxplot(profit_data, labels=labels)
-        ax4.set_title("Profit Distribution")
-        ax4.set_xlabel("Model/Condition")
-        ax4.set_ylabel("Total Profit ($)")
-        ax4.set_xticklabels(labels, rotation=45, ha='right')
-        ax4.grid(True, alpha=0.3, axis='y')
-    
-    plt.tight_layout()
-    
-    # Save plot
-    plot_dir = Path("plots")
-    plot_dir.mkdir(exist_ok=True)
-    plot_filename = plot_dir / f"{Path(results_filename).stem}_plots.png"
-    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
-    logger.info(f"Plots saved to: {plot_filename}")
-    plt.close()
+# Plot generation removed - now in analyze_results.py
 
 
 if __name__ == "__main__":
