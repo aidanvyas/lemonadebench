@@ -51,23 +51,26 @@ class ResponsesAIPlayer:
 
         # Track total token usage
         self.total_token_usage = {
-            'input_tokens': 0,
-            'output_tokens': 0,
-            'reasoning_tokens': 0,
-            'total_tokens': 0,
-            'cached_input_tokens': 0  # Track cached tokens separately
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0,
+            "total_tokens": 0,
+            "cached_input_tokens": 0,  # Track cached tokens separately
         }
 
+        # Rate limit headers from last response
+        self.last_headers = None
+
         # Check if this is a reasoning model
-        self.is_reasoning_model = model_name.startswith(('o1', 'o3', 'o4'))
+        self.is_reasoning_model = model_name.startswith(("o1", "o3", "o4"))
 
         # Model pricing (per 1M tokens)
         self.model_pricing = {
-            'gpt-4.1-nano': {'input': 0.10, 'cached_input': 0.025, 'output': 0.40},
-            'gpt-4.1-mini': {'input': 0.40, 'cached_input': 0.10, 'output': 1.60},
-            'gpt-4.1': {'input': 2.00, 'cached_input': 0.50, 'output': 8.00},
-            'o3': {'input': 2.00, 'cached_input': 0.50, 'output': 8.00},
-            'o4-mini': {'input': 1.10, 'cached_input': 0.275, 'output': 4.40},
+            "gpt-4.1-nano": {"input": 0.10, "cached_input": 0.025, "output": 0.40},
+            "gpt-4.1-mini": {"input": 0.40, "cached_input": 0.10, "output": 1.60},
+            "gpt-4.1": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
+            "o3": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
+            "o4-mini": {"input": 1.10, "cached_input": 0.275, "output": 4.40},
         }
 
         # Get API key
@@ -97,9 +100,9 @@ class ResponsesAIPlayer:
                         }
                     },
                     "required": ["days"],
-                    "additionalProperties": False
+                    "additionalProperties": False,
                 },
-                "strict": True
+                "strict": True,
             },
             {
                 "type": "function",
@@ -115,31 +118,33 @@ class ResponsesAIPlayer:
                         }
                     },
                     "required": ["price"],
-                    "additionalProperties": False
+                    "additionalProperties": False,
                 },
-                "strict": True
+                "strict": True,
             },
         ]
 
         # Optionally add calculator
         if self._include_calculator:
-            tools.append({
-                "type": "function",
-                "name": "calculate",
-                "description": "Perform arithmetic calculations to analyze profitability",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "expression": {
-                            "type": "string",
-                            "description": "Mathematical expression to evaluate (e.g., '2 * 50', '100 - 25 * 1.5')",
-                        }
+            tools.append(
+                {
+                    "type": "function",
+                    "name": "calculate",
+                    "description": "Perform arithmetic calculations to analyze profitability",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "expression": {
+                                "type": "string",
+                                "description": "Mathematical expression to evaluate (e.g., '2 * 50', '100 - 25 * 1.5')",
+                            }
+                        },
+                        "required": ["expression"],
+                        "additionalProperties": False,
                     },
-                    "required": ["expression"],
-                    "additionalProperties": False
-                },
-                "strict": True
-            })
+                    "strict": True,
+                }
+            )
 
         return tools
 
@@ -170,10 +175,9 @@ class ResponsesAIPlayer:
             try:
                 expression = arguments.get("expression", "")
                 # Track calculator usage
-                self.calculator_history.append({
-                    'day': game.current_day,
-                    'expression': expression
-                })
+                self.calculator_history.append(
+                    {"day": game.current_day, "expression": expression}
+                )
                 # Only allow basic math operations
                 allowed_chars = "0123456789+-*/()., "
                 if all(c in allowed_chars for c in expression):
@@ -191,7 +195,7 @@ class ResponsesAIPlayer:
         tools_list = [
             "- get_historical_data(days): Review past pricing and profit data",
             "- set_price(price): Set today's lemonade price",
-            "- calculate(expression): Perform arithmetic calculations"
+            "- calculate(expression): Perform arithmetic calculations",
         ]
 
         tools_text = "\n".join(tools_list)
@@ -204,9 +208,15 @@ class ResponsesAIPlayer:
         )
 
         # Add prompt variations
-        if hasattr(game, '_use_suggested_price') and game._use_suggested_price and game.suggested_starting_price is not None:
-            base_prompt += f"Suggested starting price: ${game.suggested_starting_price:.2f}\n\n"
-        elif hasattr(game, '_use_exploration_hint') and game._use_exploration_hint:
+        if (
+            hasattr(game, "_use_suggested_price")
+            and game._use_suggested_price
+            and game.suggested_starting_price is not None
+        ):
+            base_prompt += (
+                f"Suggested starting price: ${game.suggested_starting_price:.2f}\n\n"
+            )
+        elif hasattr(game, "_use_exploration_hint") and game._use_exploration_hint:
             base_prompt += "Try different prices to discover which price maximizes your daily profit.\n\n"
 
         base_prompt += "Remember: Your goal is to maximize total profit. Think carefully about the relationship between price, demand, and profit."
@@ -235,22 +245,29 @@ class ResponsesAIPlayer:
 
         # Calculate costs (pricing is per 1M tokens)
         # Non-cached input tokens = total input - cached input
-        non_cached_input_tokens = self.total_token_usage['input_tokens'] - self.total_token_usage['cached_input_tokens']
-        non_cached_input_cost = (non_cached_input_tokens / 1_000_000) * pricing['input']
-        cached_input_cost = (self.total_token_usage['cached_input_tokens'] / 1_000_000) * pricing['cached_input']
-        output_cost = (self.total_token_usage['output_tokens'] / 1_000_000) * pricing['output']
+        non_cached_input_tokens = (
+            self.total_token_usage["input_tokens"]
+            - self.total_token_usage["cached_input_tokens"]
+        )
+        non_cached_input_cost = (non_cached_input_tokens / 1_000_000) * pricing["input"]
+        cached_input_cost = (
+            self.total_token_usage["cached_input_tokens"] / 1_000_000
+        ) * pricing["cached_input"]
+        output_cost = (self.total_token_usage["output_tokens"] / 1_000_000) * pricing[
+            "output"
+        ]
 
         total_cost = non_cached_input_cost + cached_input_cost + output_cost
 
         return {
-            'non_cached_input_cost': non_cached_input_cost,
-            'cached_input_cost': cached_input_cost,
-            'output_cost': output_cost,
-            'total_cost': total_cost,
-            'model': self.model_name,
-            'non_cached_input_tokens': non_cached_input_tokens,
-            'cached_input_tokens': self.total_token_usage['cached_input_tokens'],
-            'output_tokens': self.total_token_usage['output_tokens']
+            "non_cached_input_cost": non_cached_input_cost,
+            "cached_input_cost": cached_input_cost,
+            "output_cost": output_cost,
+            "total_cost": total_cost,
+            "model": self.model_name,
+            "non_cached_input_tokens": non_cached_input_tokens,
+            "cached_input_tokens": self.total_token_usage["cached_input_tokens"],
+            "output_tokens": self.total_token_usage["output_tokens"],
         }
 
     def make_decision(self, game: SimpleLemonadeGame) -> float:
@@ -264,10 +281,7 @@ class ResponsesAIPlayer:
             self.pending_function_outputs = []  # Clear after use
 
         # Add current turn's prompt
-        input_messages.append({
-            "role": "user",
-            "content": self.get_turn_prompt(game)
-        })
+        input_messages.append({"role": "user", "content": self.get_turn_prompt(game)})
 
         # Track tools used this turn
         day_tools = []
@@ -278,7 +292,9 @@ class ResponsesAIPlayer:
                 "model": self.model_name,
                 "input": input_messages,
                 "tools": self.get_tools(),
-                "instructions": self.get_system_prompt(game),  # Use instructions parameter
+                "instructions": self.get_system_prompt(
+                    game
+                ),  # Use instructions parameter
             }
 
             # Add reasoning parameters only for reasoning models
@@ -298,7 +314,18 @@ class ResponsesAIPlayer:
             if self.recorder:
                 self.recorder.record_request(game.current_day, kwargs)
 
-            response = self.client.responses.create(**kwargs)
+            # Use with_raw_response to get headers
+            raw_response = self.client.responses.with_raw_response.create(**kwargs)
+
+            # Store headers for rate limiting
+            self.last_headers = (
+                dict(raw_response.headers) if hasattr(raw_response, "headers") else None
+            )
+
+            # Parse to get the actual response object
+            response = (
+                raw_response.parse() if hasattr(raw_response, "parse") else raw_response
+            )
 
             # Record response if enabled
             if self.recorder:
@@ -308,11 +335,12 @@ class ResponsesAIPlayer:
             self.previous_response_id = response.id
 
             # Extract reasoning summary if available
-            if hasattr(response, 'reasoning') and hasattr(response.reasoning, 'summary'):
-                self.reasoning_summaries.append({
-                    "day": game.current_day,
-                    "summary": response.reasoning.summary
-                })
+            if hasattr(response, "reasoning") and hasattr(
+                response.reasoning, "summary"
+            ):
+                self.reasoning_summaries.append(
+                    {"day": game.current_day, "summary": response.reasoning.summary}
+                )
                 logger.info(f"Reasoning summary: {response.reasoning.summary}")
 
             # Process the output items
@@ -338,11 +366,13 @@ class ResponsesAIPlayer:
                         )
 
                     # Store function call for response
-                    function_calls.append({
-                        "type": "function_call_output",
-                        "call_id": item.call_id,
-                        "output": str(result)
-                    })
+                    function_calls.append(
+                        {
+                            "type": "function_call_output",
+                            "call_id": item.call_id,
+                            "output": str(result),
+                        }
+                    )
 
                     # Capture price if set_price was called
                     if function_name == "set_price":
@@ -350,45 +380,55 @@ class ResponsesAIPlayer:
                         price_was_set = True
 
             # Record tool usage for this day
-            self.tool_call_history.append({
-                "day": game.current_day,
-                "tools": day_tools
-            })
+            self.tool_call_history.append({"day": game.current_day, "tools": day_tools})
 
             # Store function outputs for next turn
             self.pending_function_outputs = function_calls
 
             # Log usage details and accumulate token counts
-            if hasattr(response, 'usage'):
+            if hasattr(response, "usage"):
                 usage = response.usage
                 # Extract token counts
-                input_tokens = getattr(usage, 'input_tokens', 0)
-                output_tokens = getattr(usage, 'output_tokens', 0)
-                total_tokens = getattr(usage, 'total_tokens', 0)
+                input_tokens = getattr(usage, "input_tokens", 0)
+                output_tokens = getattr(usage, "output_tokens", 0)
+                total_tokens = getattr(usage, "total_tokens", 0)
+
+                # Store last usage for rate limiter
+                self.last_token_usage = {
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
+                }
 
                 # Check for cached tokens in prompt_tokens_details
                 cached_input_tokens = 0
-                if hasattr(usage, 'prompt_tokens_details'):
-                    cached_input_tokens = getattr(usage.prompt_tokens_details, 'cached_tokens', 0)
+                if hasattr(usage, "prompt_tokens_details"):
+                    cached_input_tokens = getattr(
+                        usage.prompt_tokens_details, "cached_tokens", 0
+                    )
                     # Debug logging
                     if game.current_day <= 3:
                         logger.info(f"Day {game.current_day} usage details: {usage}")
-                        if hasattr(usage, 'prompt_tokens'):
-                            logger.info(f"  prompt_tokens: {getattr(usage, 'prompt_tokens', 'N/A')}")
-                        if hasattr(usage, 'prompt_tokens_details'):
+                        if hasattr(usage, "prompt_tokens"):
+                            logger.info(
+                                f"  prompt_tokens: {getattr(usage, 'prompt_tokens', 'N/A')}"
+                            )
+                        if hasattr(usage, "prompt_tokens_details"):
                             details = usage.prompt_tokens_details
                             logger.info(f"  prompt_tokens_details: {details}")
 
                 reasoning_tokens = 0
-                if hasattr(usage, 'output_tokens_details'):
-                    reasoning_tokens = getattr(usage.output_tokens_details, 'reasoning_tokens', 0)
+                if hasattr(usage, "output_tokens_details"):
+                    reasoning_tokens = getattr(
+                        usage.output_tokens_details, "reasoning_tokens", 0
+                    )
 
                 # Update totals
-                self.total_token_usage['input_tokens'] += input_tokens
-                self.total_token_usage['output_tokens'] += output_tokens
-                self.total_token_usage['reasoning_tokens'] += reasoning_tokens
-                self.total_token_usage['total_tokens'] += total_tokens
-                self.total_token_usage['cached_input_tokens'] += cached_input_tokens
+                self.total_token_usage["input_tokens"] += input_tokens
+                self.total_token_usage["output_tokens"] += output_tokens
+                self.total_token_usage["reasoning_tokens"] += reasoning_tokens
+                self.total_token_usage["total_tokens"] += total_tokens
+                self.total_token_usage["cached_input_tokens"] += cached_input_tokens
 
                 price_str = f"${price:.2f}" if price is not None else "NOT SET"
                 logger.info(
@@ -399,8 +439,14 @@ class ResponsesAIPlayer:
 
             # If price wasn't set, use suggested price as fallback (or 1.00 if None)
             if not price_was_set:
-                fallback_price = game.suggested_starting_price if game.suggested_starting_price is not None else 1.00
-                logger.warning(f"Day {game.current_day}: set_price not called, using fallback price ${fallback_price}")
+                fallback_price = (
+                    game.suggested_starting_price
+                    if game.suggested_starting_price is not None
+                    else 1.00
+                )
+                logger.warning(
+                    f"Day {game.current_day}: set_price not called, using fallback price ${fallback_price}"
+                )
                 price = fallback_price
 
             return round(price, 2)
@@ -413,14 +459,15 @@ class ResponsesAIPlayer:
                 self.recorder.record_error(game.current_day, e)
 
             # Record the day even on error
-            self.tool_call_history.append({
-                "day": game.current_day,
-                "tools": []
-            })
+            self.tool_call_history.append({"day": game.current_day, "tools": []})
             # Clear pending outputs on error
             self.pending_function_outputs = []
             # Return suggested price or fallback to 1.00
-            return game.suggested_starting_price if game.suggested_starting_price is not None else 1.00
+            return (
+                game.suggested_starting_price
+                if game.suggested_starting_price is not None
+                else 1.00
+            )
 
     def play_game(self, game: SimpleLemonadeGame) -> list[dict]:
         """Play a full game using the Responses API."""
@@ -434,11 +481,11 @@ class ResponsesAIPlayer:
             # Record game state if enabled
             if self.recorder:
                 self.recorder.record_game_state(
-                    result['day'],
-                    result['price'],
-                    result['customers'],
-                    result['profit'],
-                    result['cash']
+                    result["day"],
+                    result["price"],
+                    result["customers"],
+                    result["profit"],
+                    result["cash"],
                 )
 
             # Get tools used for this day
@@ -454,7 +501,7 @@ class ResponsesAIPlayer:
         # Save recording if enabled
         if self.recorder:
             test_name = "game"  # Default test name
-            if hasattr(game, '_test_name'):
+            if hasattr(game, "_test_name"):
                 test_name = game._test_name
             self.recorder.save(test_name, self.model_name)
 

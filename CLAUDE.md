@@ -73,6 +73,16 @@ uv run python analysis/analyze_results.py --latest --format latex  # LaTeX table
 uv run python analysis/analyze_results.py --latest --plots         # Generate visualizations
 ```
 
+## Implementation Details
+
+### Rate Limiting
+The benchmark runner uses a sophisticated header-based rate limiting approach:
+- Reads actual rate limit information from OpenAI API response headers
+- Uses `with_raw_response.create()` to capture headers while still getting typed responses
+- Implements proactive waiting based on remaining requests/tokens
+- Falls back to exponential backoff with jitter for rate limit errors
+- Sequential execution (not parallel) to respect rate limits properly
+
 ## Research Focus
 
 This benchmark demonstrates that current LLMs:

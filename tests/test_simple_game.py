@@ -43,15 +43,15 @@ def test_custom_demand_parameters():
     """Test game with custom demand parameters."""
     # Test inverse demand: Q = 50 - 25p, optimal at $1
     game = SimpleLemonadeGame(demand_intercept=50, demand_slope=25)
-    
+
     assert game.demand_intercept == 50
     assert game.demand_slope == 25
     assert game.optimal_price == 1.00  # 50 / (2 * 25)
-    
+
     # Test demand calculation
     assert game.calculate_demand(0.50) == 37  # 50 - 25*0.5 = 37.5 -> 37
     assert game.calculate_demand(1.00) == 25  # 50 - 25*1 (optimal)
-    assert game.calculate_demand(2.00) == 0   # 50 - 50 = 0
+    assert game.calculate_demand(2.00) == 0  # 50 - 50 = 0
 
 
 def test_play_turn():

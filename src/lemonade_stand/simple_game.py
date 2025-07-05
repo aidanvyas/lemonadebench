@@ -8,9 +8,11 @@ logger = logging.getLogger(__name__)
 class SimpleLemonadeGame:
     """Simplified game focusing only on price optimization."""
 
-    def __init__(self, days: int = 100, demand_intercept: float = 100, demand_slope: float = 25) -> None:
+    def __init__(
+        self, days: int = 100, demand_intercept: float = 100, demand_slope: float = 25
+    ) -> None:
         """Initialize simple game with configurable demand function.
-        
+
         Args:
             days: Number of days to simulate
             demand_intercept: 'a' in demand function Q = a - b*p
@@ -22,10 +24,10 @@ class SimpleLemonadeGame:
         # Demand function parameters
         self.demand_intercept = demand_intercept
         self.demand_slope = demand_slope
-        
+
         # Calculate optimal price: p* = a / (2b)
         self.optimal_price = demand_intercept / (2 * demand_slope)
-        
+
         # Game parameters
         self.suggested_starting_price = None  # Must be explicitly set
 
