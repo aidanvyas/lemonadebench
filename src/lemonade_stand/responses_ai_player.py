@@ -80,9 +80,9 @@ class ResponsesAIPlayer:
 
         self.client = OpenAI(api_key=api_key)
 
-    def enable_recording(self, output_dir: str = "analysis/raw_data"):
+    def enable_recording(self):
         """Enable comprehensive recording of all interactions."""
-        self.recorder = ComprehensiveRecorder(output_dir)
+        self.recorder = ComprehensiveRecorder()
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI."""
@@ -487,11 +487,7 @@ class ResponsesAIPlayer:
                 f"Tools: {tools_used}"
             )
 
-        # Save recording if enabled
-        if self.recorder:
-            test_name = "game"  # Default test name
-            if hasattr(game, "_test_name"):
-                test_name = game._test_name
-            self.recorder.save(test_name, self.model_name)
+        # Note: Recording data is captured but not saved separately
+        # The benchmark runner includes it in the main results file
 
         return results

@@ -56,12 +56,9 @@ logs/
 archive/
 *.log
 
-# Keep directory structure but ignore contents
-results/*.json
-plots/*.png
+# Keep directory structure but ignore data files
+results/json/*.json
+results/plots/*.png
+results/tex/*.tex
 
-# But keep paper results
-!results/paper/
-!plots/paper/
-
-# Don't ignore FEATURES.md - it's our roadmap!
+# Don't ignore ROADMAP.md - it's our feature planning!

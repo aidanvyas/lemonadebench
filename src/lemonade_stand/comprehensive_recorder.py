@@ -1,17 +1,13 @@
 """Comprehensive recording of all model interactions for analysis."""
 
-import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 
 class ComprehensiveRecorder:
     """Records absolutely everything about model interactions."""
 
-    def __init__(self, output_dir: str = "analysis/raw_data"):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self):
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.records = []
 
@@ -160,12 +156,9 @@ class ComprehensiveRecorder:
             }
         )
 
-    def save(self, test_name: str, model_name: str):
-        """Save all records to a JSON file."""
-        filename = f"{model_name}_{test_name}_{self.session_id}.json"
-        filepath = self.output_dir / filename
-
-        data = {
+    def get_recording_data(self, test_name: str, model_name: str) -> dict:
+        """Get the recording data as a dictionary."""
+        return {
             "session_id": self.session_id,
             "test_name": test_name,
             "model_name": model_name,
@@ -174,9 +167,3 @@ class ComprehensiveRecorder:
             "total_records": len(self.records),
             "records": self.records,
         }
-
-        with open(filepath, "w") as f:
-            json.dump(data, f, indent=2)
-
-        print(f"Saved comprehensive recording to: {filepath}")
-        return filepath
