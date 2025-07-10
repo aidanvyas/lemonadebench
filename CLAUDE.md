@@ -3,16 +3,21 @@
 ## Key Commands to Use
 
 ```bash
-# Run experiments
+# Run experiments (sequential execution for reliability)
 uv run python experiments/run_benchmark.py                  # Quick test (5 runs)
 uv run python experiments/run_benchmark.py --runs 30       # Full benchmark
 uv run python experiments/run_benchmark.py --models gpt-4.1-nano claude-3-haiku
+uv run python experiments/run_benchmark.py --models o3 o4-mini    # Works well with all models
 
 # Analyze results
 uv run python analysis/analyze_results.py --list           # See all results
 uv run python analysis/analyze_results.py --latest         # Analyze most recent
 uv run python analysis/analyze_results.py --latest --latex # Generate LaTeX tables
 uv run python analysis/analyze_results.py --latest --plots # Generate plots
+
+# Validate results (check for completeness/errors)
+uv run python validate_results.py results/json/latest.json # Check specific file
+uv run python validate_results.py results/json/*.json -v   # Check all with details
 
 # Code quality
 uv run ruff check                                          # Check linting
@@ -24,7 +29,7 @@ uv run python -m pytest                                    # Run tests
 
 - `src/lemonade_stand/simple_game.py` - Game mechanics (demand: Q = 100 - 25p, optimal: $2)
 - `src/lemonade_stand/responses_ai_player.py` - AI player with OpenAI Responses API
-- `experiments/run_benchmark.py` - Benchmark runner with rate limiting
+- `experiments/run_benchmark.py` - Simple sequential benchmark runner with rate limiting
 - `analysis/analyze_results.py` - Result analysis and visualization
 - `ROADMAP.md` - Future features and versions
 
@@ -59,6 +64,10 @@ When adding features:
 
 - Game is deterministic (no randomness) for reproducible benchmarking
 - Rate limiting uses OpenAI response headers (x-ratelimit-remaining-*)
+- **Sequential execution**: Runs one game at a time for maximum reliability
+  - Automatically waits when rate limits are low
+  - Prevents cascading failures by stopping early on errors
+  - More predictable timing and easier to debug
 - Results organized in `results/`:
   - `json/` - Full experiment results with API interactions
   - `plots/` - Generated visualizations  
@@ -83,7 +92,7 @@ The benchmark tests 4 scenarios:
 ### Debugging rate limits
 - Check `x-ratelimit-*` headers in logs
 - Use `--runs 1` for testing
-- Monitor "Rate limit waits" in output
+- The runner automatically waits when rate limits are low
 
 ### Generating paper figures
 1. Run full benchmark first

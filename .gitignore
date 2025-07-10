@@ -57,8 +57,10 @@ archive/
 *.log
 
 # Keep directory structure but ignore data files
-results/json/*.json
-results/plots/*.png
-results/tex/*.tex
+results/json/
+results/plots/
+results/tex/
+# But keep sample results for paper
+!results/sample/
 
 # Don't ignore ROADMAP.md - it's our feature planning!

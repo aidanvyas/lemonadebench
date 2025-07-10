@@ -1,419 +1,301 @@
 #!/usr/bin/env python3
-"""Analyze LemonadeBench results - simplified version with list, latex, and plots."""
+"""Analyze v0.5 benchmark results with comprehensive metrics, LaTeX tables, and plots."""
 
 import argparse
 import json
-import statistics
 from pathlib import Path
+import sys
+from datetime import datetime
+import statistics
 
-import matplotlib.pyplot as plt
+sys.path.append(str(Path(__file__).parent.parent))
 
+from src.lemonade_stand.comprehensive_recorder import (
+    MetricsAnalyzer,
+    generate_metrics_report,
+    print_metrics_summary,
+    save_metrics_report,
+)
 
-def load_results(filepath: Path) -> dict:
-    """Load results from JSON file."""
-    with open(filepath) as f:
-        return json.load(f)
-
-
-def list_results(recent: int = 10) -> None:
-    """List all saved experiment results."""
-    results_dir = Path("results/json")
-    if not results_dir.exists():
-        print("No results found. Run experiments first.")
-        return
-
-    # Find all JSON files
-    result_files = sorted(
-        results_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True
-    )
-
-    if not result_files:
-        print("No result files found.")
-        return
-
-    print(
-        f"\nFound {len(result_files)} experiment files. Showing {min(recent, len(result_files))} most recent:\n"
-    )
-    print("=" * 100)
-
-    for i, filepath in enumerate(result_files[:recent]):
-        try:
-            data = load_results(filepath)
-
-            # Extract metadata
-            models = data.get("models", [data.get("model", "unknown")])
-            if not isinstance(models, list):
-                models = [models]
-            days = data.get("days", 30)
-            runs_per_test = data.get("runs_per_test", 1)
-            timestamp = data.get("timestamp", "unknown")
-
-            # Get test conditions
-            if "aggregated_results" in data:
-                conditions = sorted(
-                    {r["test_name"] for r in data["aggregated_results"]}
-                )
-                total_tokens = sum(
-                    r.get("total_tokens", 0) for r in data["aggregated_results"]
-                )
-            else:
-                conditions = data.get("tests_run", [])
-                total_tokens = data.get("total_tokens", 0)
-
-            print(f"\n{i + 1}. {filepath.name}")
-            print(f"   Timestamp: {timestamp}")
-            print(f"   Models: {', '.join(models)}")
-            print(f"   Conditions: {', '.join(conditions) if conditions else 'N/A'}")
-            print(f"   Configuration: {runs_per_test} runs × {days} days")
-            print(f"   Total tokens: {total_tokens:,}")
-
-        except Exception as e:
-            print(f"   Error reading file: {e}")
-
-    print("\n" + "=" * 100)
-    print("\nTo analyze: python analyze_results.py --latest --latex --plots")
+# Import plotting libraries
+try:
+    import matplotlib.pyplot as plt
+    import numpy as np
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    PLOTTING_AVAILABLE = False
+    print("Warning: matplotlib not available. Install with: pip install matplotlib")
 
 
-def generate_latex_table(
-    test_name: str, test_results: list[dict], output_path: Path
-) -> None:
-    """Generate LaTeX table for a single test condition."""
-
-    # Group by model
-    model_data = {}
-    for result in test_results:
-        model = result.get("model", "unknown")
-        if model not in model_data:
-            model_data[model] = []
-        model_data[model].append(result)
-
-    # Start LaTeX table
-    lines = []
-    lines.append("\\begin{table}[h]")
-    lines.append("\\centering")
-    lines.append("\\small")
-    lines.append(f"\\caption{{{test_name}}}")
-    lines.append("\\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|}")
-    lines.append("\\hline")
-
-    # Header
-    lines.append(
-        "\\multirow{2}{*}{Model} & \\multirow{2}{*}{Default} & \\multicolumn{4}{c|}{Profit (\\$)} & \\multicolumn{3}{c|}{Tool Calls} & \\multicolumn{3}{c|}{Tokens} & \\multirow{2}{*}{Cost (\\$)} \\\\"
-    )
-    lines.append("\\cline{3-12}")
-    lines.append(
-        "& & Min & Mean & Std & Max & set\\_price & calc & history & Input & Reason & Output & \\\\"
-    )
-    lines.append("\\hline")
-
-    # Data rows
-    for model in sorted(model_data.keys()):
-        runs = model_data[model]
-
-        # Extract data from individual runs
-        profits = []
-        tool_calls = {"set_price": [], "calculate": [], "get_historical_data": []}
-        tokens = {"input": [], "reasoning": [], "output": []}
-        costs = []
-
-        for run in runs:
-            # Get individual run data
-            if "individual_runs" in run:
-                for individual_run in run["individual_runs"]:
-                    profits.append(individual_run["total_profit"])
-
-                    # Tool calls
-                    breakdown = individual_run.get("tool_call_breakdown", {})
-                    tool_calls["set_price"].append(breakdown.get("set_price", 0))
-                    tool_calls["calculate"].append(breakdown.get("calculate", 0))
-                    tool_calls["get_historical_data"].append(
-                        breakdown.get("get_historical_data", 0)
-                    )
-
-                    # Tokens
-                    usage = individual_run.get("token_usage", {})
-                    tokens["input"].append(usage.get("input_tokens", 0))
-                    tokens["reasoning"].append(usage.get("reasoning_tokens", 0))
-                    tokens["output"].append(usage.get("output_tokens", 0))
-
-                    # Cost
-                    cost_info = individual_run.get("cost_info", {})
-                    costs.append(cost_info.get("total_cost", 0))
-
-        # Calculate statistics
-        if profits:
-            # Determine default profit based on test type
-            if "Suggested" in test_name:
-                default_profit = 2250  # $1.00 * 75 customers * 30 days
-            elif "Inverse" in test_name:
-                default_profit = 1500  # $2.00 * 25 customers * 30 days
-            else:
-                default_profit = 0  # No default for exploration/no guidance
-
-            # Format row
-            row = [
-                model,
-                f"{default_profit:,}" if default_profit > 0 else "N/A",
-                f"{min(profits):.0f}",
-                f"{statistics.mean(profits):.0f}",
-                f"{statistics.stdev(profits) if len(profits) > 1 else 0:.0f}",
-                f"{max(profits):.0f}",
-                f"{statistics.mean(tool_calls['set_price']):.1f}",
-                f"{statistics.mean(tool_calls['calculate']):.1f}",
-                f"{statistics.mean(tool_calls['get_historical_data']):.1f}",
-                f"{statistics.mean(tokens['input']) / 1000:.1f}k",
-                f"{statistics.mean(tokens['reasoning']):.0f}",
-                f"{statistics.mean(tokens['output']):.0f}",
-                f"{statistics.mean(costs):.4f}",
-            ]
-
-            lines.append(" & ".join(row) + " \\\\")
-
-    lines.append("\\hline")
-    lines.append("\\end{tabular}")
-    lines.append("\\end{table}")
-
-    # Write to file
+def generate_latex_table(report, output_file):
+    """Generate a LaTeX table with key metrics from v0.5 results.
+    
+    Args:
+        report: Metrics report from generate_metrics_report
+        output_file: Path to save the .tex file
+    """
+    latex = r"""\begin{table}[h]
+\centering
+\caption{LemonadeBench v0.5 - Business Simulation Results}
+\label{tab:lemonadebench_v05}
+\begin{tabular}{|l|r|r|r|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Days} & \textbf{Profit (\$)} & \textbf{Profit SD} & \textbf{Customers} & \textbf{Service} & \textbf{Stockouts} & \textbf{Cost (\$)} \\
+\hline
+"""
+    
+    # Add row for each model
+    for model, stats in report["model_comparison"].items():
+        # Extract model-specific data
+        model_games = [g for g in report.get("individual_metrics", []) if g.model == model]
+        profits = [g.total_profit for g in model_games] if model_games else []
+        profit_std = statistics.stdev(profits) if len(profits) > 1 else 0
+        
+        # Calculate average customers from game metrics
+        avg_customers = sum(g.total_customers_served for g in model_games) / len(model_games) if model_games else 0
+        avg_stockout_rate = sum(g.stockout_rate for g in model_games) / len(model_games) if model_games else 0
+        
+        latex += f"{model:<15} & "
+        latex += f"{stats['avg_days_survived']:>4.1f} & "
+        latex += f"{stats['avg_profit']:>8.2f} & "
+        latex += f"{profit_std:>7.2f} & "
+        latex += f"{avg_customers:>9.0f} & "
+        latex += f"{stats['avg_service_rate']*100:>7.1f}\\% & "
+        latex += f"{avg_stockout_rate*100:>9.1f}\\% & "
+        latex += f"{stats['avg_cost_per_day']:>6.4f} \\\\\n"
+        latex += r"\hline" + "\n"
+    
+    latex += r"""\end{tabular}
+\end{table}"""
+    
+    # Save to file
+    output_path = Path(output_file)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        f.write("\n".join(lines))
+    with open(output_path, 'w') as f:
+        f.write(latex)
+    
+    print(f"LaTeX table saved to: {output_path}")
 
-    print(f"  Created: {output_path}")
 
-
-def generate_latex_tables(data: dict) -> None:
-    """Generate LaTeX tables for all test conditions."""
-    print("\nGenerating LaTeX tables...")
-
-    # Get aggregated results
-    if "aggregated_results" not in data:
-        print("Error: No aggregated results found in data")
+def generate_profit_plots(data, output_dir):
+    """Generate profit-over-time plots for each model.
+    
+    Args:
+        data: Raw benchmark data with game histories
+        output_dir: Directory to save plot files
+    """
+    if not PLOTTING_AVAILABLE:
+        print("Skipping plots - matplotlib not available")
         return
-
-    results = data["aggregated_results"]
-
-    # Group by test condition
-    test_groups = {}
-    for result in results:
-        test_name = result["test_name"]
-        if test_name not in test_groups:
-            test_groups[test_name] = []
-        test_groups[test_name].append(result)
-
-    # Generate table for each test
-    for test_name, test_results in test_groups.items():
-        # Create safe filename
-        safe_name = (
-            test_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
-        )
-        output_path = Path(f"results/tex/{safe_name}.tex")
-        generate_latex_table(test_name, test_results, output_path)
-
-
-def generate_price_discovery_plot(data: dict) -> None:
-    """Generate beautiful price discovery visualization."""
-    print("\nGenerating price discovery plot...")
-
-    # Get aggregated results
-    if "aggregated_results" not in data:
-        print("Error: No aggregated results found in data")
-        return
-
-    results = data["aggregated_results"]
-    days = data.get("days", 30)
-
-    # Group by test condition and model
-    test_groups = {}
-    for result in results:
-        test_name = result["test_name"]
-        model = result.get("model", "unknown")
-
-        if test_name not in test_groups:
-            test_groups[test_name] = {}
-
-        # Extract price data from individual runs
-        all_prices = []
-        if "individual_runs" in result:
-            for run in result["individual_runs"]:
-                if "prices" in run:
-                    all_prices.append(run["prices"])
-
-        if all_prices:
-            test_groups[test_name][model] = all_prices
-
-    # Set up the plot with beautiful styling
-    plt.style.use("seaborn-v0_8-whitegrid")
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle(
-        "Price Discovery Across Test Conditions", fontsize=18, fontweight="bold"
-    )
-
-    # Color palette - professional and colorblind-friendly
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
-
-    # Test order for consistent layout
-    test_order = [
-        "Suggested Price",
-        "No Guidance",
-        "Exploration Hint",
-        "Inverse Demand",
-    ]
-
-    for idx, (ax, test_name) in enumerate(zip(axes.flat, test_order, strict=False)):
-        if test_name not in test_groups:
-            ax.text(
-                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
-            )
-            ax.set_title(test_name)
-            continue
-
-        # Plot each model
-        for model_idx, (model, price_runs) in enumerate(
-            sorted(test_groups[test_name].items())
-        ):
-            color = colors[model_idx % len(colors)]
-
-            # Calculate mean and std for each day
-            day_prices = []
-            day_stds = []
-
-            for day in range(days):
-                day_values = [run[day] for run in price_runs if day < len(run)]
-                if day_values:
-                    day_prices.append(statistics.mean(day_values))
-                    day_stds.append(
-                        statistics.stdev(day_values) if len(day_values) > 1 else 0
-                    )
-
-            days_array = list(range(1, len(day_prices) + 1))
-
-            # Plot mean line
-            ax.plot(
-                days_array,
-                day_prices,
-                color=color,
-                linewidth=2.5,
-                label=model,
-                alpha=0.9,
-            )
-
-            # Add confidence interval
-            if day_stds:
-                lower = [p - s for p, s in zip(day_prices, day_stds, strict=False)]
-                upper = [p + s for p, s in zip(day_prices, day_stds, strict=False)]
-                ax.fill_between(days_array, lower, upper, color=color, alpha=0.2)
-
-        # Add optimal price line
-        optimal_price = 2.0 if "Inverse" not in test_name else 1.0
-        ax.axhline(
-            y=optimal_price,
-            color="red",
-            linestyle="--",
-            linewidth=1.5,
-            alpha=0.7,
-            label="Optimal",
-        )
-
-        # Styling
-        ax.set_title(test_name, fontsize=14, fontweight="bold", pad=10)
-        ax.set_xlabel("Day", fontsize=12)
-        ax.set_ylabel("Price ($)", fontsize=12)
-        ax.set_xlim(0, days + 1)
-        ax.set_ylim(0, 4.5)
-        ax.grid(True, alpha=0.3)
-
-        # Add legend only to first subplot
-        if idx == 0:
-            ax.legend(loc="upper right", frameon=True, fancybox=True, shadow=True)
-
-    # Adjust layout
+    
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Set up the plot style
+    plt.style.use('seaborn-v0_8-darkgrid')
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Colors for different models
+    colors = {
+        'gpt-4.1-nano': '#FF6B6B',
+        'gpt-4.1-mini': '#4ECDC4',
+        'gpt-4.1': '#45B7D1',
+        'o3': '#96CEB4',
+        'o4-mini': '#DDA0DD',
+        'claude-3-haiku': '#F7DC6F',
+        'claude-3.5-sonnet': '#BB8FCE'
+    }
+    
+    # Plot each model's profit trajectory
+    for model, model_results in data["results"].items():
+        for game in model_results["individual_games"]:
+            if game["success"] and "daily_cash_history" in game:
+                days = list(range(len(game["daily_cash_history"])))
+                cash_history = game["daily_cash_history"]
+                
+                # Calculate profit history (cash - starting cash)
+                starting_cash = data["parameters"]["starting_cash"]
+                profit_history = [cash - starting_cash for cash in cash_history]
+                
+                # Plot with transparency for multiple games
+                alpha = 0.7 if model_results["num_games"] > 1 else 1.0
+                ax.plot(days, profit_history, 
+                       color=colors.get(model, '#808080'),
+                       label=f"{model} (Game {game['game_number']})",
+                       alpha=alpha, linewidth=2)
+    
+    # Add theoretical optimal line (if we know it)
+    # Assuming optimal daily profit of ~$625 from the metrics
+    if data["parameters"]["days_per_game"] > 0:
+        days_range = range(data["parameters"]["days_per_game"])
+        optimal_profit = [625.54 * day for day in days_range]
+        ax.plot(days_range, optimal_profit, 'k--', 
+               label='Theoretical Optimal', alpha=0.5, linewidth=2)
+    
+    # Formatting
+    ax.set_xlabel('Day', fontsize=12)
+    ax.set_ylabel('Cumulative Profit ($)', fontsize=12)
+    ax.set_title('LemonadeBench v0.5: Profit Over Time by Model', fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+    
+    # Legend
+    handles, labels = ax.get_legend_handles_labels()
+    # Remove duplicate labels
+    unique_labels = []
+    unique_handles = []
+    for handle, label in zip(handles, labels):
+        model_name = label.split(' (Game')[0]
+        if model_name not in [l.split(' (Game')[0] for l in unique_labels]:
+            unique_labels.append(label)
+            unique_handles.append(handle)
+    
+    ax.legend(unique_handles, [l.split(' (Game')[0] for l in unique_labels], 
+             loc='upper left', framealpha=0.9)
+    
+    # Save the plot
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    plot_file = output_path / f"profit_over_time_{timestamp}.png"
     plt.tight_layout()
-
-    # Save with high quality
-    output_path = Path("results/plots/price_discovery.png")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
+    plt.savefig(plot_file, dpi=300, bbox_inches='tight')
     plt.close()
-
-    print(f"  Created: {output_path}")
+    
+    print(f"Profit plot saved to: {plot_file}")
+    
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Analyze LemonadeBench experiment results",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --list                    # List all experiments
-  %(prog)s --latest --latex          # Generate LaTeX tables for latest
-  %(prog)s --latest --plots          # Generate price discovery plot
-  %(prog)s experiment.json --latex   # Analyze specific file
-        """,
-    )
-
-    parser.add_argument("input_file", nargs="?", help="JSON results file to analyze")
+    parser = argparse.ArgumentParser(description="Analyze LemonadeBench v0.5 results")
+    parser.add_argument("input_file", nargs='?', help="JSON results file from v0.5 benchmark")
+    parser.add_argument("--save-report", help="Save detailed metrics report to file")
     parser.add_argument(
-        "--latest", action="store_true", help="Use the most recent results file"
+        "--compare-models", action="store_true", help="Show detailed model comparison"
     )
     parser.add_argument(
-        "--list", action="store_true", help="List all saved experiments"
+        "--latex", help="Generate LaTeX table and save to specified file"
     )
     parser.add_argument(
-        "--recent",
-        type=int,
-        default=10,
-        help="With --list, show N most recent (default: 10)",
+        "--plots", help="Generate plots and save to specified directory"
     )
-    parser.add_argument("--latex", action="store_true", help="Generate LaTeX tables")
     parser.add_argument(
-        "--plots", action="store_true", help="Generate price discovery plot"
+        "--list", action="store_true", help="List all available result files"
+    )
+    parser.add_argument(
+        "--latest", action="store_true", help="Analyze the most recent result file"
     )
 
     args = parser.parse_args()
 
-    # Handle --list mode
+    # Handle --list option
     if args.list:
-        list_results(args.recent)
+        results_dir = Path("results/json")
+        if results_dir.exists():
+            json_files = sorted(results_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            print("Available result files:")
+            for i, file in enumerate(json_files[:20]):  # Show latest 20
+                print(f"{i+1:3d}. {file.name}")
+        else:
+            print("No results directory found")
         return
 
-    # Determine input file
-    if args.latest or not args.input_file:
-        # Find the most recent results file
+    # Handle --latest option
+    input_file = args.input_file
+    if args.latest:
         results_dir = Path("results/json")
-        if not results_dir.exists():
-            print("Error: No results/json directory found")
+        if results_dir.exists():
+            json_files = sorted(results_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if json_files:
+                input_file = str(json_files[0])
+                print(f"Analyzing latest file: {input_file}")
+            else:
+                print("No result files found")
+                return
+        else:
+            print("No results directory found")
             return
 
-        json_files = sorted(
-            results_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True
+    # Load results
+    with open(input_file) as f:
+        data = json.load(f)
+
+    if data.get("version") != "0.5":
+        print(
+            f"Warning: This file appears to be from version {data.get('version', 'unknown')}, not v0.5"
         )
 
-        if not json_files:
-            print("Error: No results files found")
-            return
+    # Extract all games
+    analyzer = MetricsAnalyzer()
+    all_game_metrics = []
 
-        input_file = json_files[0]
-        print(f"Using latest results: {input_file.name}")
-    else:
-        input_file = Path(args.input_file)
-        if not input_file.exists():
-            print(f"Error: File not found: {input_file}")
-            return
+    for model, model_results in data["results"].items():
+        for game in model_results["individual_games"]:
+            if game["success"]:
+                # Add model info if not present
+                if "model" not in game:
+                    game["model"] = model
 
-    # Load data
-    data = load_results(input_file)
+                # Add days target if not present
+                if "days_target" not in game:
+                    game["days_target"] = data["parameters"]["days_per_game"]
 
-    # Generate requested outputs
+                game_metrics = analyzer.analyze_game(game)
+                all_game_metrics.append(game_metrics)
+
+    if not all_game_metrics:
+        print("No successful games found to analyze!")
+        return
+
+    # Generate report
+    report = generate_metrics_report(all_game_metrics)
+    print_metrics_summary(report)
+
+    # Save if requested
+    if args.save_report:
+        save_metrics_report(report, args.save_report)
+        print(f"\nDetailed report saved to: {args.save_report}")
+
+    # Show detailed model comparison if requested
+    if args.compare_models and "model_comparison" in report:
+        print("\n" + "=" * 80)
+        print("DETAILED MODEL COMPARISON")
+        print("=" * 80)
+
+        for model, stats in report["model_comparison"].items():
+            print(f"\n--- {model} ---")
+            print(f"Games Analyzed: {stats['games']}")
+            print(
+                f"Average Days Survived: {stats['avg_days_survived']:.1f} / {data['parameters']['days_per_game']}"
+            )
+            print(f"Average Total Profit: ${stats['avg_profit']:.2f}")
+            print(f"Average Service Rate: {stats['avg_service_rate']:.1%}")
+            print(f"Optimal Price Discovery: {stats['price_discovery_rate']:.1%}")
+            print(f"Average Cost per Day: ${stats['avg_cost_per_day']:.4f}")
+
+            # Find best and worst games for this model
+            model_games = [g for g in all_game_metrics if g.model == model]
+            if model_games:
+                best_game = max(model_games, key=lambda g: g.total_profit)
+                worst_game = min(model_games, key=lambda g: g.total_profit)
+
+                print(f"\nBest Game:")
+                print(f"  - Survived: {best_game.days_survived} days")
+                print(f"  - Profit: ${best_game.total_profit:.2f}")
+                print(f"  - Service Rate: {best_game.overall_service_rate:.1%}")
+
+                print(f"\nWorst Game:")
+                print(f"  - Survived: {worst_game.days_survived} days")
+                print(f"  - Profit: ${worst_game.total_profit:.2f}")
+                print(f"  - Service Rate: {worst_game.overall_service_rate:.1%}")
+
+    # Generate LaTeX table if requested
     if args.latex:
-        generate_latex_tables(data)
+        # Add the game metrics to the report for LaTeX generation
+        report["individual_metrics"] = all_game_metrics
+        generate_latex_table(report, args.latex)
 
+    # Generate plots if requested
     if args.plots:
-        generate_price_discovery_plot(data)
-
-    if not args.latex and not args.plots:
-        print("\nNo output requested. Use --latex and/or --plots to generate outputs.")
-        print("Use --help for more information.")
+        generate_profit_plots(data, args.plots)
 
 
 if __name__ == "__main__":

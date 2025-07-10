@@ -1,0 +1,3375 @@
+{
+  "version": "0.5",
+  "timestamp": "2025-07-07T02:14:49.549178",
+  "parameters": {
+    "models": [
+      "o4-mini"
+    ],
+    "games_per_model": 1,
+    "days_per_game": 30,
+    "starting_cash": 1000,
+    "seed": null
+  },
+  "results": {
+    "o4-mini": {
+      "num_games": 1,
+      "successful_games": 1,
+      "failed_games": 0,
+      "total_profit": {
+        "mean": 13091.988299999999,
+        "std": 0,
+        "min": 13091.988299999999,
+        "max": 13091.988299999999,
+        "values": [
+          13091.988299999999
+        ]
+      },
+      "total_customers": {
+        "mean": 4896,
+        "std": 0,
+        "total": 4896
+      },
+      "customers_lost": {
+        "mean": 1048,
+        "total": 1048
+      },
+      "stockout_rate": {
+        "mean": 0.26666666666666666,
+        "std": 0
+      },
+      "expired_value": {
+        "mean": 0.0,
+        "total": 0.0
+      },
+      "peak_customer_ratio": {
+        "mean": 0.6017156862745098
+      },
+      "total_expired_items": {
+        "cups": 0,
+        "lemons": 0,
+        "sugar": 0,
+        "water": 0
+      },
+      "duration": 2432.315938949585,
+      "total_tokens": 383647,
+      "total_cost": 0.0,
+      "cost_per_game": 0.0,
+      "individual_games": [
+        {
+          "game_number": 1,
+          "model": "o4-mini",
+          "success": true,
+          "days_played": 30,
+          "final_cash": 13191.988299999999,
+          "total_profit": 13091.988299999999,
+          "total_revenue": 15925.299999999997,
+          "total_operating_cost": 1895,
+          "total_customers": 4896,
+          "total_customers_lost": 1048,
+          "days_with_stockouts": 8,
+          "stockout_rate": 0.26666666666666666,
+          "average_daily_profit": 436.39961,
+          "final_inventory_value": 15.170000000000002,
+          "total_expired_items": {
+            "cups": 0,
+            "lemons": 0,
+            "sugar": 0,
+            "water": 0
+          },
+          "total_expired_value": 0.0,
+          "peak_customers": 2946,
+          "off_peak_customers": 1950,
+          "peak_customer_ratio": 0.6017156862745098,
+          "daily_cash_history": [
+            1000,
+            1024.73,
+            1059.502,
+            1207.657,
+            1461.731,
+            1875.659,
+            2428.639,
+            2895.179,
+            3402.533,
+            3796.2705,
+            4193.154500000001,
+            4789.7249,
+            5247.5749000000005,
+            5610.7641,
+            6044.9721,
+            6526.0521,
+            6835.9221,
+            7025.072099999999,
+            7536.2189,
+            7892.6689,
+            8436.5013,
+            8969.5913,
+            9443.6681,
+            9922.6731,
+            10330.793099999999,
+            10755.1403,
+            11033.2411,
+            11551.443099999999,
+            12132.418099999999,
+            12696.9281
+          ],
+          "average_turn_attempts": 5.633333333333334,
+          "token_usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0,
+            "total_tokens": 383647,
+            "cached_input_tokens": 0
+          },
+          "cost_info": {
+            "input_cost": 0.0,
+            "cached_cost": 0.0,
+            "output_cost": 0.0,
+            "total_cost": 0.0,
+            "total_tokens": 383647
+          },
+          "reasoning_summaries": [
+            {
+              "day": 1,
+              "summary": "detailed"
+            },
+            {
+              "day": 1,
+              "summary": "detailed"
+            },
+            {
+              "day": 1,
+              "summary": "detailed"
+            },
+            {
+              "day": 1,
+              "summary": "detailed"
+            },
+            {
+              "day": 1,
+              "summary": "detailed"
+            },
+            {
+              "day": 2,
+              "summary": "detailed"
+            },
+            {
+              "day": 2,
+              "summary": "detailed"
+            },
+            {
+              "day": 2,
+              "summary": "detailed"
+            },
+            {
+              "day": 2,
+              "summary": "detailed"
+            },
+            {
+              "day": 2,
+              "summary": "detailed"
+            },
+            {
+              "day": 3,
+              "summary": "detailed"
+            },
+            {
+              "day": 3,
+              "summary": "detailed"
+            },
+            {
+              "day": 3,
+              "summary": "detailed"
+            },
+            {
+              "day": 3,
+              "summary": "detailed"
+            },
+            {
+              "day": 3,
+              "summary": "detailed"
+            },
+            {
+              "day": 4,
+              "summary": "detailed"
+            },
+            {
+              "day": 4,
+              "summary": "detailed"
+            },
+            {
+              "day": 4,
+              "summary": "detailed"
+            },
+            {
+              "day": 4,
+              "summary": "detailed"
+            },
+            {
+              "day": 4,
+              "summary": "detailed"
+            },
+            {
+              "day": 5,
+              "summary": "detailed"
+            },
+            {
+              "day": 5,
+              "summary": "detailed"
+            },
+            {
+              "day": 5,
+              "summary": "detailed"
+            },
+            {
+              "day": 5,
+              "summary": "detailed"
+            },
+            {
+              "day": 5,
+              "summary": "detailed"
+            },
+            {
+              "day": 5,
+              "summary": "detailed"
+            },
+            {
+              "day": 6,
+              "summary": "detailed"
+            },
+            {
+              "day": 6,
+              "summary": "detailed"
+            },
+            {
+              "day": 6,
+              "summary": "detailed"
+            },
+            {
+              "day": 6,
+              "summary": "detailed"
+            },
+            {
+              "day": 6,
+              "summary": "detailed"
+            },
+            {
+              "day": 7,
+              "summary": "detailed"
+            },
+            {
+              "day": 7,
+              "summary": "detailed"
+            },
+            {
+              "day": 7,
+              "summary": "detailed"
+            },
+            {
+              "day": 7,
+              "summary": "detailed"
+            },
+            {
+              "day": 7,
+              "summary": "detailed"
+            },
+            {
+              "day": 7,
+              "summary": "detailed"
+            },
+            {
+              "day": 8,
+              "summary": "detailed"
+            },
+            {
+              "day": 8,
+              "summary": "detailed"
+            },
+            {
+              "day": 8,
+              "summary": "detailed"
+            },
+            {
+              "day": 8,
+              "summary": "detailed"
+            },
+            {
+              "day": 8,
+              "summary": "detailed"
+            },
+            {
+              "day": 8,
+              "summary": "detailed"
+            },
+            {
+              "day": 9,
+              "summary": "detailed"
+            },
+            {
+              "day": 9,
+              "summary": "detailed"
+            },
+            {
+              "day": 9,
+              "summary": "detailed"
+            },
+            {
+              "day": 9,
+              "summary": "detailed"
+            },
+            {
+              "day": 9,
+              "summary": "detailed"
+            },
+            {
+              "day": 10,
+              "summary": "detailed"
+            },
+            {
+              "day": 10,
+              "summary": "detailed"
+            },
+            {
+              "day": 10,
+              "summary": "detailed"
+            },
+            {
+              "day": 10,
+              "summary": "detailed"
+            },
+            {
+              "day": 10,
+              "summary": "detailed"
+            },
+            {
+              "day": 10,
+              "summary": "detailed"
+            },
+            {
+              "day": 11,
+              "summary": "detailed"
+            },
+            {
+              "day": 11,
+              "summary": "detailed"
+            },
+            {
+              "day": 11,
+              "summary": "detailed"
+            },
+            {
+              "day": 11,
+              "summary": "detailed"
+            },
+            {
+              "day": 11,
+              "summary": "detailed"
+            },
+            {
+              "day": 11,
+              "summary": "detailed"
+            },
+            {
+              "day": 12,
+              "summary": "detailed"
+            },
+            {
+              "day": 12,
+              "summary": "detailed"
+            },
+            {
+              "day": 12,
+              "summary": "detailed"
+            },
+            {
+              "day": 12,
+              "summary": "detailed"
+            },
+            {
+              "day": 12,
+              "summary": "detailed"
+            },
+            {
+              "day": 12,
+              "summary": "detailed"
+            },
+            {
+              "day": 13,
+              "summary": "detailed"
+            },
+            {
+              "day": 13,
+              "summary": "detailed"
+            },
+            {
+              "day": 13,
+              "summary": "detailed"
+            },
+            {
+              "day": 13,
+              "summary": "detailed"
+            },
+            {
+              "day": 13,
+              "summary": "detailed"
+            },
+            {
+              "day": 13,
+              "summary": "detailed"
+            },
+            {
+              "day": 14,
+              "summary": "detailed"
+            },
+            {
+              "day": 14,
+              "summary": "detailed"
+            },
+            {
+              "day": 14,
+              "summary": "detailed"
+            },
+            {
+              "day": 14,
+              "summary": "detailed"
+            },
+            {
+              "day": 14,
+              "summary": "detailed"
+            },
+            {
+              "day": 14,
+              "summary": "detailed"
+            },
+            {
+              "day": 15,
+              "summary": "detailed"
+            },
+            {
+              "day": 15,
+              "summary": "detailed"
+            },
+            {
+              "day": 15,
+              "summary": "detailed"
+            },
+            {
+              "day": 15,
+              "summary": "detailed"
+            },
+            {
+              "day": 15,
+              "summary": "detailed"
+            },
+            {
+              "day": 15,
+              "summary": "detailed"
+            },
+            {
+              "day": 16,
+              "summary": "detailed"
+            },
+            {
+              "day": 16,
+              "summary": "detailed"
+            },
+            {
+              "day": 16,
+              "summary": "detailed"
+            },
+            {
+              "day": 16,
+              "summary": "detailed"
+            },
+            {
+              "day": 16,
+              "summary": "detailed"
+            },
+            {
+              "day": 16,
+              "summary": "detailed"
+            },
+            {
+              "day": 17,
+              "summary": "detailed"
+            },
+            {
+              "day": 17,
+              "summary": "detailed"
+            },
+            {
+              "day": 17,
+              "summary": "detailed"
+            },
+            {
+              "day": 17,
+              "summary": "detailed"
+            },
+            {
+              "day": 17,
+              "summary": "detailed"
+            },
+            {
+              "day": 17,
+              "summary": "detailed"
+            },
+            {
+              "day": 18,
+              "summary": "detailed"
+            },
+            {
+              "day": 18,
+              "summary": "detailed"
+            },
+            {
+              "day": 18,
+              "summary": "detailed"
+            },
+            {
+              "day": 18,
+              "summary": "detailed"
+            },
+            {
+              "day": 18,
+              "summary": "detailed"
+            },
+            {
+              "day": 19,
+              "summary": "detailed"
+            },
+            {
+              "day": 19,
+              "summary": "detailed"
+            },
+            {
+              "day": 19,
+              "summary": "detailed"
+            },
+            {
+              "day": 19,
+              "summary": "detailed"
+            },
+            {
+              "day": 19,
+              "summary": "detailed"
+            },
+            {
+              "day": 20,
+              "summary": "detailed"
+            },
+            {
+              "day": 20,
+              "summary": "detailed"
+            },
+            {
+              "day": 20,
+              "summary": "detailed"
+            },
+            {
+              "day": 20,
+              "summary": "detailed"
+            },
+            {
+              "day": 20,
+              "summary": "detailed"
+            },
+            {
+              "day": 20,
+              "summary": "detailed"
+            },
+            {
+              "day": 21,
+              "summary": "detailed"
+            },
+            {
+              "day": 21,
+              "summary": "detailed"
+            },
+            {
+              "day": 21,
+              "summary": "detailed"
+            },
+            {
+              "day": 21,
+              "summary": "detailed"
+            },
+            {
+              "day": 21,
+              "summary": "detailed"
+            },
+            {
+              "day": 21,
+              "summary": "detailed"
+            },
+            {
+              "day": 22,
+              "summary": "detailed"
+            },
+            {
+              "day": 22,
+              "summary": "detailed"
+            },
+            {
+              "day": 22,
+              "summary": "detailed"
+            },
+            {
+              "day": 22,
+              "summary": "detailed"
+            },
+            {
+              "day": 22,
+              "summary": "detailed"
+            },
+            {
+              "day": 23,
+              "summary": "detailed"
+            },
+            {
+              "day": 23,
+              "summary": "detailed"
+            },
+            {
+              "day": 23,
+              "summary": "detailed"
+            },
+            {
+              "day": 23,
+              "summary": "detailed"
+            },
+            {
+              "day": 23,
+              "summary": "detailed"
+            },
+            {
+              "day": 23,
+              "summary": "detailed"
+            },
+            {
+              "day": 24,
+              "summary": "detailed"
+            },
+            {
+              "day": 24,
+              "summary": "detailed"
+            },
+            {
+              "day": 24,
+              "summary": "detailed"
+            },
+            {
+              "day": 24,
+              "summary": "detailed"
+            },
+            {
+              "day": 24,
+              "summary": "detailed"
+            },
+            {
+              "day": 25,
+              "summary": "detailed"
+            },
+            {
+              "day": 25,
+              "summary": "detailed"
+            },
+            {
+              "day": 25,
+              "summary": "detailed"
+            },
+            {
+              "day": 25,
+              "summary": "detailed"
+            },
+            {
+              "day": 25,
+              "summary": "detailed"
+            },
+            {
+              "day": 26,
+              "summary": "detailed"
+            },
+            {
+              "day": 26,
+              "summary": "detailed"
+            },
+            {
+              "day": 26,
+              "summary": "detailed"
+            },
+            {
+              "day": 26,
+              "summary": "detailed"
+            },
+            {
+              "day": 26,
+              "summary": "detailed"
+            },
+            {
+              "day": 26,
+              "summary": "detailed"
+            },
+            {
+              "day": 27,
+              "summary": "detailed"
+            },
+            {
+              "day": 27,
+              "summary": "detailed"
+            },
+            {
+              "day": 27,
+              "summary": "detailed"
+            },
+            {
+              "day": 27,
+              "summary": "detailed"
+            },
+            {
+              "day": 27,
+              "summary": "detailed"
+            },
+            {
+              "day": 27,
+              "summary": "detailed"
+            },
+            {
+              "day": 28,
+              "summary": "detailed"
+            },
+            {
+              "day": 28,
+              "summary": "detailed"
+            },
+            {
+              "day": 28,
+              "summary": "detailed"
+            },
+            {
+              "day": 28,
+              "summary": "detailed"
+            },
+            {
+              "day": 28,
+              "summary": "detailed"
+            },
+            {
+              "day": 28,
+              "summary": "detailed"
+            },
+            {
+              "day": 29,
+              "summary": "detailed"
+            },
+            {
+              "day": 29,
+              "summary": "detailed"
+            },
+            {
+              "day": 29,
+              "summary": "detailed"
+            },
+            {
+              "day": 29,
+              "summary": "detailed"
+            },
+            {
+              "day": 29,
+              "summary": "detailed"
+            },
+            {
+              "day": 29,
+              "summary": "detailed"
+            },
+            {
+              "day": 30,
+              "summary": "detailed"
+            },
+            {
+              "day": 30,
+              "summary": "detailed"
+            },
+            {
+              "day": 30,
+              "summary": "detailed"
+            },
+            {
+              "day": 30,
+              "summary": "detailed"
+            },
+            {
+              "day": 30,
+              "summary": "detailed"
+            },
+            {
+              "day": 30,
+              "summary": "detailed"
+            }
+          ],
+          "ai_errors": [],
+          "duration_seconds": 2432.308607339859,
+          "game_history": [
+            {
+              "day": 1,
+              "price": 1.0,
+              "open_hour": 9,
+              "close_hour": 17,
+              "hours_open": 8,
+              "customers_served": 100,
+              "customers_lost": 239,
+              "revenue": 100.0,
+              "operating_cost": 40,
+              "profit": 60.0,
+              "cash": 1024.73,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 34,
+                  "customers_served": 34,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 39,
+                  "customers_served": 39,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 50,
+                  "customers_served": 27,
+                  "customers_lost": 23
+                },
+                "12": {
+                  "customers_wanted": 61,
+                  "customers_served": 0,
+                  "customers_lost": 61
+                },
+                "13": {
+                  "customers_wanted": 49,
+                  "customers_served": 0,
+                  "customers_lost": 49
+                },
+                "14": {
+                  "customers_wanted": 38,
+                  "customers_served": 0,
+                  "customers_lost": 38
+                },
+                "15": {
+                  "customers_wanted": 32,
+                  "customers_served": 0,
+                  "customers_lost": 32
+                },
+                "16": {
+                  "customers_wanted": 36,
+                  "customers_served": 0,
+                  "customers_lost": 36
+                }
+              }
+            },
+            {
+              "day": 2,
+              "price": 1.0,
+              "open_hour": 10,
+              "close_hour": 18,
+              "hours_open": 8,
+              "customers_served": 120,
+              "customers_lost": 232,
+              "revenue": 120.0,
+              "operating_cost": 40,
+              "profit": 80.0,
+              "cash": 1059.502,
+              "hourly_sales": {
+                "10": {
+                  "customers_wanted": 38,
+                  "customers_served": 38,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 50,
+                  "customers_served": 50,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 59,
+                  "customers_served": 32,
+                  "customers_lost": 27
+                },
+                "13": {
+                  "customers_wanted": 53,
+                  "customers_served": 0,
+                  "customers_lost": 53
+                },
+                "14": {
+                  "customers_wanted": 33,
+                  "customers_served": 0,
+                  "customers_lost": 33
+                },
+                "15": {
+                  "customers_wanted": 34,
+                  "customers_served": 0,
+                  "customers_lost": 34
+                },
+                "16": {
+                  "customers_wanted": 38,
+                  "customers_served": 0,
+                  "customers_lost": 38
+                },
+                "17": {
+                  "customers_wanted": 47,
+                  "customers_served": 0,
+                  "customers_lost": 47
+                }
+              }
+            },
+            {
+              "day": 3,
+              "price": 1.85,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 150,
+              "customers_lost": 276,
+              "revenue": 277.5,
+              "operating_cost": 75,
+              "profit": 202.5,
+              "cash": 1207.657,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 26,
+                  "customers_served": 26,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 34,
+                  "customers_served": 34,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 41,
+                  "customers_served": 41,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 48,
+                  "customers_served": 3,
+                  "customers_lost": 45
+                },
+                "13": {
+                  "customers_wanted": 45,
+                  "customers_served": 0,
+                  "customers_lost": 45
+                },
+                "14": {
+                  "customers_wanted": 31,
+                  "customers_served": 0,
+                  "customers_lost": 31
+                },
+                "15": {
+                  "customers_wanted": 26,
+                  "customers_served": 0,
+                  "customers_lost": 26
+                },
+                "16": {
+                  "customers_wanted": 28,
+                  "customers_served": 0,
+                  "customers_lost": 28
+                },
+                "17": {
+                  "customers_wanted": 32,
+                  "customers_served": 0,
+                  "customers_lost": 32
+                },
+                "18": {
+                  "customers_wanted": 35,
+                  "customers_served": 0,
+                  "customers_lost": 35
+                },
+                "19": {
+                  "customers_wanted": 22,
+                  "customers_served": 0,
+                  "customers_lost": 22
+                },
+                "20": {
+                  "customers_wanted": 12,
+                  "customers_served": 0,
+                  "customers_lost": 12
+                }
+              }
+            },
+            {
+              "day": 4,
+              "price": 2.08,
+              "open_hour": 9,
+              "close_hour": 19,
+              "hours_open": 10,
+              "customers_served": 180,
+              "customers_lost": 123,
+              "revenue": 374.40000000000003,
+              "operating_cost": 50,
+              "profit": 324.40000000000003,
+              "cash": 1461.731,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 27,
+                  "customers_served": 27,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 36,
+                  "customers_served": 36,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 41,
+                  "customers_served": 41,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 41,
+                  "customers_served": 41,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 24,
+                  "customers_served": 13,
+                  "customers_lost": 11
+                },
+                "15": {
+                  "customers_wanted": 23,
+                  "customers_served": 0,
+                  "customers_lost": 23
+                },
+                "16": {
+                  "customers_wanted": 24,
+                  "customers_served": 0,
+                  "customers_lost": 24
+                },
+                "17": {
+                  "customers_wanted": 34,
+                  "customers_served": 0,
+                  "customers_lost": 34
+                },
+                "18": {
+                  "customers_wanted": 31,
+                  "customers_served": 0,
+                  "customers_lost": 31
+                }
+              }
+            },
+            {
+              "day": 5,
+              "price": 2.6,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 220,
+              "customers_lost": 99,
+              "revenue": 572.0,
+              "operating_cost": 75,
+              "profit": 497.0,
+              "cash": 1875.659,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 23,
+                  "customers_served": 23,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 31,
+                  "customers_served": 31,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 34,
+                  "customers_served": 34,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 31,
+                  "customers_served": 31,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 23,
+                  "customers_served": 5,
+                  "customers_lost": 18
+                },
+                "17": {
+                  "customers_wanted": 28,
+                  "customers_served": 0,
+                  "customers_lost": 28
+                },
+                "18": {
+                  "customers_wanted": 25,
+                  "customers_served": 0,
+                  "customers_lost": 25
+                },
+                "19": {
+                  "customers_wanted": 18,
+                  "customers_served": 0,
+                  "customers_lost": 18
+                },
+                "20": {
+                  "customers_wanted": 10,
+                  "customers_served": 0,
+                  "customers_lost": 10
+                }
+              }
+            },
+            {
+              "day": 6,
+              "price": 3.25,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 227,
+              "customers_lost": 0,
+              "revenue": 737.75,
+              "operating_cost": 75,
+              "profit": 662.75,
+              "cash": 2428.639,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 27,
+                  "customers_served": 27,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 24,
+                  "customers_served": 24,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 7,
+              "price": 3.75,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 162,
+              "customers_lost": 0,
+              "revenue": 607.5,
+              "operating_cost": 75,
+              "profit": 532.5,
+              "cash": 2895.179,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 8,
+              "price": 3.5,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 196,
+              "customers_lost": 0,
+              "revenue": 686.0,
+              "operating_cost": 75,
+              "profit": 611.0,
+              "cash": 3402.533,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 9,
+              "price": 3.75,
+              "open_hour": 8,
+              "close_hour": 18,
+              "hours_open": 10,
+              "customers_served": 126,
+              "customers_lost": 0,
+              "revenue": 472.5,
+              "operating_cost": 50,
+              "profit": 422.5,
+              "cash": 3796.2705,
+              "hourly_sales": {
+                "8": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 10,
+              "price": 4.0,
+              "open_hour": 7,
+              "close_hour": 19,
+              "hours_open": 12,
+              "customers_served": 116,
+              "customers_lost": 0,
+              "revenue": 464.0,
+              "operating_cost": 60,
+              "profit": 404.0,
+              "cash": 4193.154500000001,
+              "hourly_sales": {
+                "7": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 11,
+              "price": 3.25,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 229,
+              "customers_lost": 0,
+              "revenue": 744.25,
+              "operating_cost": 75,
+              "profit": 669.25,
+              "cash": 4789.7249,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 23,
+                  "customers_served": 23,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 24,
+                  "customers_served": 24,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 23,
+                  "customers_served": 23,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 12,
+              "price": 3.75,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 167,
+              "customers_lost": 0,
+              "revenue": 626.25,
+              "operating_cost": 75,
+              "profit": 551.25,
+              "cash": 5247.5749000000005,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 13,
+              "price": 4.0,
+              "open_hour": 8,
+              "close_hour": 20,
+              "hours_open": 12,
+              "customers_served": 117,
+              "customers_lost": 0,
+              "revenue": 468.0,
+              "operating_cost": 60,
+              "profit": 408.0,
+              "cash": 5610.7641,
+              "hourly_sales": {
+                "8": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 14,
+              "price": 3.5,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 153,
+              "customers_lost": 40,
+              "revenue": 535.5,
+              "operating_cost": 75,
+              "profit": 460.5,
+              "cash": 6044.9721,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 15,
+                  "customers_served": 7,
+                  "customers_lost": 8
+                },
+                "18": {
+                  "customers_wanted": 15,
+                  "customers_served": 0,
+                  "customers_lost": 15
+                },
+                "19": {
+                  "customers_wanted": 11,
+                  "customers_served": 0,
+                  "customers_lost": 11
+                },
+                "20": {
+                  "customers_wanted": 6,
+                  "customers_served": 0,
+                  "customers_lost": 6
+                }
+              }
+            },
+            {
+              "day": 15,
+              "price": 3.75,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 168,
+              "customers_lost": 0,
+              "revenue": 630.0,
+              "operating_cost": 75,
+              "profit": 555.0,
+              "cash": 6526.0521,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 3,
+                  "customers_served": 3,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 16,
+              "price": 4.0,
+              "open_hour": 9,
+              "close_hour": 19,
+              "hours_open": 10,
+              "customers_served": 107,
+              "customers_lost": 0,
+              "revenue": 428.0,
+              "operating_cost": 50,
+              "profit": 378.0,
+              "cash": 6835.9221,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 17,
+              "price": 4.5,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 67,
+              "customers_lost": 0,
+              "revenue": 301.5,
+              "operating_cost": 75,
+              "profit": 226.5,
+              "cash": 7025.072099999999,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 2,
+                  "customers_served": 2,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 3,
+                  "customers_served": 3,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 2,
+                  "customers_served": 2,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 18,
+              "price": 3.0,
+              "open_hour": 10,
+              "close_hour": 19,
+              "hours_open": 9,
+              "customers_served": 193,
+              "customers_lost": 0,
+              "revenue": 579.0,
+              "operating_cost": 45,
+              "profit": 534.0,
+              "cash": 7536.2189,
+              "hourly_sales": {
+                "10": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 24,
+                  "customers_served": 24,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 30,
+                  "customers_served": 30,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 28,
+                  "customers_served": 28,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 19,
+              "price": 3.5,
+              "open_hour": 9,
+              "close_hour": 18,
+              "hours_open": 9,
+              "customers_served": 141,
+              "customers_lost": 0,
+              "revenue": 493.5,
+              "operating_cost": 45,
+              "profit": 448.5,
+              "cash": 7892.6689,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 23,
+                  "customers_served": 23,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 20,
+              "price": 3.6,
+              "open_hour": 6,
+              "close_hour": 20,
+              "hours_open": 14,
+              "customers_served": 179,
+              "customers_lost": 0,
+              "revenue": 644.4,
+              "operating_cost": 70,
+              "profit": 574.4,
+              "cash": 8436.5013,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 21,
+              "price": 3.25,
+              "open_hour": 9,
+              "close_hour": 21,
+              "hours_open": 12,
+              "customers_served": 205,
+              "customers_lost": 0,
+              "revenue": 666.25,
+              "operating_cost": 60,
+              "profit": 606.25,
+              "cash": 8969.5913,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 23,
+                  "customers_served": 23,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 28,
+                  "customers_served": 28,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 22,
+              "price": 3.75,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 167,
+              "customers_lost": 0,
+              "revenue": 626.25,
+              "operating_cost": 75,
+              "profit": 551.25,
+              "cash": 9443.6681,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 23,
+              "price": 3.35,
+              "open_hour": 8,
+              "close_hour": 18,
+              "hours_open": 10,
+              "customers_served": 174,
+              "customers_lost": 0,
+              "revenue": 582.9,
+              "operating_cost": 50,
+              "profit": 532.9,
+              "cash": 9922.6731,
+              "hourly_sales": {
+                "8": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 26,
+                  "customers_served": 26,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 24,
+              "price": 3.8,
+              "open_hour": 9,
+              "close_hour": 21,
+              "hours_open": 12,
+              "customers_served": 143,
+              "customers_lost": 0,
+              "revenue": 543.4,
+              "operating_cost": 60,
+              "profit": 483.4,
+              "cash": 10330.793099999999,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 25,
+              "price": 4.0,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 131,
+              "customers_lost": 0,
+              "revenue": 524.0,
+              "operating_cost": 75,
+              "profit": 449.0,
+              "cash": 10755.1403,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 3,
+                  "customers_served": 3,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 4,
+                  "customers_served": 4,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 26,
+              "price": 4.0,
+              "open_hour": 10,
+              "close_hour": 18,
+              "hours_open": 8,
+              "customers_served": 90,
+              "customers_lost": 0,
+              "revenue": 360.0,
+              "operating_cost": 40,
+              "profit": 320.0,
+              "cash": 11033.2411,
+              "hourly_sales": {
+                "10": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 9,
+                  "customers_served": 9,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 10,
+                  "customers_served": 10,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 27,
+              "price": 3.25,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 201,
+              "customers_lost": 27,
+              "revenue": 653.25,
+              "operating_cost": 75,
+              "profit": 578.25,
+              "cash": 11551.443099999999,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 19,
+                  "customers_served": 19,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 27,
+                  "customers_served": 27,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 18,
+                  "customers_served": 10,
+                  "customers_lost": 8
+                },
+                "19": {
+                  "customers_wanted": 12,
+                  "customers_served": 0,
+                  "customers_lost": 12
+                },
+                "20": {
+                  "customers_wanted": 7,
+                  "customers_served": 0,
+                  "customers_lost": 7
+                }
+              }
+            },
+            {
+              "day": 28,
+              "price": 3.0,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 250,
+              "customers_lost": 12,
+              "revenue": 750.0,
+              "operating_cost": 75,
+              "profit": 675.0,
+              "cash": 12132.418099999999,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 6,
+                  "customers_served": 6,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 13,
+                  "customers_served": 13,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 32,
+                  "customers_served": 32,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 24,
+                  "customers_served": 24,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 22,
+                  "customers_served": 22,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 15,
+                  "customers_served": 11,
+                  "customers_lost": 4
+                },
+                "20": {
+                  "customers_wanted": 8,
+                  "customers_served": 0,
+                  "customers_lost": 8
+                }
+              }
+            },
+            {
+              "day": 29,
+              "price": 3.3,
+              "open_hour": 6,
+              "close_hour": 21,
+              "hours_open": 15,
+              "customers_served": 228,
+              "customers_lost": 0,
+              "revenue": 752.4,
+              "operating_cost": 75,
+              "profit": 677.4,
+              "cash": 12696.9281,
+              "hourly_sales": {
+                "6": {
+                  "customers_wanted": 5,
+                  "customers_served": 5,
+                  "customers_lost": 0
+                },
+                "7": {
+                  "customers_wanted": 8,
+                  "customers_served": 8,
+                  "customers_lost": 0
+                },
+                "8": {
+                  "customers_wanted": 11,
+                  "customers_served": 11,
+                  "customers_lost": 0
+                },
+                "9": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 28,
+                  "customers_served": 28,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 24,
+                  "customers_served": 24,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 17,
+                  "customers_served": 17,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "19": {
+                  "customers_wanted": 12,
+                  "customers_served": 12,
+                  "customers_lost": 0
+                },
+                "20": {
+                  "customers_wanted": 7,
+                  "customers_served": 7,
+                  "customers_lost": 0
+                }
+              }
+            },
+            {
+              "day": 30,
+              "price": 3.2,
+              "open_hour": 9,
+              "close_hour": 19,
+              "hours_open": 10,
+              "customers_served": 189,
+              "customers_lost": 0,
+              "revenue": 604.8000000000001,
+              "operating_cost": 50,
+              "profit": 554.8000000000001,
+              "cash": 13191.988299999999,
+              "hourly_sales": {
+                "9": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "10": {
+                  "customers_wanted": 18,
+                  "customers_served": 18,
+                  "customers_lost": 0
+                },
+                "11": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                },
+                "12": {
+                  "customers_wanted": 27,
+                  "customers_served": 27,
+                  "customers_lost": 0
+                },
+                "13": {
+                  "customers_wanted": 24,
+                  "customers_served": 24,
+                  "customers_lost": 0
+                },
+                "14": {
+                  "customers_wanted": 15,
+                  "customers_served": 15,
+                  "customers_lost": 0
+                },
+                "15": {
+                  "customers_wanted": 14,
+                  "customers_served": 14,
+                  "customers_lost": 0
+                },
+                "16": {
+                  "customers_wanted": 16,
+                  "customers_served": 16,
+                  "customers_lost": 0
+                },
+                "17": {
+                  "customers_wanted": 21,
+                  "customers_served": 21,
+                  "customers_lost": 0
+                },
+                "18": {
+                  "customers_wanted": 20,
+                  "customers_served": 20,
+                  "customers_lost": 0
+                }
+              }
+            }
+          ],
+          "supply_cost_history": [
+            {
+              "day": 1,
+              "cups": 0.0477,
+              "lemons": 0.1851,
+              "sugar": 0.0999,
+              "water": 0.02
+            },
+            {
+              "day": 2,
+              "cups": 0.0464,
+              "lemons": 0.2196,
+              "sugar": 0.0907,
+              "water": 0.0202
+            },
+            {
+              "day": 3,
+              "cups": 0.0506,
+              "lemons": 0.1895,
+              "sugar": 0.1039,
+              "water": 0.0183
+            },
+            {
+              "day": 4,
+              "cups": 0.0515,
+              "lemons": 0.2179,
+              "sugar": 0.1025,
+              "water": 0.0188
+            },
+            {
+              "day": 5,
+              "cups": 0.0498,
+              "lemons": 0.2123,
+              "sugar": 0.097,
+              "water": 0.0185
+            },
+            {
+              "day": 6,
+              "cups": 0.0509,
+              "lemons": 0.1863,
+              "sugar": 0.1098,
+              "water": 0.0189
+            },
+            {
+              "day": 7,
+              "cups": 0.0507,
+              "lemons": 0.2061,
+              "sugar": 0.1093,
+              "water": 0.0219
+            },
+            {
+              "day": 8,
+              "cups": 0.05,
+              "lemons": 0.1929,
+              "sugar": 0.0951,
+              "water": 0.0194
+            },
+            {
+              "day": 9,
+              "cups": 0.0529,
+              "lemons": 0.2009,
+              "sugar": 0.1086,
+              "water": 0.0211
+            },
+            {
+              "day": 10,
+              "cups": 0.0458,
+              "lemons": 0.1838,
+              "sugar": 0.1056,
+              "water": 0.0206
+            },
+            {
+              "day": 11,
+              "cups": 0.0462,
+              "lemons": 0.1866,
+              "sugar": 0.1055,
+              "water": 0.0215
+            },
+            {
+              "day": 12,
+              "cups": 0.0547,
+              "lemons": 0.1939,
+              "sugar": 0.1034,
+              "water": 0.0216
+            },
+            {
+              "day": 13,
+              "cups": 0.0539,
+              "lemons": 0.2052,
+              "sugar": 0.1074,
+              "water": 0.0198
+            },
+            {
+              "day": 14,
+              "cups": 0.0472,
+              "lemons": 0.2063,
+              "sugar": 0.1024,
+              "water": 0.0197
+            },
+            {
+              "day": 15,
+              "cups": 0.0474,
+              "lemons": 0.2056,
+              "sugar": 0.098,
+              "water": 0.0186
+            },
+            {
+              "day": 16,
+              "cups": 0.0519,
+              "lemons": 0.1963,
+              "sugar": 0.1094,
+              "water": 0.0209
+            },
+            {
+              "day": 17,
+              "cups": 0.0478,
+              "lemons": 0.2125,
+              "sugar": 0.0913,
+              "water": 0.0219
+            },
+            {
+              "day": 18,
+              "cups": 0.052,
+              "lemons": 0.1921,
+              "sugar": 0.1031,
+              "water": 0.0214
+            },
+            {
+              "day": 19,
+              "cups": 0.0459,
+              "lemons": 0.1946,
+              "sugar": 0.109,
+              "water": 0.0187
+            },
+            {
+              "day": 20,
+              "cups": 0.0487,
+              "lemons": 0.2034,
+              "sugar": 0.0937,
+              "water": 0.0181
+            },
+            {
+              "day": 21,
+              "cups": 0.0498,
+              "lemons": 0.1943,
+              "sugar": 0.1024,
+              "water": 0.0193
+            },
+            {
+              "day": 22,
+              "cups": 0.0465,
+              "lemons": 0.2065,
+              "sugar": 0.1041,
+              "water": 0.0212
+            },
+            {
+              "day": 23,
+              "cups": 0.0545,
+              "lemons": 0.1848,
+              "sugar": 0.1017,
+              "water": 0.0183
+            },
+            {
+              "day": 24,
+              "cups": 0.0497,
+              "lemons": 0.2062,
+              "sugar": 0.1008,
+              "water": 0.0197
+            },
+            {
+              "day": 25,
+              "cups": 0.0479,
+              "lemons": 0.2198,
+              "sugar": 0.0969,
+              "water": 0.0206
+            },
+            {
+              "day": 26,
+              "cups": 0.048,
+              "lemons": 0.2071,
+              "sugar": 0.0983,
+              "water": 0.0207
+            },
+            {
+              "day": 27,
+              "cups": 0.0523,
+              "lemons": 0.1996,
+              "sugar": 0.1017,
+              "water": 0.0217
+            },
+            {
+              "day": 28,
+              "cups": 0.0486,
+              "lemons": 0.1999,
+              "sugar": 0.108,
+              "water": 0.0196
+            },
+            {
+              "day": 29,
+              "cups": 0.0525,
+              "lemons": 0.2088,
+              "sugar": 0.0943,
+              "water": 0.0207
+            },
+            {
+              "day": 30,
+              "cups": 0.0512,
+              "lemons": 0.2112,
+              "sugar": 0.0965,
+              "water": 0.0192
+            }
+          ]
+        }
+      ],
+      "model": "o4-mini"
+    }
+  },
+  "total_duration_seconds": 2432.3232641220093
+}
