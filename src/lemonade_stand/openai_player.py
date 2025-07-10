@@ -68,7 +68,6 @@ class AIPlayerV05:
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI."""
-
         return [
             self._tool_check_morning_prices(),
             self._tool_check_inventory(),
@@ -254,7 +253,6 @@ class AIPlayerV05:
 
     def play_turn(self, game: BusinessGame) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API (stateless)."""
-
         prompt = game.get_turn_prompt()
         max_attempts = 10
         attempts = 0

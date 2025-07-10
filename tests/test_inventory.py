@@ -1,6 +1,7 @@
 """Tests for the inventory management system."""
 
 import pytest
+
 from src.lemonade_stand.business_game import Inventory
 
 
