@@ -4,6 +4,12 @@ import random
 from collections import deque
 from typing import Any
 
+# Game configuration constants
+DEFAULT_STARTING_CASH = 100.0
+DEFAULT_HOURLY_OPERATING_COST = 5.0
+DEFAULT_TOTAL_DAYS = 100
+LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
+
 
 class Inventory:
     """Manages perishable inventory with FIFO expiration tracking."""
@@ -332,9 +338,9 @@ class BusinessGame:
 
     def __init__(
         self,
-        days: int = 100,
-        starting_cash: float = 100,
-        hourly_operating_cost: float = 5,
+        days: int = DEFAULT_TOTAL_DAYS,
+        starting_cash: float = DEFAULT_STARTING_CASH,
+        hourly_operating_cost: float = DEFAULT_HOURLY_OPERATING_COST,
         seed: int | None = None,
     ):
         """Initialize the business game.
@@ -347,6 +353,7 @@ class BusinessGame:
         """
         self.total_days = days
         self.current_day = 0
+        self.starting_cash = starting_cash
         self.cash = starting_cash
         self.hourly_operating_cost = hourly_operating_cost
 
@@ -377,7 +384,7 @@ class BusinessGame:
         self.yesterday_profit: float | None = None
 
         # Recipe for making lemonade
-        self.recipe = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
+        self.recipe = LEMONADE_RECIPE.copy()
 
     def start_new_day(self) -> dict[str, Any]:
         """Start a new day: handle expiration, generate costs, reset state.
@@ -410,16 +417,22 @@ class BusinessGame:
 
         return {"day": self.current_day, "expired_items": expired, "cash": self.cash}
 
-    def check_morning_prices(self) -> dict[str, float]:
+    def check_morning_prices(self) -> dict[str, Any]:
         """Check today's supply costs.
 
         Returns:
-            Dictionary of item -> cost
+            Dictionary with supply costs or error
         """
         if not self.today_supply_costs:
-            raise RuntimeError("Day hasn't started yet. Call start_new_day() first.")
+            return {
+                "success": False,
+                "error": "Day hasn't started yet. Call start_new_day() first."
+            }
 
-        return self.today_supply_costs.copy()
+        return {
+            "success": True,
+            "prices": self.today_supply_costs.copy()
+        }
 
     def check_inventory(self) -> dict[str, Any]:
         """Check current inventory levels and expiration dates.
@@ -577,14 +590,16 @@ class BusinessGame:
         """
         # Check required actions
         if not self.price_set:
-            raise RuntimeError(
-                "Cannot simulate day: price not set. Call set_price() first."
-            )
+            return {
+                "success": False,
+                "error": "Cannot simulate day: price not set. Call set_price() first."
+            }
 
         if not self.hours_set:
-            raise RuntimeError(
-                "Cannot simulate day: hours not set. Call set_operating_hours() first."
-            )
+            return {
+                "success": False,
+                "error": "Cannot simulate day: hours not set. Call set_operating_hours() first."
+            }
 
         # Calculate customers for each hour
         hourly_customers = self.demand_model.calculate_daily_customers(
@@ -635,6 +650,7 @@ class BusinessGame:
 
         # Create day summary
         day_summary = {
+            "success": True,
             "day": self.current_day,
             "price": self.price,
             "open_hour": self.open_hour,
@@ -649,8 +665,9 @@ class BusinessGame:
             "hourly_sales": hourly_sales,
         }
 
-        # Store in history
-        self.history.append(day_summary)
+        # Store in history (without the success field)
+        history_entry = {k: v for k, v in day_summary.items() if k != "success"}
+        self.history.append(history_entry)
 
         return day_summary
 
@@ -824,12 +841,12 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} and {self.inventory.c
         return {
             "days_played": self.current_day,
             "final_cash": self.cash,
-            "total_profit": self.cash - 100,  # Profit over starting capital
+            "total_profit": self.cash - self.starting_cash,  # Profit over starting capital
             "total_revenue": total_revenue,
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
             "total_lost_sales": total_lost_sales,
-            "average_daily_profit": (self.cash - 100) / self.current_day
+            "average_daily_profit": (self.cash - self.starting_cash) / self.current_day
             if self.current_day > 0
             else 0,
             "inventory_value": self.inventory.get_total_value(),

@@ -1,6 +1,5 @@
 """Tests for the business game engine."""
 
-import pytest
 
 from src.lemonade_stand.business_game import BusinessGame
 
@@ -40,13 +39,16 @@ class TestBusinessGame:
         game = BusinessGame(seed=42)
 
         # Should fail before day starts
-        with pytest.raises(RuntimeError, match="Day hasn't started"):
-            game.check_morning_prices()
+        result = game.check_morning_prices()
+        assert result["success"] is False
+        assert "Day hasn't started" in result["error"]
 
         # Start day and check
         game.start_new_day()
-        prices = game.check_morning_prices()
+        result = game.check_morning_prices()
 
+        assert result["success"] is True
+        prices = result["prices"]
         assert "cups" in prices
         assert "lemons" in prices
         assert "sugar" in prices
@@ -124,13 +126,15 @@ class TestBusinessGame:
         game.start_new_day()
 
         # Should fail without price
-        with pytest.raises(RuntimeError, match="price not set"):
-            game.simulate_day()
+        result = game.simulate_day()
+        assert result["success"] is False
+        assert "price not set" in result["error"]
 
         # Set price, should still fail without hours
         game.set_price(2.0)
-        with pytest.raises(RuntimeError, match="hours not set"):
-            game.simulate_day()
+        result = game.simulate_day()
+        assert result["success"] is False
+        assert "hours not set" in result["error"]
 
     def test_simulate_day_success(self):
         """Test successful day simulation."""
