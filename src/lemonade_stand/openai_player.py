@@ -3,12 +3,11 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from openai import OpenAI
 
 from .business_game import BusinessGame
-
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ class AIPlayerV05:
     def __init__(
         self,
         model_name: str = "gpt-4.1-mini",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         include_reasoning_summary: bool = True,
     ):
         """Initialize the AI player.
@@ -67,7 +66,7 @@ class AIPlayerV05:
         # Track errors
         self.errors = []
 
-    def get_tools(self) -> List[Dict[str, Any]]:
+    def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI.
 
         Returns:
@@ -201,7 +200,7 @@ class AIPlayerV05:
         ]
 
     def execute_tool(
-        self, tool_name: str, args: Dict[str, Any], game: BusinessGame
+        self, tool_name: str, args: dict[str, Any], game: BusinessGame
     ) -> str:
         """Execute a tool with given arguments.
 
@@ -235,7 +234,7 @@ class AIPlayerV05:
         except Exception as e:
             return json.dumps({"error": str(e)})
 
-    def play_turn(self, game: BusinessGame) -> Dict[str, Any]:
+    def play_turn(self, game: BusinessGame) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API (stateless).
 
         Args:
@@ -291,16 +290,20 @@ class AIPlayerV05:
                 if self.is_reasoning_model and hasattr(response, "output"):
                     # Look for reasoning items in the output
                     for item in response.output:
-                        if hasattr(item, "type") and item.type == "reasoning":
-                            if hasattr(item, "summary") and item.summary:
-                                # Extract the actual reasoning text
-                                reasoning_text = None
-                                if (
-                                    isinstance(item.summary, list)
-                                    and len(item.summary) > 0
-                                ):
-                                    if hasattr(item.summary[0], "text"):
-                                        reasoning_text = item.summary[0].text
+                        if (
+                            hasattr(item, "type")
+                            and item.type == "reasoning"
+                            and hasattr(item, "summary")
+                            and item.summary
+                        ):
+                            # Extract the actual reasoning text
+                            reasoning_text = None
+                            if (
+                                isinstance(item.summary, list)
+                                and len(item.summary) > 0
+                                and hasattr(item.summary[0], "text")
+                            ):
+                                reasoning_text = item.summary[0].text
 
                                 self.reasoning_summaries.append(
                                     {
@@ -436,7 +439,7 @@ class AIPlayerV05:
             "tool_calls": all_tool_calls_this_turn,
         }
 
-    def calculate_cost(self) -> Dict[str, float]:
+    def calculate_cost(self) -> dict[str, float]:
         """Calculate the total cost of API usage.
 
         Returns:

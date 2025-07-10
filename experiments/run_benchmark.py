@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -17,10 +17,9 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
+from src.lemonade_stand import AIPlayerV05, BusinessGame
+
 load_dotenv()
-
-from src.lemonade_stand import BusinessGame, AIPlayerV05
-
 
 # Set up logging
 logging.basicConfig(
@@ -37,7 +36,7 @@ def run_single_game(
     days: int = 100,
     starting_cash: float = 100,
     seed: int = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run a single 100-day lemonade business game.
 
     Args:
@@ -185,7 +184,7 @@ def run_single_game(
         }
 
 
-def aggregate_results(games: List[Dict[str, Any]]) -> Dict[str, Any]:
+def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate results from multiple games.
 
     Args:
@@ -413,7 +412,7 @@ def main():
     analyzer = MetricsAnalyzer()
     all_game_metrics = []
 
-    for model, model_results in all_results.items():
+    for _model, model_results in all_results.items():
         for game in model_results["individual_games"]:
             if game["success"]:
                 game_metrics = analyzer.analyze_game(game)
