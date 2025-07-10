@@ -1,18 +1,4 @@
-# LemonadeBench: Economic Reasoning Benchmark for LLMs
-
-A benchmark revealing that state-of-the-art Large Language Models fail at basic economic reasoning, unable to discover optimal pricing through experimentation or manage simple business operations effectively.
-
-## Version 0.5 - Business Simulation
-
-LemonadeBench v0.5 tests economic intuition, long-term planning, and decision-making under uncertainty through a 30-day lemonade stand simulation with inventory management.
-
-### Key Findings
-
-Testing 5 OpenAI models on 30-day simulations revealed:
-- **61.5x performance gap** between worst (gpt-4.1-nano: $213) and best (o4-mini: $13,092)
-- **O3 Paradox**: Achieved 96.4% service rate but lower profit than O4-mini due to overordering
-- **No price arbitrage**: Models fail to exploit daily price variations by stockpiling
-- **Optimal profit**: $20,065 over 30 days; best model achieved only 65%
+# LemonadeBench
 
 ## Quick Start
 
@@ -33,8 +19,8 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 # Quick test (1 game, 10 days)
 uv run python experiments/run_benchmark.py --models gpt-4.1-mini --games 1 --days 10
 
-# Full benchmark (5 games, 30 days)
-uv run python experiments/run_benchmark.py --models gpt-4.1-mini gpt-4.1 o4-mini --games 5
+# Full benchmark (1 game, 100 days - default)
+uv run python experiments/run_benchmark.py --models gpt-4.1-mini gpt-4.1 o4-mini
 ```
 
 ## Game Mechanics
@@ -53,11 +39,13 @@ uv run python experiments/run_benchmark.py --models gpt-4.1-mini gpt-4.1 o4-mini
 - **Daily price variations**: ±10% on all supplies
 
 ### Available Actions
-- Check morning prices and inventory
-- Order supplies (instant delivery)
-- Set operating hours
-- Set lemonade price
-- Open for business
+- `check_morning_prices`: View today's supply costs (varies ±10% daily)
+- `check_inventory`: See available supplies and expiration dates
+- `order_supplies`: Purchase supplies (instant delivery)
+- `set_operating_hours`: Choose when to open (6am-9pm available)
+- `set_price`: Set lemonade price per cup
+- `open_for_business`: Start selling for the day
+- `get_historical_supply_costs`: Review past supply price trends
 
 ## Project Structure
 
@@ -80,21 +68,33 @@ lemonade_stand/
 
 View results:
 ```bash
-# Analyze specific results file
+# Analyze specific results file (shows summary statistics)
 uv run python analysis/analyze_results.py results/json/your_results.json
 
-# Save detailed metrics report
+# Save detailed metrics report (exports comprehensive metrics to JSON)
 uv run python analysis/analyze_results.py results/json/your_results.json --save-report metrics.json
 
-# Show model comparison
+# Show detailed model comparison (displays best/worst games per model)
 uv run python analysis/analyze_results.py results/json/your_results.json --compare-models
+
+# List all available result files
+uv run python analysis/analyze_results.py --list
+
+# Analyze the most recent results
+uv run python analysis/analyze_results.py --latest
+
+# Generate LaTeX table for paper
+uv run python analysis/analyze_results.py --latest --latex results/tex/benchmark.tex
+
+# Generate profit-over-time plots
+uv run python analysis/analyze_results.py --latest --plots results/plots/
 ```
 
 ## Roadmap
 
 - **v0.5** (current): Basic inventory management and price discovery
-- **v1.0** (planned): 10-year simulation with financial markets, loans, and marketing
-- **v2.0** (future): Multi-agent markets to test AI collusion
+- **v1.0** (in development): Multi-day planning with weather forecasts and dynamic pricing
+- **v2.0** (planned): Multi-agent markets to test strategic decision making and AI alignment
 
 See [ROADMAP.md](ROADMAP.md) for detailed plans.
 
@@ -103,7 +103,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed plans.
 If you use LemonadeBench in your research:
 ```bibtex
 @misc{lemonadebench2025,
-  title={LemonadeBench: A Simple Test Reveals Economic Reasoning Gaps in State-of-the-Art LLMs},
+  title={LemonadeBench: Evaluating the Economic Intuition of Large Language Models in Simple Markets},
   author={Vyas, Aidan},
   year={2025},
   url={https://github.com/aidanvyas/lemonadebench}
