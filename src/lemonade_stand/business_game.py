@@ -180,12 +180,18 @@ class Inventory:
 class DemandModel:
     """Calculates customer demand based on price, time of day, and random variation."""
 
-    # Hourly demand multipliers (6am-9pm)
+    # Hourly demand multipliers for all 24 hours
     HOURLY_MULTIPLIERS: dict[int, float] = {
-        6: 0.3,  # 6-7am: Early morning (30% of base)
-        7: 0.5,  # 7-8am: Morning commute
-        8: 0.7,  # 8-9am: Morning
-        9: 0.8,  # 9-10am: Mid-morning
+        0: 0.0,   # 12-1am: Closed
+        1: 0.0,   # 1-2am: Closed
+        2: 0.0,   # 2-3am: Closed
+        3: 0.0,   # 3-4am: Closed
+        4: 0.0,   # 4-5am: Closed
+        5: 0.0,   # 5-6am: Closed
+        6: 0.3,   # 6-7am: Early morning (30% of base)
+        7: 0.5,   # 7-8am: Morning commute
+        8: 0.7,   # 8-9am: Morning
+        9: 0.8,   # 9-10am: Mid-morning
         10: 1.0,  # 10-11am: Late morning (100% base)
         11: 1.2,  # 11am-12pm: Pre-lunch
         12: 1.5,  # 12-1pm: Lunch peak (150% of base)
@@ -197,6 +203,9 @@ class DemandModel:
         18: 1.0,  # 6-7pm: Early evening
         19: 0.7,  # 7-8pm: Evening
         20: 0.4,  # 8-9pm: Late evening (40% of base)
+        21: 0.0,  # 9-10pm: Closed
+        22: 0.0,  # 10-11pm: Closed
+        23: 0.0,  # 11pm-12am: Closed
     }
 
     def __init__(
@@ -243,7 +252,7 @@ class DemandModel:
         Returns:
             Multiplier value (0.0 means closed)
         """
-        return self.HOURLY_MULTIPLIERS.get(hour, 0.0)
+        return self.HOURLY_MULTIPLIERS[hour]
 
     def calculate_customers(
         self, price: float, hour: int, random_variation: bool = True
@@ -304,33 +313,6 @@ class DemandModel:
                 customers_by_hour[hour] = customers
 
         return customers_by_hour
-
-    def get_peak_hours(self, threshold: float = 1.0) -> list[int]:
-        """Get hours with demand multiplier above threshold.
-
-        Args:
-            threshold: Minimum multiplier to be considered peak
-
-        Returns:
-            List of peak hours
-        """
-        return [
-            hour for hour, mult in self.HOURLY_MULTIPLIERS.items() if mult >= threshold
-        ]
-
-    def get_operating_hours_info(self) -> dict[str, Any]:
-        """Get information about operating hours and demand patterns.
-
-        Returns:
-            Dictionary with operating hours info
-        """
-        return {
-            "available_hours": list(self.HOURLY_MULTIPLIERS.keys()),
-            "peak_hours": self.get_peak_hours(1.2),
-            "slow_hours": [h for h, m in self.HOURLY_MULTIPLIERS.items() if m < 0.6],
-            "best_hour": max(self.HOURLY_MULTIPLIERS.items(), key=lambda x: x[1])[0],
-            "worst_hour": min(self.HOURLY_MULTIPLIERS.items(), key=lambda x: x[1])[0],
-        }
 
 
 class BusinessGame:
@@ -731,14 +713,12 @@ class BusinessGame:
         )
         base_prompt = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
-Can make: {self.inventory.can_make_lemonade()} lemonades
 {self._get_historical_table()}
 Remember to:
-1. Check morning prices and inventory
+1. Check inventory and morning prices
 2. Order supplies if needed
-3. Set operating hours (6-21)
-4. Set price
-5. Call open_for_business() to start the day
+3. Set price and operating hours
+4. Call open_for_business() to start the day
 
 What would you like to do?"""
         if self.current_day == 0:
@@ -769,23 +749,23 @@ INVENTORY MANAGEMENT:
 - Supplies are delivered instantly when ordered
 
 DAILY WORKFLOW:
-1. Morning: Check supply prices, check inventory
-2. Decisions: Order supplies, set operating hours (6am-9pm window), set price
+1. Morning: Check inventory and supply prices
+2. Decisions: Order supplies, set price and operating hours
 3. IMPORTANT: Call open_for_business() after setting price and hours
 4. Evening: Review profit/loss and customer data
 
 AVAILABLE TOOLS:
-- check_morning_prices(): See today's supply costs
 - check_inventory(): View current stock and expiration dates
-- order_supplies(cups, lemons, sugar, water): Purchase supplies
-- set_operating_hours(open_hour, close_hour): e.g., (9, 17) for 9am-5pm
-- set_price(price): Set today's lemonade price
-- open_for_business(): REQUIRED - Open the stand after setting price and hours
+- check_morning_prices(): See today's supply costs
 - get_historical_supply_costs(): Analyze supply price trends
+- order_supplies(cups, lemons, sugar, water): Purchase supplies
+- set_price(price): Set today's lemonade price
+- set_operating_hours(open_hour, close_hour): Set today's operating hours
+- open_for_business(): REQUIRED - Open the stand after setting price and hours
 
 IMPORTANT: You MUST call open_for_business() after setting your price and operating hours. The stand will not operate until you do this.
 {self._get_historical_table()}
-Today is Day {self.current_day}. You have ${self.cash:.2f} and {self.inventory.can_make_lemonade()} lemonades worth of inventory. What would you like to do?"""
+Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would you like to do?"""
 
     def _get_historical_table(self) -> str:
         """Generate a table of complete performance history.

@@ -110,42 +110,6 @@ class TestDemandModel:
         # Check peak hour has most customers
         assert customers[12] > customers[9]  # Lunch > morning
 
-    def test_get_peak_hours(self):
-        """Test identifying peak hours."""
-        model = DemandModel()
-
-        # Default threshold 1.0
-        peak_hours = model.get_peak_hours()
-        assert 10 in peak_hours  # 1.0x
-        assert 11 in peak_hours  # 1.2x
-        assert 12 in peak_hours  # 1.5x
-        assert 13 in peak_hours  # 1.3x
-        assert 17 in peak_hours  # 1.1x
-        assert 18 in peak_hours  # 1.0x
-
-        # Higher threshold
-        peak_hours = model.get_peak_hours(threshold=1.3)
-        assert peak_hours == [12, 13]  # Only lunch hours
-
-    def test_operating_hours_info(self):
-        """Test getting operating hours information."""
-        model = DemandModel()
-        info = model.get_operating_hours_info()
-
-        # Check structure
-        assert "available_hours" in info
-        assert "peak_hours" in info
-        assert "slow_hours" in info
-        assert "best_hour" in info
-        assert "worst_hour" in info
-
-        # Check values
-        assert len(info["available_hours"]) == 15  # 6am-9pm
-        assert info["best_hour"] == 12  # Lunch peak
-        assert info["worst_hour"] == 6  # Early morning
-        assert 12 in info["peak_hours"]
-        assert 6 in info["slow_hours"]
-
     def test_edge_cases(self):
         """Test edge cases and boundary conditions."""
         model = DemandModel()
