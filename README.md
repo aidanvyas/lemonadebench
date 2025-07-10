@@ -39,18 +39,21 @@ uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gp
 - **Daily price variations**: ±10% on all supplies
 
 ### Available Actions
-- `check_morning_prices`: View today's supply costs (varies ±10% daily)
 - `check_inventory`: See available supplies and expiration dates
-- `order_supplies`: Purchase supplies (instant delivery)
-- `set_operating_hours`: Choose when to open (6am-9pm available)
-- `set_price`: Set lemonade price per cup
-- `open_for_business`: Start selling for the day
+- `check_morning_prices`: View today's supply costs (varies ±10% daily)
 - `get_historical_supply_costs`: Review past supply price trends
+- `order_supplies`: Purchase supplies (instant delivery)
+- `set_price`: Set lemonade price per cup
+- `set_operating_hours`: Choose when to open (6am-9pm available)
+- `open_for_business`: Start selling for the day
 
 ## Project Structure
 
 ```
 lemonade_stand/
+├── pyproject.toml             # Project config & dependencies
+├── uv.lock                    # Locked dependency versions
+├── .python-version            # Python version for pyenv
 ├── src/lemonade_stand/        # Core implementation
 │   ├── business_game.py       # Game mechanics + inventory + demand
 │   ├── openai_player.py       # AI player using OpenAI Responses API
@@ -93,7 +96,7 @@ uv run python analysis/analyze_results.py --latest --plots results/plots/
 ## Roadmap
 
 - **v0.5** (current): Basic inventory management and price discovery
-- **v1.0** (in development): Multi-day planning with weather forecasts and dynamic pricing
+- **v1.0** (in development): Comprehensive economic decision making over a decade
 - **v2.0** (planned): Multi-agent markets to test strategic decision making and AI alignment
 
 See [ROADMAP.md](ROADMAP.md) for detailed plans.
