@@ -17,10 +17,10 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 ### 3. Run Benchmark
 ```bash
 # Quick test (1 model, 10 days)
-uv run python experiments/run_benchmark.py --models gpt-4.1-mini --games 1 --days 10
+uv run python experiments/run_benchmark.py --models gpt-4.1-mini --days 10
 
 # Full benchmark (5 models, 30 days - default)
-uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gpt-4.1 o3 o4-mini
+uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gpt-4.1 o4-mini o3
 ```
 
 ## Game Mechanics
