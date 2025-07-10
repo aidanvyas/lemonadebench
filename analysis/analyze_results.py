@@ -24,7 +24,7 @@ try:
     PLOTTING_AVAILABLE = True
 except ImportError:
     PLOTTING_AVAILABLE = False
-    print("Warning: matplotlib not available. Install with: pip install matplotlib")
+    print("Warning: matplotlib not available. Install with: uv add matplotlib")
 
 
 def generate_latex_table(report, output_file):
