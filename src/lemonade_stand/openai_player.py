@@ -67,137 +67,154 @@ class AIPlayerV05:
         self.errors = []
 
     def get_tools(self) -> list[dict[str, Any]]:
-        """Define available tools for the AI.
-
-        Returns:
-            List of tool definitions in OpenAI Responses API format
-        """
+        """Define available tools for the AI."""
         return [
-            {
-                "type": "function",
-                "name": "check_morning_prices",
-                "description": "Check today's supply costs for all items",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            {
-                "type": "function",
-                "name": "check_inventory",
-                "description": "View current inventory levels and expiration dates",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            {
-                "type": "function",
-                "name": "order_supplies",
-                "description": "Purchase supplies (delivered instantly)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "cups": {
-                            "type": "integer",
-                            "description": "Number of cups to order",
-                            "minimum": 0,
-                        },
-                        "lemons": {
-                            "type": "integer",
-                            "description": "Number of lemons to order",
-                            "minimum": 0,
-                        },
-                        "sugar": {
-                            "type": "integer",
-                            "description": "Amount of sugar to order",
-                            "minimum": 0,
-                        },
-                        "water": {
-                            "type": "integer",
-                            "description": "Amount of water to order",
-                            "minimum": 0,
-                        },
-                    },
-                    "required": ["cups", "lemons", "sugar", "water"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            {
-                "type": "function",
-                "name": "set_operating_hours",
-                "description": "Set today's operating hours (must be between 6-21)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "open_hour": {
-                            "type": "integer",
-                            "description": "Opening hour (6-21)",
-                            "minimum": 6,
-                            "maximum": 21,
-                        },
-                        "close_hour": {
-                            "type": "integer",
-                            "description": "Closing hour (6-21)",
-                            "minimum": 6,
-                            "maximum": 21,
-                        },
-                    },
-                    "required": ["open_hour", "close_hour"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            {
-                "type": "function",
-                "name": "set_price",
-                "description": "Set the price for a lemonade",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "price": {
-                            "type": "number",
-                            "description": "Price per lemonade",
-                            "minimum": 0,
-                        }
-                    },
-                    "required": ["price"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            {
-                "type": "function",
-                "name": "get_historical_supply_costs",
-                "description": "Analyze supply price trends",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            {
-                "type": "function",
-                "name": "open_for_business",
-                "description": "Open the stand for business (must set price and hours first)",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
+            self._tool_check_morning_prices(),
+            self._tool_check_inventory(),
+            self._tool_order_supplies(),
+            self._tool_set_operating_hours(),
+            self._tool_set_price(),
+            self._tool_get_historical_supply_costs(),
+            self._tool_open_for_business(),
         ]
+
+    def _tool_check_morning_prices(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "check_morning_prices",
+            "description": "Check today's supply costs for all items",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
+
+    def _tool_check_inventory(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "check_inventory",
+            "description": "View current inventory levels and expiration dates",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
+
+    def _tool_order_supplies(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "order_supplies",
+            "description": "Purchase supplies (delivered instantly)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cups": {
+                        "type": "integer",
+                        "description": "Number of cups to order",
+                        "minimum": 0,
+                    },
+                    "lemons": {
+                        "type": "integer",
+                        "description": "Number of lemons to order",
+                        "minimum": 0,
+                    },
+                    "sugar": {
+                        "type": "integer",
+                        "description": "Amount of sugar to order",
+                        "minimum": 0,
+                    },
+                    "water": {
+                        "type": "integer",
+                        "description": "Amount of water to order",
+                        "minimum": 0,
+                    },
+                },
+                "required": ["cups", "lemons", "sugar", "water"],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
+
+    def _tool_set_operating_hours(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "set_operating_hours",
+            "description": "Set today's operating hours (must be between 6-21)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "open_hour": {
+                        "type": "integer",
+                        "description": "Opening hour (6-21)",
+                        "minimum": 6,
+                        "maximum": 21,
+                    },
+                    "close_hour": {
+                        "type": "integer",
+                        "description": "Closing hour (6-21)",
+                        "minimum": 6,
+                        "maximum": 21,
+                    },
+                },
+                "required": ["open_hour", "close_hour"],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
+
+    def _tool_set_price(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "set_price",
+            "description": "Set the price for a lemonade",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "price": {
+                        "type": "number",
+                        "description": "Price per lemonade",
+                        "minimum": 0,
+                    }
+                },
+                "required": ["price"],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
+
+    def _tool_get_historical_supply_costs(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "get_historical_supply_costs",
+            "description": "Analyze supply price trends",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
+
+    def _tool_open_for_business(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "name": "open_for_business",
+            "description": "Open the stand for business (must set price and hours first)",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        }
 
     def execute_tool(
         self, tool_name: str, args: dict[str, Any], game: BusinessGame
@@ -235,47 +252,16 @@ class AIPlayerV05:
             return json.dumps({"error": str(e)})
 
     def play_turn(self, game: BusinessGame) -> dict[str, Any]:
-        """Play one turn of the game using OpenAI Responses API (stateless).
-
-        Args:
-            game: The game instance
-
-        Returns:
-            Turn results including any errors
-        """
-        # Get the prompt for this turn (includes historical table)
+        """Play one turn of the game using OpenAI Responses API (stateless)."""
         prompt = game.get_turn_prompt()
-
-        # Keep trying until all required actions are complete
         max_attempts = 10
         attempts = 0
-
-        # Track all tool calls made during this turn
-        all_tool_calls_this_turn = []
-
-        # Build conversation history for this turn only
+        all_tool_calls_this_turn: list[str] = []
         conversation = [{"role": "user", "content": prompt}]
 
         while attempts < max_attempts:
             attempts += 1
-
             try:
-                kwargs = {
-                    "model": self.model_name,
-                    "input": conversation,
-                    "tools": self.get_tools(),
-                    "instructions": game._get_system_prompt(),  # Always include
-                }
-
-                # Add reasoning parameters for o* models
-                if self.is_reasoning_model:
-                    kwargs["reasoning"] = {"effort": "medium"}
-                    kwargs["max_output_tokens"] = 25000
-
-                    if self.include_reasoning_summary:
-                        kwargs["reasoning"]["summary"] = "auto"
-
-                # Debug logging
                 if attempts <= 2:
                     logger.info(f"Day {game.current_day}, Attempt {attempts}")
                     if attempts > 1:
@@ -283,161 +269,162 @@ class AIPlayerV05:
                             f"  Progress: {list(set(all_tool_calls_this_turn))}"
                         )
 
-                # Make API call
+                kwargs = self._build_request_kwargs(conversation, game)
                 response = self.client.responses.create(**kwargs)
 
-                # Extract reasoning summary if available
-                if self.is_reasoning_model and hasattr(response, "output"):
-                    # Look for reasoning items in the output
-                    for item in response.output:
-                        if (
-                            hasattr(item, "type")
-                            and item.type == "reasoning"
-                            and hasattr(item, "summary")
-                            and item.summary
-                        ):
-                            # Extract the actual reasoning text
-                            reasoning_text = None
-                            if (
-                                isinstance(item.summary, list)
-                                and len(item.summary) > 0
-                                and hasattr(item.summary[0], "text")
-                            ):
-                                reasoning_text = item.summary[0].text
+                self._extract_reasoning_summary(response, game, attempts)
+                self._update_token_usage(response)
 
-                                self.reasoning_summaries.append(
-                                    {
-                                        "day": game.current_day,
-                                        "attempt": attempts,
-                                        "summary": reasoning_text,
-                                        "summary_type": response.reasoning.summary
-                                        if hasattr(response, "reasoning")
-                                        else None,
-                                        "effort": response.reasoning.effort
-                                        if hasattr(response, "reasoning")
-                                        else None,
-                                    }
-                                )
+                (
+                    tool_calls_made,
+                    tool_results,
+                    assistant_message,
+                    success,
+                ) = self._process_output(response, game, attempts, all_tool_calls_this_turn)
 
-                                # Debug log first reasoning
-                                if game.current_day == 1 and attempts == 1:
-                                    logger.info(
-                                        f"Captured reasoning summary: {reasoning_text[:200]}..."
-                                        if reasoning_text
-                                        else "No reasoning text"
-                                    )
+                if success is not None:
+                    return success
 
-                # Update token usage
-                if hasattr(response, "usage"):
-                    usage = response.usage
-                    self.total_token_usage["input_tokens"] += getattr(
-                        usage, "prompt_tokens", 0
-                    )
-                    self.total_token_usage["output_tokens"] += getattr(
-                        usage, "completion_tokens", 0
-                    )
-                    self.total_token_usage["total_tokens"] += getattr(
-                        usage, "total_tokens", 0
-                    )
-
-                    # Check for cached tokens
-                    if hasattr(usage, "prompt_tokens_details"):
-                        cached = getattr(
-                            usage.prompt_tokens_details, "cached_tokens", 0
-                        )
-                        self.total_token_usage["cached_input_tokens"] += cached
-
-                    # Check for reasoning tokens
-                    if hasattr(usage, "completion_tokens_details"):
-                        reasoning = getattr(
-                            usage.completion_tokens_details, "reasoning_tokens", 0
-                        )
-                        self.total_token_usage["reasoning_tokens"] += reasoning
-
-                # Process the response
-                tool_calls_made = []
-                tool_results = []
-                assistant_message = None
-
-                # Debug log the response
-                if attempts <= 4:
-                    logger.info(f"Response has {len(response.output)} output items")
-
-                # Process output items and execute tools
-                for item in response.output:
-                    if item.type == "function_call":
-                        # Execute the function
-                        args = json.loads(item.arguments) if item.arguments else {}
-                        result = self.execute_tool(item.name, args, game)
-                        tool_calls_made.append(item.name)
-                        all_tool_calls_this_turn.append(item.name)
-
-                        # Store result for later
-                        tool_results.append(
-                            {"name": item.name, "result": result, "id": item.id}
-                        )
-
-                        # Check if open_for_business succeeded
-                        if item.name == "open_for_business":
-                            result_dict = json.loads(result)
-                            if result_dict.get("success", False):
-                                logger.info(
-                                    "open_for_business succeeded - day complete"
-                                )
-                                return {
-                                    "success": True,
-                                    "attempts": attempts,
-                                    "tool_calls": all_tool_calls_this_turn,
-                                    "opened_for_business": True,
-                                }
-
-                        # Log execution
-                        if attempts <= 2:
-                            logger.info(
-                                f"Executed {item.name}, result: {result[:100]}..."
-                            )
-                    elif item.type == "text":
-                        # Add any text response
-                        if not assistant_message:
-                            assistant_message = {
-                                "role": "assistant",
-                                "content": item.text,
-                            }
-                        elif isinstance(assistant_message["content"], str):
-                            assistant_message["content"] += "\n" + item.text
-                        else:
-                            assistant_message["content"].append(
-                                {"type": "text", "text": item.text}
-                            )
-
-                # For subsequent attempts, append tool results to a new user message
                 if tool_results:
-                    # Build a user message with the tool results
-                    results_message = "Here are the results of the tool calls:\n\n"
-                    for tool_result in tool_results:
-                        results_message += f"{tool_result['name']} result:\n{tool_result['result']}\n\n"
-                    results_message += "Please continue with the next steps."
+                    self._append_tool_results_to_conversation(tool_results, conversation)
 
-                    conversation.append({"role": "user", "content": results_message})
-
-                # If no tool calls made, try again
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
-
             except Exception as e:
                 logger.error(f"Error in turn: {e}")
                 self.errors.append({"day": game.current_day, "error": str(e)})
-
                 if attempts < max_attempts:
                     logger.warning(f"Error on attempt {attempts}, will retry")
 
-        # Max attempts reached
+        return self._max_attempts_response(attempts, all_tool_calls_this_turn)
+
+    def _max_attempts_response(
+        self, attempts: int, all_tool_calls: list[str]
+    ) -> dict[str, Any]:
         return {
             "success": False,
             "error": "Max attempts reached. Did not call open_for_business() to start the day.",
             "attempts": attempts,
-            "tool_calls": all_tool_calls_this_turn,
+            "tool_calls": all_tool_calls,
         }
+
+    def _build_request_kwargs(
+        self, conversation: list[dict[str, Any]], game: BusinessGame
+    ) -> dict[str, Any]:
+        kwargs = {
+            "model": self.model_name,
+            "input": conversation,
+            "tools": self.get_tools(),
+            "instructions": game._get_system_prompt(),
+        }
+        if self.is_reasoning_model:
+            kwargs["reasoning"] = {"effort": "medium"}
+            kwargs["max_output_tokens"] = 25000
+            if self.include_reasoning_summary:
+                kwargs["reasoning"]["summary"] = "auto"
+        return kwargs
+
+    def _extract_reasoning_summary(self, response: Any, game: BusinessGame, attempts: int) -> None:
+        if not (self.is_reasoning_model and hasattr(response, "output")):
+            return
+        for item in response.output:
+            if (
+                hasattr(item, "type")
+                and item.type == "reasoning"
+                and hasattr(item, "summary")
+                and item.summary
+            ):
+                reasoning_text = None
+                if (
+                    isinstance(item.summary, list)
+                    and len(item.summary) > 0
+                    and hasattr(item.summary[0], "text")
+                ):
+                    reasoning_text = item.summary[0].text
+                self.reasoning_summaries.append(
+                    {
+                        "day": game.current_day,
+                        "attempt": attempts,
+                        "summary": reasoning_text,
+                        "summary_type": response.reasoning.summary if hasattr(response, "reasoning") else None,
+                        "effort": response.reasoning.effort if hasattr(response, "reasoning") else None,
+                    }
+                )
+                if game.current_day == 1 and attempts == 1:
+                    logger.info(
+                        f"Captured reasoning summary: {reasoning_text[:200]}..." if reasoning_text else "No reasoning text"
+                    )
+
+    def _update_token_usage(self, response: Any) -> None:
+        if not hasattr(response, "usage"):
+            return
+        usage = response.usage
+        self.total_token_usage["input_tokens"] += getattr(usage, "prompt_tokens", 0)
+        self.total_token_usage["output_tokens"] += getattr(usage, "completion_tokens", 0)
+        self.total_token_usage["total_tokens"] += getattr(usage, "total_tokens", 0)
+        if hasattr(usage, "prompt_tokens_details"):
+            cached = getattr(usage.prompt_tokens_details, "cached_tokens", 0)
+            self.total_token_usage["cached_input_tokens"] += cached
+        if hasattr(usage, "completion_tokens_details"):
+            reasoning = getattr(usage.completion_tokens_details, "reasoning_tokens", 0)
+            self.total_token_usage["reasoning_tokens"] += reasoning
+
+    def _process_output(
+        self,
+        response: Any,
+        game: BusinessGame,
+        attempts: int,
+        all_tool_calls_this_turn: list[str],
+    ) -> tuple[list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None]:
+        tool_calls_made: list[str] = []
+        tool_results: list[dict[str, Any]] = []
+        assistant_message: dict[str, Any] | None = None
+
+        if attempts <= 4:
+            logger.info(f"Response has {len(response.output)} output items")
+
+        for item in response.output:
+            if item.type == "function_call":
+                args = json.loads(item.arguments) if item.arguments else {}
+                result = self.execute_tool(item.name, args, game)
+                tool_calls_made.append(item.name)
+                all_tool_calls_this_turn.append(item.name)
+                tool_results.append({"name": item.name, "result": result, "id": item.id})
+                if item.name == "open_for_business":
+                    result_dict = json.loads(result)
+                    if result_dict.get("success", False):
+                        logger.info("open_for_business succeeded - day complete")
+                        return (
+                            tool_calls_made,
+                            tool_results,
+                            assistant_message,
+                            {
+                                "success": True,
+                                "attempts": attempts,
+                                "tool_calls": all_tool_calls_this_turn,
+                                "opened_for_business": True,
+                            },
+                        )
+                if attempts <= 2:
+                    logger.info(f"Executed {item.name}, result: {result[:100]}...")
+            elif item.type == "text":
+                if not assistant_message:
+                    assistant_message = {"role": "assistant", "content": item.text}
+                elif isinstance(assistant_message["content"], str):
+                    assistant_message["content"] += "\n" + item.text
+                else:
+                    assistant_message["content"].append({"type": "text", "text": item.text})
+
+        return tool_calls_made, tool_results, assistant_message, None
+
+    def _append_tool_results_to_conversation(
+        self, tool_results: list[dict[str, Any]], conversation: list[dict[str, Any]]
+    ) -> None:
+        results_message = "Here are the results of the tool calls:\n\n"
+        for tool_result in tool_results:
+            results_message += f"{tool_result['name']} result:\n{tool_result['result']}\n\n"
+        results_message += "Please continue with the next steps."
+        conversation.append({"role": "user", "content": results_message})
 
     def calculate_cost(self) -> dict[str, float]:
         """Calculate the total cost of API usage.
