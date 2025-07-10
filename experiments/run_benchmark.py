@@ -273,7 +273,7 @@ def main():
     parser.add_argument(
         "--games", type=int, default=5, help="Number of games to run per model"
     )
-    parser.add_argument("--days", type=int, default=100, help="Number of days per game")
+    parser.add_argument("--days", type=int, default=30, help="Number of days per game")
     parser.add_argument(
         "--models", nargs="+", default=["gpt-4.1-mini"], help="Models to test"
     )
