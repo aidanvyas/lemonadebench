@@ -72,7 +72,7 @@ class Inventory:
 
         return sum(quantity for quantity, _ in self.items[item_type])
 
-    def get_inventory_details(self) -> Dict[str, List[Dict[str, any]]]:
+    def get_inventory_details(self) -> Dict[str, List[Dict[str, Any]]]:
         """Get detailed inventory information including expiration dates.
 
         Returns:
@@ -313,7 +313,7 @@ class DemandModel:
             hour for hour, mult in self.HOURLY_MULTIPLIERS.items() if mult >= threshold
         ]
 
-    def get_operating_hours_info(self) -> Dict[str, any]:
+    def get_operating_hours_info(self) -> Dict[str, Any]:
         """Get information about operating hours and demand patterns.
 
         Returns:
