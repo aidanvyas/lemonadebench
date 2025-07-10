@@ -184,11 +184,11 @@ class TestBusinessGame:
         assert game.inventory.can_make_lemonade() == 0
 
     def test_historical_data(self):
-        """Test getting historical data."""
+        """Test that history is tracked correctly."""
         game = BusinessGame(seed=42)
 
         # No history initially
-        assert game.get_historical_data() == []
+        assert game.history == []
 
         # Play a day
         game.start_new_day()
@@ -198,13 +198,13 @@ class TestBusinessGame:
         game.simulate_day()
 
         # Check history
-        history = game.get_historical_data()
-        assert len(history) == 1
-        assert history[0]["day"] == 1
-        assert history[0]["price"] == 2.5
-        assert history[0]["hours"] == "9-17"
-        assert "customers" in history[0]
-        assert "profit" in history[0]
+        assert len(game.history) == 1
+        assert game.history[0]["day"] == 1
+        assert game.history[0]["price"] == 2.5
+        assert game.history[0]["open_hour"] == 9
+        assert game.history[0]["close_hour"] == 17
+        assert "customers_served" in game.history[0]
+        assert "profit" in game.history[0]
 
     def test_supply_cost_history(self):
         """Test tracking supply cost history."""

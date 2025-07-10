@@ -653,28 +653,6 @@ class BusinessGame:
 
         return day_summary
 
-    def get_historical_data(self) -> list[dict[str, Any]]:
-        """Get historical performance data.
-
-        Returns:
-            List of daily summaries
-        """
-        # Return simplified view for AI
-        simplified_history = []
-        for day_data in self.history:
-            simplified_history.append(
-                {
-                    "day": day_data["day"],
-                    "price": day_data["price"],
-                    "hours": f"{day_data['open_hour']}-{day_data['close_hour']}",
-                    "customers": day_data["customers_served"],
-                    "lost_sales": day_data["customers_lost"],
-                    "profit": day_data["profit"],
-                }
-            )
-
-        return simplified_history
-
     def get_historical_supply_costs(self) -> list[dict[str, float]]:
         """Get historical supply cost data.
 
@@ -786,17 +764,6 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
             table += f"{day['day']:3} | ${day['profit']:9.2f} | {day['customers_served']:9} | {ran_out:^7}\n"
 
         return table
-
-    def get_end_of_day_message(self) -> str:
-        """Get the end of day message.
-
-        Returns:
-            Message string
-        """
-        if self.yesterday_profit is not None:
-            return f"Day {self.current_day} complete. You made ${self.yesterday_profit:.2f} today."
-        else:
-            return f"Day {self.current_day} complete."
 
     def is_game_over(self) -> bool:
         """Check if the game has ended.
