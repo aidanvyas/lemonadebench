@@ -1,11 +1,11 @@
 """Comprehensive recording of all model interactions for analysis."""
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+import json
 import statistics
 from collections import defaultdict
-import json
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -28,9 +28,9 @@ class DailyMetrics:
     service_rate: float
 
     # Inventory metrics
-    inventory_purchased: Dict[str, int]
-    inventory_used: Dict[str, int]
-    inventory_expired: Dict[str, int]
+    inventory_purchased: dict[str, int]
+    inventory_used: dict[str, int]
+    inventory_expired: dict[str, int]
     inventory_value_end: float
 
     # Pricing metrics
@@ -44,7 +44,7 @@ class DailyMetrics:
     off_peak_customers_served: int
 
     # Tool usage
-    tool_calls: Dict[str, int]
+    tool_calls: dict[str, int]
     turn_attempts: int
 
     # Economic efficiency
@@ -67,7 +67,7 @@ class GameMetrics:
     survival_rate: float  # days_survived / days_target
     final_cash: float
     went_bankrupt: bool
-    bankruptcy_day: Optional[int]
+    bankruptcy_day: int | None
 
     # Economic metrics
     total_revenue: float
@@ -85,14 +85,14 @@ class GameMetrics:
     stockout_rate: float
 
     # Inventory efficiency
-    total_inventory_purchased: Dict[str, int]
-    total_inventory_used: Dict[str, int]
-    total_inventory_expired: Dict[str, int]
-    inventory_efficiency: Dict[str, float]  # used / purchased
+    total_inventory_purchased: dict[str, int]
+    total_inventory_used: dict[str, int]
+    total_inventory_expired: dict[str, int]
+    inventory_efficiency: dict[str, float]  # used / purchased
     expired_value: float
 
     # Pricing strategy
-    unique_prices: List[float]
+    unique_prices: list[float]
     price_changes: int
     average_price: float
     price_variance: float
@@ -108,8 +108,8 @@ class GameMetrics:
     peak_revenue_share: float  # % of revenue from peak hours
 
     # Tool usage patterns
-    total_tool_calls: Dict[str, int]
-    tool_calls_per_day: Dict[str, float]
+    total_tool_calls: dict[str, int]
+    tool_calls_per_day: dict[str, float]
     average_turn_attempts: float
 
     # Learning metrics
@@ -123,7 +123,7 @@ class GameMetrics:
     cost_per_day: float
 
     # Daily history for analysis
-    daily_metrics: List[DailyMetrics] = field(default_factory=list)
+    daily_metrics: list[DailyMetrics] = field(default_factory=list)
 
 
 class MetricsAnalyzer:
@@ -134,7 +134,7 @@ class MetricsAnalyzer:
         self.optimal_price = 2.69  # Theoretical optimum
         self.optimal_daily_profit = 625.54
 
-    def analyze_game(self, game_result: Dict[str, Any]) -> GameMetrics:
+    def analyze_game(self, game_result: dict[str, Any]) -> GameMetrics:
         """Analyze a single game and compute all metrics."""
         # Basic info
         metrics = GameMetrics(
@@ -224,7 +224,7 @@ class MetricsAnalyzer:
             if abs(price - self.optimal_price) < 0.20:  # Within $0.20 of optimal
                 metrics.optimal_price_discovery = True
 
-        metrics.unique_prices = sorted(list(set(prices)))
+        metrics.unique_prices = sorted(set(prices))
         metrics.price_changes = price_changes
         metrics.average_price = statistics.mean(prices) if prices else 0
         metrics.price_variance = statistics.variance(prices) if len(prices) > 1 else 0
@@ -247,7 +247,7 @@ class MetricsAnalyzer:
 
         return metrics
 
-    def _calculate_supply_costs(self, game_result: Dict[str, Any]) -> float:
+    def _calculate_supply_costs(self, game_result: dict[str, Any]) -> float:
         """Calculate total supply costs from history."""
         # This would need the actual purchase history
         # For now, estimate from revenue and profit
@@ -257,13 +257,13 @@ class MetricsAnalyzer:
             - game_result["total_operating_cost"]
         )
 
-    def _sum_inventory_purchases(self, game_result: Dict[str, Any]) -> Dict[str, int]:
+    def _sum_inventory_purchases(self, _game_result: dict[str, Any]) -> dict[str, int]:
         """Sum all inventory purchases from game history."""
         # This would need detailed purchase logs
         # Placeholder for now
         return {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
 
-    def _calculate_inventory_used(self, game_result: Dict[str, Any]) -> Dict[str, int]:
+    def _calculate_inventory_used(self, game_result: dict[str, Any]) -> dict[str, int]:
         """Calculate inventory actually used to serve customers."""
         # Estimate based on customers served
         # Each lemonade needs specific ingredients
@@ -275,7 +275,7 @@ class MetricsAnalyzer:
             "water": customers * 200,  # 200ml water per cup
         }
 
-    def _analyze_trend(self, game_result: Dict[str, Any]) -> str:
+    def _analyze_trend(self, game_result: dict[str, Any]) -> str:
         """Analyze if performance is improving, declining, or stable."""
         if len(game_result["game_history"]) < 5:
             return "stable"
@@ -292,7 +292,7 @@ class MetricsAnalyzer:
         else:
             return "stable"
 
-    def _calculate_learning_rate(self, game_result: Dict[str, Any]) -> float:
+    def _calculate_learning_rate(self, game_result: dict[str, Any]) -> float:
         """Calculate rate of improvement in key metrics."""
         if len(game_result["game_history"]) < 3:
             return 0.0
@@ -313,7 +313,7 @@ class MetricsAnalyzer:
             return (late_service_rate - early_service_rate) / early_service_rate
         return 0.0
 
-    def _extract_daily_metrics(self, game_result: Dict[str, Any]) -> List[DailyMetrics]:
+    def _extract_daily_metrics(self, game_result: dict[str, Any]) -> list[DailyMetrics]:
         """Extract detailed metrics for each day."""
         daily_metrics = []
         cash_history = game_result.get("daily_cash_history", [])
@@ -550,12 +550,12 @@ class ComprehensiveRecorder:
         }
 
 
-def generate_metrics_report(game_metrics: List[GameMetrics]) -> Dict[str, Any]:
+def generate_metrics_report(game_metrics: list[GameMetrics]) -> dict[str, Any]:
     """Generate a comprehensive report from multiple game metrics."""
     report = {
         "summary": {
             "total_games": len(game_metrics),
-            "models_tested": list(set(m.model for m in game_metrics)),
+            "models_tested": list({m.model for m in game_metrics}),
         },
         "survival_analysis": {
             "average_days_survived": statistics.mean(
@@ -663,13 +663,13 @@ def generate_metrics_report(game_metrics: List[GameMetrics]) -> Dict[str, Any]:
     return report
 
 
-def save_metrics_report(report: Dict[str, Any], filename: str):
+def save_metrics_report(report: dict[str, Any], filename: str):
     """Save metrics report to JSON file."""
     with open(filename, "w") as f:
         json.dump(report, f, indent=2)
 
 
-def print_metrics_summary(report: Dict[str, Any]):
+def print_metrics_summary(report: dict[str, Any]):
     """Print a formatted summary of the metrics report."""
     print("\n" + "=" * 80)
     print("LEMONADEBENCH v0.5 - COMPREHENSIVE METRICS REPORT")

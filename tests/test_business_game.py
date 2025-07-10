@@ -1,6 +1,7 @@
 """Tests for the business game engine."""
 
 import pytest
+
 from src.lemonade_stand.business_game import BusinessGame
 
 
@@ -262,7 +263,7 @@ class TestBusinessGame:
         assert remaining_lemons > 40  # Should have most lemons left
 
         # Fast forward to day 7 (lemons still good)
-        for i in range(2, 8):
+        for _ in range(2, 8):
             game.start_new_day()
             game.set_price(10.0)  # Keep high price
             game.set_operating_hours(9, 10)
@@ -316,7 +317,7 @@ class TestBusinessGame:
         game = BusinessGame(seed=42)
 
         # Play a few days
-        for day in range(1, 4):
+        for _ in range(1, 4):
             game.start_new_day()
             game.order_supplies(cups=20, lemons=20, sugar=20, water=20)
             game.set_price(2.0)
