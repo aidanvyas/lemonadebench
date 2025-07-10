@@ -2,8 +2,7 @@
 
 import random
 from collections import deque
-from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime
+from typing import Any
 
 
 class Inventory:
@@ -12,7 +11,7 @@ class Inventory:
     def __init__(self):
         """Initialize empty inventory with shelf life definitions."""
         # Store items as deques of (quantity, expiry_day) tuples
-        self.items: Dict[str, deque[Tuple[int, int]]] = {
+        self.items: dict[str, deque[tuple[int, int]]] = {
             "cups": deque(),
             "lemons": deque(),
             "sugar": deque(),
@@ -20,7 +19,7 @@ class Inventory:
         }
 
         # Shelf life in days for each item type
-        self.shelf_life: Dict[str, float] = {
+        self.shelf_life: dict[str, float] = {
             "cups": 30,
             "lemons": 7,
             "sugar": 60,
@@ -28,7 +27,7 @@ class Inventory:
         }
 
         # Base costs for reference (actual costs vary daily)
-        self.base_costs: Dict[str, float] = {
+        self.base_costs: dict[str, float] = {
             "cups": 0.05,
             "lemons": 0.20,
             "sugar": 0.10,
@@ -72,7 +71,7 @@ class Inventory:
 
         return sum(quantity for quantity, _ in self.items[item_type])
 
-    def get_inventory_details(self) -> Dict[str, List[Dict[str, any]]]:
+    def get_inventory_details(self) -> dict[str, list[dict[str, any]]]:
         """Get detailed inventory information including expiration dates.
 
         Returns:
@@ -89,7 +88,7 @@ class Inventory:
                 details[item_type].append(batch_info)
         return details
 
-    def use_items(self, recipe: Dict[str, int]) -> bool:
+    def use_items(self, recipe: dict[str, int]) -> bool:
         """Use items according to recipe, FIFO style.
 
         Args:
@@ -121,7 +120,7 @@ class Inventory:
 
         return True
 
-    def remove_expired(self, current_day: int) -> Dict[str, int]:
+    def remove_expired(self, current_day: int) -> dict[str, int]:
         """Remove expired items from inventory.
 
         Args:
@@ -176,7 +175,7 @@ class DemandModel:
     """Calculates customer demand based on price, time of day, and random variation."""
 
     # Hourly demand multipliers (6am-9pm)
-    HOURLY_MULTIPLIERS: Dict[int, float] = {
+    HOURLY_MULTIPLIERS: dict[int, float] = {
         6: 0.3,  # 6-7am: Early morning (30% of base)
         7: 0.5,  # 7-8am: Morning commute
         8: 0.7,  # 8-9am: Morning
@@ -205,7 +204,7 @@ class DemandModel:
         """
         self.base_demand_intercept = base_demand_intercept
         self.price_sensitivity = price_sensitivity
-        self._rng: Optional[random.Random] = None
+        self._rng: random.Random | None = None
 
     def set_random_seed(self, seed: int) -> None:
         """Set random seed for reproducible simulations.
@@ -279,7 +278,7 @@ class DemandModel:
         open_hour: int,
         close_hour: int,
         random_variation: bool = True,
-    ) -> Dict[int, int]:
+    ) -> dict[int, int]:
         """Calculate customers for each hour of operation.
 
         Args:
@@ -313,7 +312,7 @@ class DemandModel:
             hour for hour, mult in self.HOURLY_MULTIPLIERS.items() if mult >= threshold
         ]
 
-    def get_operating_hours_info(self) -> Dict[str, any]:
+    def get_operating_hours_info(self) -> dict[str, any]:
         """Get information about operating hours and demand patterns.
 
         Returns:
@@ -336,7 +335,7 @@ class BusinessGame:
         days: int = 100,
         starting_cash: float = 100,
         hourly_operating_cost: float = 5,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ):
         """Initialize the business game.
 
@@ -363,24 +362,24 @@ class BusinessGame:
             self.rng = random.Random()
 
         # Daily state tracking
-        self.today_supply_costs: Dict[str, float] = {}
+        self.today_supply_costs: dict[str, float] = {}
         self.price_set = False
         self.hours_set = False
-        self.open_hour: Optional[int] = None
-        self.close_hour: Optional[int] = None
-        self.price: Optional[float] = None
+        self.open_hour: int | None = None
+        self.close_hour: int | None = None
+        self.price: float | None = None
 
         # History tracking
-        self.history: List[Dict[str, Any]] = []
-        self.supply_cost_history: List[Dict[str, float]] = []
+        self.history: list[dict[str, Any]] = []
+        self.supply_cost_history: list[dict[str, float]] = []
 
         # Yesterday's profit for display
-        self.yesterday_profit: Optional[float] = None
+        self.yesterday_profit: float | None = None
 
         # Recipe for making lemonade
         self.recipe = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
-    def start_new_day(self) -> Dict[str, Any]:
+    def start_new_day(self) -> dict[str, Any]:
         """Start a new day: handle expiration, generate costs, reset state.
 
         Returns:
@@ -411,7 +410,7 @@ class BusinessGame:
 
         return {"day": self.current_day, "expired_items": expired, "cash": self.cash}
 
-    def check_morning_prices(self) -> Dict[str, float]:
+    def check_morning_prices(self) -> dict[str, float]:
         """Check today's supply costs.
 
         Returns:
@@ -422,7 +421,7 @@ class BusinessGame:
 
         return self.today_supply_costs.copy()
 
-    def check_inventory(self) -> Dict[str, Any]:
+    def check_inventory(self) -> dict[str, Any]:
         """Check current inventory levels and expiration dates.
 
         Returns:
@@ -439,7 +438,7 @@ class BusinessGame:
 
     def order_supplies(
         self, cups: int = 0, lemons: int = 0, sugar: int = 0, water: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Order supplies for immediate delivery.
 
         Args:
@@ -490,7 +489,7 @@ class BusinessGame:
             "remaining_cash": self.cash,
         }
 
-    def set_operating_hours(self, open_hour: int, close_hour: int) -> Dict[str, Any]:
+    def set_operating_hours(self, open_hour: int, close_hour: int) -> dict[str, Any]:
         """Set today's operating hours.
 
         Args:
@@ -530,7 +529,7 @@ class BusinessGame:
             "hours_open": close_hour - open_hour,
         }
 
-    def set_price(self, price: float) -> Dict[str, Any]:
+    def set_price(self, price: float) -> dict[str, Any]:
         """Set today's lemonade price.
 
         Args:
@@ -547,7 +546,7 @@ class BusinessGame:
 
         return {"success": True, "price": self.price}
 
-    def open_for_business(self) -> Dict[str, Any]:
+    def open_for_business(self) -> dict[str, Any]:
         """Attempt to open the stand for business today.
 
         This must be called after setting price and operating hours.
@@ -570,7 +569,7 @@ class BusinessGame:
             "message": f"Ready to open! Hours: {self.open_hour}-{self.close_hour}, Price: ${self.price:.2f}. The stand is now open for business and the day will play out automatically.",
         }
 
-    def simulate_day(self) -> Dict[str, Any]:
+    def simulate_day(self) -> dict[str, Any]:
         """Simulate the day's business after all decisions are made.
 
         Returns:
@@ -655,7 +654,7 @@ class BusinessGame:
 
         return day_summary
 
-    def get_historical_data(self) -> List[Dict[str, Any]]:
+    def get_historical_data(self) -> list[dict[str, Any]]:
         """Get historical performance data.
 
         Returns:
@@ -677,7 +676,7 @@ class BusinessGame:
 
         return simplified_history
 
-    def get_historical_supply_costs(self) -> List[Dict[str, float]]:
+    def get_historical_supply_costs(self) -> list[dict[str, float]]:
         """Get historical supply cost data.
 
         Returns:
@@ -685,7 +684,7 @@ class BusinessGame:
         """
         return self.supply_cost_history.copy()
 
-    def check_ready_for_next_day(self) -> Tuple[bool, List[str]]:
+    def check_ready_for_next_day(self) -> tuple[bool, list[str]]:
         """Check if all required actions have been taken.
 
         Returns:
@@ -713,7 +712,7 @@ class BusinessGame:
             if self.yesterday_profit is not None
             else ""
         )
-        return f"""Day {self.current_day} of {self.total_days}.{profit_msg}
+        base_prompt = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
 Can make: {self.inventory.can_make_lemonade()} lemonades
 {self._get_historical_table()}
@@ -725,6 +724,9 @@ Remember to:
 5. Call open_for_business() to start the day
 
 What would you like to do?"""
+        if self.current_day == 0:
+            return f"{self._get_system_prompt()}\n{base_prompt}"
+        return base_prompt
 
     def _get_system_prompt(self) -> str:
         """Get the full system prompt for day 1.
@@ -743,7 +745,7 @@ BUSINESS MECHANICS:
 INVENTORY MANAGEMENT:
 - Items have different shelf lives:
   * Cups: 30 days
-  * Sugar: 60 days  
+  * Sugar: 60 days
   * Water: Never expires
   * Lemons: 7 days
 - Expired items are automatically discarded each morning
@@ -808,7 +810,7 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} and {self.inventory.c
         # Game ends after all days or if bankrupt
         return self.current_day >= self.total_days or self.cash < 0
 
-    def get_final_results(self) -> Dict[str, Any]:
+    def get_final_results(self) -> dict[str, Any]:
         """Get final game results.
 
         Returns:
