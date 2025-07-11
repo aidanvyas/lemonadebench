@@ -180,9 +180,6 @@ class Inventory:
 class DemandModel:
     """Calculates customer demand based on price, time of day, and random variation."""
 
-    # Peak hours for analysis (lunch time)
-    PEAK_HOURS = [11, 12, 13, 14]
-    
     # Hourly demand multipliers for all 24 hours
     HOURLY_MULTIPLIERS: dict[int, float] = {
         0: 0.0,   # 12-1am: Closed
@@ -316,14 +313,6 @@ class DemandModel:
                 customers_by_hour[hour] = customers
 
         return customers_by_hour
-
-    def get_peak_hours(self) -> list[int]:
-        """Get the peak demand hours.
-        
-        Returns:
-            List of hours with peak demand multipliers
-        """
-        return self.PEAK_HOURS
 
 
 class BusinessGame:

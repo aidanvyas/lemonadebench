@@ -111,18 +111,6 @@ def run_single_game(
             for item in total_expired_items
         )
 
-        # Peak/off-peak analysis
-        peak_hours = game.demand_model.get_peak_hours()
-        total_peak_customers = 0
-        total_off_peak_customers = 0
-
-        for day_data in game.history:
-            for hour, sales in day_data["hourly_sales"].items():
-                if hour in peak_hours:
-                    total_peak_customers += sales["customers_served"]
-                else:
-                    total_off_peak_customers += sales["customers_served"]
-
         duration = time.time() - start_time
 
         logger.info(
@@ -150,12 +138,6 @@ def run_single_game(
             "final_inventory_value": final_results["inventory_value"],
             "total_expired_items": total_expired_items,
             "total_expired_value": total_expired_value,
-            "peak_customers": total_peak_customers,
-            "off_peak_customers": total_off_peak_customers,
-            "peak_customer_ratio": total_peak_customers
-            / (total_peak_customers + total_off_peak_customers)
-            if (total_peak_customers + total_off_peak_customers) > 0
-            else 0,
             "daily_cash_history": daily_cash_history,
             "average_turn_attempts": statistics.mean(turn_attempts)
             if turn_attempts
@@ -215,7 +197,6 @@ def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:
     customers_lost = [g["total_customers_lost"] for g in successful_games]
     stockout_rates = [g["stockout_rate"] for g in successful_games]
     expired_values = [g["total_expired_value"] for g in successful_games]
-    peak_ratios = [g["peak_customer_ratio"] for g in successful_games]
     durations = [g["duration_seconds"] for g in successful_games]
 
     # Aggregate token usage
@@ -256,7 +237,6 @@ def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:
             "mean": statistics.mean(expired_values),
             "total": sum(expired_values),
         },
-        "peak_customer_ratio": {"mean": statistics.mean(peak_ratios)},
         "total_expired_items": total_expired,
         "duration": {"mean": statistics.mean(durations), "total": sum(durations)},
         "total_tokens": total_tokens,

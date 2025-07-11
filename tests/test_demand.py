@@ -141,11 +141,3 @@ class TestDemandModel:
         results2 = [model2.calculate_customers(2.0, 12) for _ in range(5)]
 
         assert results1 == results2
-
-    def test_get_peak_hours(self):
-        """Test getting peak hours."""
-        model = DemandModel()
-        peak_hours = model.get_peak_hours()
-        
-        assert peak_hours == [11, 12, 13, 14]
-        assert all(isinstance(h, int) for h in peak_hours)

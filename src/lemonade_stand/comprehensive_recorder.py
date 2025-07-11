@@ -37,12 +37,6 @@ class DailyMetrics:
     price_set: float
     hours_open: int
 
-    # Peak vs off-peak
-    peak_customers_wanted: int
-    peak_customers_served: int
-    off_peak_customers_wanted: int
-    off_peak_customers_served: int
-
     # Tool usage
     tool_calls: dict[str, int]
     turn_attempts: int
@@ -103,10 +97,6 @@ class GameMetrics:
     total_operating_hours: int
     revenue_per_hour: float
 
-    # Peak optimization
-    peak_focus_rate: float  # % of served customers during peak hours
-    peak_revenue_share: float  # % of revenue from peak hours
-
     # Tool usage patterns
     total_tool_calls: dict[str, int]
     tool_calls_per_day: dict[str, float]
@@ -130,7 +120,6 @@ class MetricsAnalyzer:
     """Analyze game results and compute comprehensive metrics."""
 
     def __init__(self):
-        self.peak_hours = [11, 12, 13, 14]  # Peak demand hours
         self.optimal_price = 2.69  # Theoretical optimum
         self.optimal_daily_profit = 625.54
 
@@ -185,8 +174,6 @@ class MetricsAnalyzer:
             / (15 * game_result["days_played"])
             if game_result["days_played"] > 0
             else 0,
-            peak_focus_rate=game_result["peak_customer_ratio"],
-            peak_revenue_share=0,  # Calculate if we have hourly data
             total_tool_calls={},  # Extract from history
             tool_calls_per_day={},
             average_turn_attempts=game_result.get("average_turn_attempts", 1),
@@ -319,20 +306,6 @@ class MetricsAnalyzer:
         cash_history = game_result.get("daily_cash_history", [])
 
         for i, day_data in enumerate(game_result["game_history"]):
-            # Calculate peak vs off-peak
-            peak_wanted = 0
-            peak_served = 0
-            off_peak_wanted = 0
-            off_peak_served = 0
-
-            for hour, sales in day_data["hourly_sales"].items():
-                if int(hour) in self.peak_hours:
-                    peak_wanted += sales["customers_wanted"]
-                    peak_served += sales["customers_served"]
-                else:
-                    off_peak_wanted += sales["customers_wanted"]
-                    off_peak_served += sales["customers_served"]
-
             # Create daily metric
             daily_metric = DailyMetrics(
                 day=day_data["day"],
@@ -359,10 +332,6 @@ class MetricsAnalyzer:
                 inventory_value_end=0,  # Would need inventory tracking
                 price_set=day_data["price"],
                 hours_open=day_data["hours_open"],
-                peak_customers_wanted=peak_wanted,
-                peak_customers_served=peak_served,
-                off_peak_customers_wanted=off_peak_wanted,
-                off_peak_customers_served=off_peak_served,
                 tool_calls={},  # Would need tool call logs
                 turn_attempts=1,  # Default, update if available
                 revenue_per_customer=day_data["revenue"] / day_data["customers_served"]
@@ -619,7 +588,6 @@ def generate_metrics_report(game_metrics: list[GameMetrics]) -> dict[str, Any]:
             "average_revenue_per_hour": statistics.mean(
                 m.revenue_per_hour for m in game_metrics
             ),
-            "peak_focus_rate": statistics.mean(m.peak_focus_rate for m in game_metrics),
         },
         "learning_metrics": {
             "improving_games": sum(
