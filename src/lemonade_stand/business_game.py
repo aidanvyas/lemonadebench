@@ -709,10 +709,10 @@ What would you like to do?"""
         Returns:
             System prompt string
         """
-        return """You run a lemonade stand for 100 days. Your goal is to maximize total profit (cash in bank after 100 days).
+        return f"""You run a lemonade stand for 100 days. Your goal is to maximize total profit (cash in bank after 100 days).
 
 BUSINESS MECHANICS:
-- Starting capital: $1000
+- Starting capital: ${self.starting_cash}
 - Operating cost: $5 per hour the stand is open
 - Recipe: 1 lemonade = 1 cup + 1 lemon + 1 sugar + 1 water (all required)
 - You can only sell lemonade if you have ALL ingredients in stock
@@ -785,16 +785,16 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
         total_customers = sum(day["customers_served"] for day in self.history)
         total_lost_sales = sum(day["customers_lost"] for day in self.history)
 
+        profit = self.cash - self.starting_cash
+
         return {
             "days_played": self.current_day,
             "final_cash": self.cash,
-            "total_profit": self.cash - self.starting_cash,  # Profit over starting capital
+            "total_profit": profit,
             "total_revenue": total_revenue,
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
             "total_lost_sales": total_lost_sales,
-            "average_daily_profit": (self.cash - self.starting_cash) / self.current_day
-            if self.current_day > 0
-            else 0,
+            "average_daily_profit": profit / self.current_day if self.current_day > 0 else 0,
             "inventory_value": self.inventory.get_total_value(),
         }

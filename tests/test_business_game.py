@@ -14,6 +14,7 @@ class TestBusinessGame:
         assert game.total_days == 100
         assert game.current_day == 0
         assert game.cash == 100
+        assert game.starting_cash == 100
         assert game.hourly_operating_cost == 5
         assert game.yesterday_profit is None
 
@@ -333,7 +334,7 @@ class TestBusinessGame:
 
         assert results["days_played"] == 3
         assert results["final_cash"] == game.cash
-        assert results["total_profit"] == game.cash - 100
+        assert results["total_profit"] == game.cash - game.starting_cash
         assert results["total_customers"] >= 0
         assert "average_daily_profit" in results
         assert "inventory_value" in results
