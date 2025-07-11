@@ -93,11 +93,11 @@ class TestBusinessGame:
         assert game.hours_set is True
 
         # Invalid hours
-        result = game.set_operating_hours(5, 17)  # Too early
+        result = game.set_operating_hours(-1, 17)  # Too early
         assert result["success"] is False
         assert "Invalid open hour" in result["error"]
 
-        result = game.set_operating_hours(9, 22)  # Too late
+        result = game.set_operating_hours(9, 25)  # Too late
         assert result["success"] is False
         assert "Invalid close hour" in result["error"]
 
@@ -286,7 +286,7 @@ class TestBusinessGame:
 
         # Set high operating cost day
         game.set_price(5.0)  # High price = no customers
-        game.set_operating_hours(6, 21)  # 15 hours = $75 cost
+        game.set_operating_hours(0, 15)  # 15 hours = $75 cost
         game.simulate_day()
 
         # Should be bankrupt

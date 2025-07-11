@@ -488,23 +488,23 @@ class BusinessGame:
         """Set today's operating hours.
 
         Args:
-            open_hour: Opening hour (6-21)
-            close_hour: Closing hour (6-21, must be > open_hour)
+            open_hour: Opening hour (0-23)
+            close_hour: Closing hour (1-24, must be > open_hour)
 
         Returns:
             Confirmation or error
         """
         # Validate hours
-        if open_hour < 6 or open_hour > 21:
+        if open_hour < 0 or open_hour > 23:
             return {
                 "success": False,
-                "error": f"Invalid open hour: {open_hour}. Must be between 6-21.",
+                "error": f"Invalid open hour: {open_hour}. Must be between 0-23.",
             }
 
-        if close_hour < 6 or close_hour > 21:
+        if close_hour < 1 or close_hour > 24:
             return {
                 "success": False,
-                "error": f"Invalid close hour: {close_hour}. Must be between 6-21.",
+                "error": f"Invalid close hour: {close_hour}. Must be between 1-24.",
             }
 
         if close_hour <= open_hour:

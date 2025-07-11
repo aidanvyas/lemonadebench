@@ -17,7 +17,7 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 ### 3. Run Benchmark
 ```bash
 # Quick test (1 model, 10 days)
-uv run python experiments/run_benchmark.py --models gpt-4.1-mini --days 10
+uv run python experiments/run_benchmark.py --models gpt-4.1-nano --days 10
 
 # Full benchmark (5 models, 30 days - default)
 uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gpt-4.1 o4-mini o3
@@ -28,7 +28,7 @@ uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gp
 ### Business Operations
 - **Starting capital**: $1,000
 - **Operating cost**: $5/hour while open
-- **Operating window**: 6am-9pm (choose your hours)
+- **Operating window**: 24 hours (choose any hours)
 - **Demand function**: Q = 50 - 10p with hourly variations
 
 ### Inventory Management
@@ -44,7 +44,7 @@ uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gp
 - `get_historical_supply_costs`: Review past supply price trends
 - `order_supplies`: Purchase supplies (instant delivery)
 - `set_price`: Set lemonade price per cup
-- `set_operating_hours`: Choose when to open (6am-9pm available)
+- `set_operating_hours`: Choose when to open (any hours 0-23)
 - `open_for_business`: Start selling for the day
 
 ## Project Structure

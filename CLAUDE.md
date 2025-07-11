@@ -26,6 +26,7 @@ uv run ruff check && uv run ruff format    # Lint and format
 - Recipe: 1 cup + 1 lemon + 1 sugar + 1 water = 1 lemonade
 - Inventory expires: Lemons (7 days), Cups (30 days), Sugar (60 days), Water (never)
 - Operating cost: $5/hour
+- Operating hours: Any hours 0-23 (24-hour operation allowed)
 - Goal: Maximize profit over 100 days
 
 ## Project Guidelines
