@@ -1,4 +1,4 @@
-"""AI Player for Version 0.5 Business Game with inventory management (stateless)."""
+"""OpenAI-based player for the Lemonade Stand business game."""
 
 import json
 import logging
@@ -13,8 +13,8 @@ from .business_game import BusinessGame
 logger = logging.getLogger(__name__)
 
 
-class AIPlayerV05:
-    """AI player that uses OpenAI's API to play the business game (stateless version)."""
+class OpenAIPlayer:
+    """AI player that uses OpenAI's API to play the lemonade stand business game."""
 
     def __init__(
         self,
@@ -51,8 +51,6 @@ class AIPlayerV05:
             "gpt-4.1": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
             "o3": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
             "o4-mini": {"input": 1.10, "cached_input": 0.275, "output": 4.40},
-            "claude-3-haiku": {"input": 0.25, "cached_input": 0.25, "output": 1.25},
-            "claude-3.5-sonnet": {"input": 3.00, "cached_input": 3.00, "output": 15.00},
         }
 
         # Check if this is a reasoning model

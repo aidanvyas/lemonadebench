@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import AIPlayerV05, BusinessGame, GameRecorder, BenchmarkRecorder
+from src.lemonade_stand import OpenAIPlayer, BusinessGame, GameRecorder, BenchmarkRecorder
 
 load_dotenv()
 
@@ -54,7 +54,7 @@ def run_single_game(
 
     # Initialize game and player
     game = BusinessGame(days=days, starting_cash=starting_cash, seed=seed)
-    player = AIPlayerV05(model_name=model_name)
+    player = OpenAIPlayer(model_name=model_name)
     
     # Initialize GameRecorder
     recorder = GameRecorder(

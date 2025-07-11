@@ -11,176 +11,80 @@ from typing import Any, Dict, List
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Import plotting libraries
-try:
-    import matplotlib.pyplot as plt
-
-    PLOTTING_AVAILABLE = True
-except ImportError:
-    PLOTTING_AVAILABLE = False
-    print("Warning: matplotlib not available. Install with: uv add matplotlib")
+import matplotlib.pyplot as plt
 
 
-def generate_latex_table(report, output_file):
-    """Generate a LaTeX table with key metrics from v0.5 results.
-
-    Args:
-        report: Metrics report from generate_metrics_report
-        output_file: Path to save the .tex file
-    """
-    latex = r"""\begin{table}[h]
-\centering
-\caption{LemonadeBench v0.5 - Business Simulation Results}
-\label{tab:lemonadebench_v05}
-\begin{tabular}{|l|r|r|r|r|r|r|r|}
-\hline
-\textbf{Model} & \textbf{Days} & \textbf{Profit (\$)} & \textbf{Profit SD} & \textbf{Customers} & \textbf{Service} & \textbf{Stockouts} & \textbf{Cost (\$)} \\
-\hline
-"""
-
-    # Add row for each model
-    for model, stats in report["model_comparison"].items():
-        # Extract model-specific data
-        model_games = [
-            g for g in report.get("individual_metrics", []) if g.model == model
-        ]
-        profits = [g.total_profit for g in model_games] if model_games else []
-        profit_std = statistics.stdev(profits) if len(profits) > 1 else 0
-
-        # Calculate average customers from game metrics
-        avg_customers = (
-            sum(g.total_customers_served for g in model_games) / len(model_games)
-            if model_games
-            else 0
-        )
-        avg_stockout_rate = (
-            sum(g.stockout_rate for g in model_games) / len(model_games)
-            if model_games
-            else 0
-        )
-
-        latex += f"{model:<15} & "
-        latex += f"{stats['avg_days_survived']:>4.1f} & "
-        latex += f"{stats['avg_profit']:>8.2f} & "
-        latex += f"{profit_std:>7.2f} & "
-        latex += f"{avg_customers:>9.0f} & "
-        latex += f"{stats['avg_service_rate'] * 100:>7.1f}\\% & "
-        latex += f"{avg_stockout_rate * 100:>9.1f}\\% & "
-        latex += f"{stats['avg_cost_per_day']:>6.4f} \\\\\n"
-        latex += r"\hline" + "\n"
-
-    latex += r"""\end{tabular}
-\end{table}"""
-
-    # Save to file
-    output_path = Path(output_file)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        f.write(latex)
-
-    print(f"LaTeX table saved to: {output_path}")
-
-
-def generate_profit_plots(data, output_dir):
-    """Generate profit-over-time plots for each model.
-
-    Args:
-        data: Raw benchmark data with game histories
-        output_dir: Directory to save plot files
-    """
-    if not PLOTTING_AVAILABLE:
-        print("Skipping plots - matplotlib not available")
-        return
-
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    # Set up the plot style
-    plt.style.use("seaborn-v0_8-darkgrid")
-    fig, ax = plt.subplots(figsize=(12, 8))
-
-    # Colors for different models
-    colors = {
-        "gpt-4.1-nano": "#FF6B6B",
-        "gpt-4.1-mini": "#4ECDC4",
-        "gpt-4.1": "#45B7D1",
-        "o3": "#96CEB4",
-        "o4-mini": "#DDA0DD",
-        "claude-3-haiku": "#F7DC6F",
-        "claude-3.5-sonnet": "#BB8FCE",
+def calculate_business_metrics(model: str, stats: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate business efficiency metrics for a model."""
+    
+    # Find all games for this model in the comprehensive data
+    model_games = [game for game in data["games"] if game["model"] == model]
+    
+    # Initialize aggregators
+    all_prices = set()
+    total_weighted_purchase_cost = 0
+    total_quantity_purchased = 0
+    total_expired_value = 0
+    total_lost_customer_profit = 0
+    total_excess_stock_value = 0
+    
+    for game_data in model_games:
+        # 1. Extract distinct prices tried
+        for day_data in game_data.get("days", []):
+            for interaction in day_data.get("interactions", []):
+                for tool_exec in interaction.get("tool_executions", []):
+                    if tool_exec["tool"] == "set_price":
+                        price = tool_exec["arguments"].get("price")
+                        if price:
+                            all_prices.add(price)
+        
+        # 2. Calculate weighted average purchase price
+        for day_data in game_data.get("days", []):
+            supply_costs = day_data.get("game_state_before", {}).get("supply_costs", {})
+            for interaction in day_data.get("interactions", []):
+                for tool_exec in interaction.get("tool_executions", []):
+                    if tool_exec["tool"] == "order_supplies":
+                        ordered = tool_exec.get("arguments", {})
+                        for item, quantity in ordered.items():
+                            if quantity > 0 and item in supply_costs:
+                                total_weighted_purchase_cost += supply_costs[item] * quantity
+                                total_quantity_purchased += quantity
+        
+        # 3. Calculate expired goods value
+        for day_data in game_data.get("days", []):
+            expired_items = day_data.get("game_state_before", {}).get("expired_items", {})
+            # Use base costs for expired items (approximate)
+            base_costs = {"cups": 0.05, "lemons": 0.20, "sugar": 0.10, "water": 0.02}
+            for item, quantity in expired_items.items():
+                if item in base_costs:
+                    total_expired_value += base_costs[item] * quantity
+        
+        # 4. Calculate lost customer profit (from final results)
+        final_results = game_data.get("final_results", {})
+        customers_lost = final_results.get("total_customers_lost", 0)
+        customers_served = final_results.get("total_customers", 0)
+        revenue = final_results.get("total_revenue", 0)
+        if customers_served > 0:
+            revenue_per_customer = revenue / customers_served
+            total_lost_customer_profit += customers_lost * revenue_per_customer
+        
+        # 5. Calculate excess stock value (final inventory)
+        final_inventory_value = final_results.get("final_inventory_value", 0)
+        total_excess_stock_value += final_inventory_value
+    
+    # Calculate averages
+    num_games = len(model_games)
+    avg_purchase_price = (total_weighted_purchase_cost / total_quantity_purchased 
+                         if total_quantity_purchased > 0 else 0)
+    
+    return {
+        "distinct_prices": len(all_prices),
+        "avg_purchase_price": avg_purchase_price,
+        "expired_value": total_expired_value / num_games if num_games > 0 else 0,
+        "lost_customer_profit": total_lost_customer_profit / num_games if num_games > 0 else 0,
+        "excess_stock_value": total_excess_stock_value / num_games if num_games > 0 else 0,
     }
 
-    # Plot each model's profit trajectory
-    for model, model_results in data["results"].items():
-        for game in model_results["individual_games"]:
-            if game["success"] and "daily_cash_history" in game:
-                days = list(range(len(game["daily_cash_history"])))
-                cash_history = game["daily_cash_history"]
-
-                # Calculate profit history (cash - starting cash)
-                starting_cash = data["parameters"]["starting_cash"]
-                profit_history = [cash - starting_cash for cash in cash_history]
-
-                # Plot with transparency for multiple games
-                alpha = 0.7 if model_results["num_games"] > 1 else 1.0
-                ax.plot(
-                    days,
-                    profit_history,
-                    color=colors.get(model, "#808080"),
-                    label=f"{model} (Game {game['game_number']})",
-                    alpha=alpha,
-                    linewidth=2,
-                )
-
-    # Add theoretical optimal line (if we know it)
-    # Assuming optimal daily profit of ~$625 from the metrics
-    if data["parameters"]["days_per_game"] > 0:
-        days_range = range(data["parameters"]["days_per_game"])
-        optimal_profit = [625.54 * day for day in days_range]
-        ax.plot(
-            days_range,
-            optimal_profit,
-            "k--",
-            label="Theoretical Optimal",
-            alpha=0.5,
-            linewidth=2,
-        )
-
-    # Formatting
-    ax.set_xlabel("Day", fontsize=12)
-    ax.set_ylabel("Cumulative Profit ($)", fontsize=12)
-    ax.set_title(
-        "LemonadeBench v0.5: Profit Over Time by Model", fontsize=14, fontweight="bold"
-    )
-    ax.grid(True, alpha=0.3)
-    ax.axhline(y=0, color="black", linestyle="-", alpha=0.3)
-
-    # Legend
-    handles, labels = ax.get_legend_handles_labels()
-    # Remove duplicate labels
-    unique_labels = []
-    unique_handles = []
-    for handle, label in zip(handles, labels, strict=False):
-        model_name = label.split(" (Game")[0]
-        if model_name not in [lbl.split(" (Game")[0] for lbl in unique_labels]:
-            unique_labels.append(label)
-            unique_handles.append(handle)
-
-    ax.legend(
-        unique_handles,
-        [lbl.split(" (Game")[0] for lbl in unique_labels],
-        loc="upper left",
-        framealpha=0.9,
-    )
-
-    # Save the plot
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plot_file = output_path / f"profit_over_time_{timestamp}.png"
-    plt.tight_layout()
-    plt.savefig(plot_file, dpi=300, bbox_inches="tight")
-    plt.close()
-
-    print(f"Profit plot saved to: {plot_file}")
 
 
 def analyze_results(filename: str = None) -> None:
@@ -302,38 +206,81 @@ def analyze_comprehensive_format(data: Dict[str, Any], filename: str) -> None:
     
     # Generate LaTeX table
     latex_file = f"results/latex/{base_name}_analysis.tex"
-    generate_comprehensive_latex_table(model_stats, latex_file, params)
+    generate_comprehensive_latex_table(model_stats, latex_file, params, data)
     
     # Generate plots
     plot_dir = f"results/plots/{base_name}"
     generate_comprehensive_plots(data, plot_dir)
 
 
-def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file: str, params: Dict[str, Any]) -> None:
-    """Generate LaTeX table from comprehensive data."""
-    latex = r"""\begin{table}[h]
+def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file: str, params: Dict[str, Any], data: Dict[str, Any]) -> None:
+    """Generate LaTeX table with business efficiency metrics."""
+    
+    # Check if any model has multiple games
+    multiple_games = any(len(stats["games"]) > 1 for stats in model_stats.values())
+    
+    # Build dynamic header based on whether we have multiple games
+    if multiple_games:
+        header = r"""\begin{table}[h]
 \centering
-\caption{LemonadeBench v0.5 - Comprehensive Results}
-\label{tab:lemonadebench_v05_comprehensive}
-\begin{tabular}{|l|r|r|r|r|r|r|}
+\caption{LemonadeBench v0.5 - Business Efficiency Analysis}
+\label{tab:lemonadebench_v05_efficiency}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
 \hline
-\textbf{Model} & \textbf{Games} & \textbf{Avg Profit (\$)} & \textbf{Std Dev (\$)} & \textbf{Tokens} & \textbf{Cost (\$)} & \textbf{Interactions} \\
+\textbf{Model} & \textbf{Games} & \textbf{Avg Profit (\$)} & \textbf{Std Dev} & \textbf{Avg Tools} & \textbf{Avg Cost} & \textbf{Avg Time (s)} & \textbf{Prices} & \textbf{Avg Buy Price} & \textbf{Expired (\$)} & \textbf{Lost Profit (\$)} & \textbf{Excess (\$)} \\
+\hline
+"""
+    else:
+        header = r"""\begin{table}[h]
+\centering
+\caption{LemonadeBench v0.5 - Business Efficiency Analysis}
+\label{tab:lemonadebench_v05_efficiency}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Profit (\$)} & \textbf{Tools} & \textbf{Cost (\$)} & \textbf{Time (s)} & \textbf{Prices} & \textbf{Avg Buy Price} & \textbf{Expired (\$)} & \textbf{Lost Profit (\$)} & \textbf{Excess (\$)} \\
 \hline
 """
     
+    latex = header
+    
     for model, stats in sorted(model_stats.items()):
         if stats["games"]:
-            profits = [g["total_profit"] for g in stats["games"]]
-            avg_profit = statistics.mean(profits)
-            std_profit = statistics.stdev(profits) if len(profits) > 1 else 0
+            # Calculate business efficiency metrics
+            efficiency_metrics = calculate_business_metrics(model, stats, data)
             
-            latex += f"{model} & "
-            latex += f"{len(stats['games'])} & "
-            latex += f"{avg_profit:.2f} & "
-            latex += f"{std_profit:.2f} & "
-            latex += f"{stats['total_tokens']:,} & "
-            latex += f"{stats['total_cost']:.4f} & "
-            latex += f"{stats['total_interactions']} \\\\"
+            if multiple_games:
+                profits = [g["total_profit"] for g in stats["games"]]
+                avg_profit = statistics.mean(profits)
+                std_profit = statistics.stdev(profits) if len(profits) > 1 else 0
+                avg_tools = stats["total_interactions"] / len(stats["games"])
+                avg_cost = stats["total_cost"] / len(stats["games"])
+                avg_time = sum(g["duration_seconds"] for g in stats["games"]) / len(stats["games"])
+                
+                latex += f"{model} & "
+                latex += f"{len(stats['games'])} & "
+                latex += f"{avg_profit:.2f} & "
+                latex += f"{std_profit:.2f} & "
+                latex += f"{avg_tools:.1f} & "
+                latex += f"{avg_cost:.4f} & "
+                latex += f"{avg_time:.1f} & "
+            else:
+                profit = stats["games"][0]["total_profit"]
+                tools = stats["total_interactions"]
+                cost = stats["total_cost"]
+                time_taken = stats["games"][0]["duration_seconds"]
+                
+                latex += f"{model} & "
+                latex += f"{profit:.2f} & "
+                latex += f"{tools} & "
+                latex += f"{cost:.4f} & "
+                latex += f"{time_taken:.1f} & "
+            
+            # Add business efficiency metrics (same for both formats)
+            latex += f"{efficiency_metrics['distinct_prices']} & "
+            latex += f"{efficiency_metrics['avg_purchase_price']:.3f} & "
+            latex += f"{efficiency_metrics['expired_value']:.2f} & "
+            latex += f"{efficiency_metrics['lost_customer_profit']:.2f} & "
+            latex += f"{efficiency_metrics['excess_stock_value']:.2f} \\\\"
             latex += "\n\\hline\n"
     
     latex += r"""\end{tabular}
@@ -349,15 +296,11 @@ def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file:
 
 
 def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
-    """Generate plots from comprehensive data."""
-    if not PLOTTING_AVAILABLE:
-        print("\nSkipping plots - matplotlib not available")
-        return
+    """Generate average profit trajectory plot."""
     
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Plot 1: Profit trajectories
     plt.figure(figsize=(12, 8))
     
     colors = {
@@ -366,13 +309,16 @@ def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
         "gpt-4.1": "#45B7D1",
         "o3": "#96CEB4",
         "o4-mini": "#DDA0DD",
-        "claude-3-haiku": "#F7DC6F",
-        "claude-3.5-sonnet": "#BB8FCE",
     }
+    
+    # Group games by model
+    model_trajectories = {}
+    max_days = 0
     
     for game_data in data["games"]:
         model = game_data["model"]
-        game_id = game_data["game_id"]
+        if model not in model_trajectories:
+            model_trajectories[model] = []
         
         # Extract daily cash history from game states
         cash_history = []
@@ -381,50 +327,75 @@ def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
                 cash_history.append(day_data["game_state_after"]["cash"])
         
         if cash_history:
-            days = list(range(len(cash_history)))
             starting_cash = game_data["parameters"]["starting_cash"]
             profit_history = [cash - starting_cash for cash in cash_history]
+            model_trajectories[model].append(profit_history)
+            max_days = max(max_days, len(profit_history))
+    
+    # Calculate and plot average trajectory for each model
+    for model, trajectories in model_trajectories.items():
+        if not trajectories:
+            continue
             
+        # Calculate average trajectory
+        avg_trajectory = []
+        for day in range(max_days):
+            day_profits = [traj[day] for traj in trajectories if day < len(traj)]
+            if day_profits:
+                avg_trajectory.append(statistics.mean(day_profits))
+            else:
+                break  # No more data for this day
+        
+        if avg_trajectory:
+            days = list(range(len(avg_trajectory)))
+            
+            # Plot average trajectory
             plt.plot(
                 days,
-                profit_history,
+                avg_trajectory,
                 color=colors.get(model, "#808080"),
-                label=f"{model} (Game {game_id})",
-                alpha=0.7,
-                linewidth=2,
+                label=f"{model} (avg of {len(trajectories)} games)" if len(trajectories) > 1 else model,
+                linewidth=3,
+                marker='o',
+                markersize=4,
+                alpha=0.9
             )
+            
+            # Add confidence interval if multiple games
+            if len(trajectories) > 1:
+                std_trajectory = []
+                for day in range(len(avg_trajectory)):
+                    day_profits = [traj[day] for traj in trajectories if day < len(traj)]
+                    if len(day_profits) > 1:
+                        std_trajectory.append(statistics.stdev(day_profits))
+                    else:
+                        std_trajectory.append(0)
+                
+                upper_bound = [avg + std for avg, std in zip(avg_trajectory, std_trajectory)]
+                lower_bound = [avg - std for avg, std in zip(avg_trajectory, std_trajectory)]
+                
+                plt.fill_between(
+                    days,
+                    lower_bound,
+                    upper_bound,
+                    color=colors.get(model, "#808080"),
+                    alpha=0.2
+                )
     
-    plt.xlabel("Day", fontsize=12)
-    plt.ylabel("Cumulative Profit ($)", fontsize=12)
-    plt.title("LemonadeBench v0.5: Profit Trajectories", fontsize=14, fontweight="bold")
+    plt.xlabel("Day", fontsize=14)
+    plt.ylabel("Cumulative Profit ($)", fontsize=14)
+    plt.title("LemonadeBench v0.5: Average Profit Trajectories by Model", fontsize=16, fontweight="bold")
     plt.grid(True, alpha=0.3)
-    plt.axhline(y=0, color="black", linestyle="-", alpha=0.3)
+    plt.axhline(y=0, color="black", linestyle="-", alpha=0.5)
     
-    # Custom legend with unique models only
-    ax = plt.gca()
-    handles, labels = ax.get_legend_handles_labels()
-    unique_models = {}
-    for handle, label in zip(handles, labels):
-        model = label.split(" (Game")[0]
-        if model not in unique_models:
-            unique_models[model] = handle
+    plt.legend(loc="upper left", framealpha=0.9, fontsize=12)
     
-    plt.legend(
-        unique_models.values(),
-        unique_models.keys(),
-        loc="upper left",
-        framealpha=0.9
-    )
-    
-    plot_file = output_path / "profit_trajectories.png"
+    plot_file = output_path / "average_profit_trajectories.png"
     plt.tight_layout()
     plt.savefig(plot_file, dpi=300, bbox_inches="tight")
     plt.close()
     
-    print(f"Profit plot saved to: {plot_file}")
-    
-    # Plot 2: Tool usage heatmap
-    # ... additional plots can be added here
+    print(f"Average profit trajectory plot saved to: {plot_file}")
 
 
 
