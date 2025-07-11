@@ -5,7 +5,7 @@
 ```bash
 # Run experiments (sequential execution for reliability)
 uv run python experiments/run_benchmark.py                  # Quick test (5 runs)
-uv run python experiments/run_benchmark.py --runs 30       # Full benchmark
+uv run python experiments/run_benchmark.py --games 30       # Full benchmark
 uv run python experiments/run_benchmark.py --models gpt-4.1-nano claude-3-haiku
 uv run python experiments/run_benchmark.py --models o3 o4-mini    # Works well with all models
 
@@ -86,12 +86,12 @@ The benchmark tests 4 scenarios:
 
 ### Adding a new model
 1. Add to `model_pricing` dict in `responses_ai_player.py`
-2. Test with `--models your-model --runs 1`
+2. Test with `--models your-model --games 1`
 3. Add to default models list if stable
 
 ### Debugging rate limits
 - Check `x-ratelimit-*` headers in logs
-- Use `--runs 1` for testing
+- Use `--games 1` for testing
 - The runner automatically waits when rate limits are low
 
 ### Generating paper figures
