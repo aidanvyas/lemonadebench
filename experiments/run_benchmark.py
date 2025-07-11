@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import AIPlayerV05, BusinessGame
+from src.lemonade_stand import AIPlayerV05, BusinessGame, GameRecorder, BenchmarkRecorder
 
 load_dotenv()
 
@@ -55,6 +55,17 @@ def run_single_game(
     # Initialize game and player
     game = BusinessGame(days=days, starting_cash=starting_cash, seed=seed)
     player = AIPlayerV05(model_name=model_name)
+    
+    # Initialize GameRecorder
+    recorder = GameRecorder(
+        model=model_name,
+        game_number=game_number,
+        parameters={
+            "days": days,
+            "starting_cash": starting_cash,
+            "seed": seed,
+        }
+    )
 
     # Track additional metrics
     days_with_stockouts = 0
@@ -69,8 +80,18 @@ def run_single_game(
             # Start new day
             day_info = game.start_new_day()
             daily_cash_history.append(game.cash)
-
-            # Stateless approach - no need to prepare player for new day
+            
+            # Record game state at start of day
+            supply_costs = game.check_morning_prices()["prices"]
+            recorder.start_day(
+                day_number=game.current_day,
+                game_state={
+                    "cash": game.cash,
+                    "inventory": game.check_inventory(),
+                    "expired_items": day_info["expired_items"],
+                    "supply_costs": supply_costs,
+                }
+            )
 
             # Track expired items
             if day_info["expired_items"]:
@@ -81,8 +102,8 @@ def run_single_game(
             if game.current_day % 10 == 0 or game.current_day == 1:
                 logger.info(f"  Day {game.current_day}/{days} - Cash: ${game.cash:.2f}")
 
-            # AI plays the turn
-            turn_result = player.play_turn(game)
+            # AI plays the turn - pass the recorder
+            turn_result = player.play_turn(game, recorder=recorder)
             turn_attempts.append(turn_result.get("attempts", 1))
 
             if not turn_result["success"]:
@@ -99,7 +120,18 @@ def run_single_game(
                 days_with_stockouts += 1
                 total_customers_lost += day_result["customers_lost"]
 
-            # Stateless approach - no need to track conversation history
+            # Record game state at end of day
+            recorder.end_day(
+                game_state_after={
+                    "cash": game.cash,
+                    "inventory": game.check_inventory(),
+                    "day_result": day_result,
+                    "price": game.price,
+                    "open_hour": game.open_hour,
+                    "close_hour": game.close_hour,
+                },
+                total_attempts=turn_result.get("attempts", 1)
+            )
 
         # Get final results
         final_results = game.get_final_results()
@@ -112,6 +144,12 @@ def run_single_game(
         )
 
         duration = time.time() - start_time
+        
+        # Record final results
+        recorder.record_final_results(
+            results=final_results,
+            total_cost=cost_info["total_cost"]
+        )
 
         logger.info(
             f"Completed game {game_number}: "
@@ -149,6 +187,7 @@ def run_single_game(
             "duration_seconds": duration,
             "game_history": game.history,  # Full game history for detailed analysis
             "supply_cost_history": game.supply_cost_history,
+            "recorder": recorder,  # Include recorder for saving later
         }
 
     except Exception as e:
@@ -256,13 +295,16 @@ def main():
     )
     parser.add_argument("--days", type=int, default=30, help="Number of days per game")
     parser.add_argument(
-        "--models", nargs="+", default=["gpt-4.1-mini"], help="Models to test"
+        "--models", nargs="+", default=["gpt-4.1-nano"], help="Models to test"
     )
     parser.add_argument(
         "--starting-cash", type=float, default=1000, help="Starting cash for each game"
     )
     parser.add_argument(
         "--seed", type=int, default=None, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--no-analysis", action="store_true", help="Skip automatic analysis generation"
     )
     args = parser.parse_args()
 
@@ -276,6 +318,17 @@ def main():
     logger.info(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("")
 
+    # Initialize benchmark recorder
+    benchmark_recorder = BenchmarkRecorder(
+        parameters={
+            "models": args.models,
+            "games_per_model": args.games,
+            "days_per_game": args.days,
+            "starting_cash": args.starting_cash,
+            "seed": args.seed,
+        }
+    )
+    
     # Run benchmark for each model
     all_results = {}
     overall_start = time.time()
@@ -299,7 +352,15 @@ def main():
                 starting_cash=args.starting_cash,
                 seed=game_seed,
             )
-            games.append(result)
+            
+            # Extract recorder and add to benchmark recorder
+            if result.get("success") and "recorder" in result:
+                benchmark_recorder.add_game_recording(result["recorder"])
+                
+            # Remove recorder from result before appending (to avoid duplication)
+            result_copy = result.copy()
+            result_copy.pop("recorder", None)
+            games.append(result_copy)
 
             # Log progress
             if result["success"]:
@@ -334,9 +395,16 @@ def main():
     # Save results
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     models_str = "-".join(args.models) if len(args.models) > 1 else args.models[0]
+    
+    # Save comprehensive recording
+    recording_filename = f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}_full.json"
     filename = f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}.json"
 
     Path("results/json").mkdir(parents=True, exist_ok=True)
+    
+    # Save the comprehensive recording
+    benchmark_recorder.save_to_file(Path(recording_filename))
+    logger.info(f"Full recording saved to: {recording_filename}")
 
     with open(filename, "w") as f:
         json.dump(
@@ -363,6 +431,7 @@ def main():
     logger.info(f"{'=' * 70}")
     logger.info(f"Total duration: {(time.time() - overall_start) / 60:.1f} minutes")
     logger.info(f"Results saved to: {filename}")
+    logger.info(f"Full recording saved to: {recording_filename}")
 
     # Print comparison if multiple models
     if len(args.models) > 1:
@@ -381,33 +450,19 @@ def main():
                     f"{results['stockout_rate']['mean']:<9.1%} "
                     f"${results['cost_per_game']:<9.4f}"
                 )
-
-    # Generate comprehensive metrics report
-    logger.info("\nGenerating comprehensive metrics report...")
-    from src.lemonade_stand.comprehensive_recorder import (
-        MetricsAnalyzer,
-        generate_metrics_report,
-        print_metrics_summary,
-        save_metrics_report,
-    )
-
-    analyzer = MetricsAnalyzer()
-    all_game_metrics = []
-
-    for _model, model_results in all_results.items():
-        for game in model_results["individual_games"]:
-            if game["success"]:
-                game_metrics = analyzer.analyze_game(game)
-                all_game_metrics.append(game_metrics)
-
-    if all_game_metrics:
-        report = generate_metrics_report(all_game_metrics)
-        print_metrics_summary(report)
-
-        # Save detailed metrics report
-        metrics_filename = filename.replace(".json", "_metrics.json")
-        save_metrics_report(report, metrics_filename)
-        logger.info(f"\nDetailed metrics saved to: {metrics_filename}")
+    
+    # Run analysis if not skipped
+    if not args.no_analysis:
+        logger.info("\nGenerating analysis report...")
+        from analysis.analyze_results import analyze_results
+        
+        try:
+            # Pass the full recording filename to analyze_results
+            analyze_results(recording_filename)
+            logger.info("Analysis complete!")
+        except Exception as e:
+            logger.error(f"Failed to generate analysis: {e}")
+            logger.info("You can manually run: python analysis/analyze_results.py --file " + recording_filename)
 
 
 if __name__ == "__main__":

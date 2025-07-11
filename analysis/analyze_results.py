@@ -7,15 +7,9 @@ import statistics
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List
 
 sys.path.append(str(Path(__file__).parent.parent))
-
-from src.lemonade_stand.comprehensive_recorder import (
-    MetricsAnalyzer,
-    generate_metrics_report,
-    print_metrics_summary,
-    save_metrics_report,
-)
 
 # Import plotting libraries
 try:
@@ -189,23 +183,256 @@ def generate_profit_plots(data, output_dir):
     print(f"Profit plot saved to: {plot_file}")
 
 
+def analyze_results(filename: str = None) -> None:
+    """Analyze results from the given filename or the latest results.
+    
+    Args:
+        filename: Path to the JSON results file
+    """
+    if filename:
+        with open(filename) as f:
+            data = json.load(f)
+    else:
+        # Find the latest file
+        results_dir = Path("results/json")
+        if results_dir.exists():
+            json_files = sorted(
+                results_dir.glob("*_full.json"),  # Look for comprehensive recordings first
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if not json_files:  # Fall back to regular files
+                json_files = sorted(
+                    results_dir.glob("*.json"),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                )
+            if json_files:
+                filename = str(json_files[0])
+                print(f"Analyzing: {filename}")
+                with open(filename) as f:
+                    data = json.load(f)
+            else:
+                print("No result files found")
+                return
+        else:
+            print("No results directory found")
+            return
+    
+    # Check if this is a comprehensive recording
+    if "benchmark_metadata" in data and "games" in data:
+        # New comprehensive format
+        analyze_comprehensive_format(data, filename)
+    else:
+        print("Error: This file is not in the comprehensive recording format.")
+        print("Please run a new benchmark to generate data in the correct format.")
+
+
+def analyze_comprehensive_format(data: Dict[str, Any], filename: str) -> None:
+    """Analyze the new comprehensive recording format."""
+    print("\n" + "=" * 80)
+    print("LEMONADEBENCH v0.5 - COMPREHENSIVE ANALYSIS")
+    print("=" * 80)
+    
+    metadata = data["benchmark_metadata"]
+    params = metadata["parameters"]
+    
+    print(f"\nBenchmark Configuration:")
+    print(f"  Models: {', '.join(params['models'])}")
+    print(f"  Games per model: {params['games_per_model']}")
+    print(f"  Days per game: {params['days_per_game']}")
+    print(f"  Starting cash: ${params['starting_cash']}")
+    print(f"  Duration: {metadata['total_duration_seconds']:.1f} seconds")
+    
+    # Analyze each game
+    model_stats = {}
+    
+    for game_data in data["games"]:
+        model = game_data["model"]
+        if model not in model_stats:
+            model_stats[model] = {
+                "games": [],
+                "total_tokens": 0,
+                "total_cost": 0,
+                "total_interactions": 0,
+                "tool_usage": {},
+            }
+        
+        # Extract key metrics from final results
+        if game_data.get("final_results"):
+            model_stats[model]["games"].append(game_data["final_results"])
+            model_stats[model]["total_tokens"] += game_data.get("total_tokens", 0)
+            model_stats[model]["total_cost"] += game_data.get("total_cost", 0)
+        
+        # Analyze interactions
+        for day_data in game_data.get("days", []):
+            for interaction in day_data.get("interactions", []):
+                model_stats[model]["total_interactions"] += 1
+                
+                # Count tool usage
+                for tool_exec in interaction.get("tool_executions", []):
+                    tool_name = tool_exec["tool"]
+                    if tool_name not in model_stats[model]["tool_usage"]:
+                        model_stats[model]["tool_usage"][tool_name] = 0
+                    model_stats[model]["tool_usage"][tool_name] += 1
+    
+    # Print model comparison
+    print("\n" + "=" * 80)
+    print("MODEL COMPARISON")
+    print("=" * 80)
+    
+    for model, stats in model_stats.items():
+        print(f"\n--- {model} ---")
+        if stats["games"]:
+            profits = [g["total_profit"] for g in stats["games"]]
+            print(f"Games completed: {len(stats['games'])}")
+            print(f"Average profit: ${statistics.mean(profits):.2f}")
+            if len(profits) > 1:
+                print(f"Profit std dev: ${statistics.stdev(profits):.2f}")
+            print(f"Total tokens: {stats['total_tokens']:,}")
+            print(f"Total cost: ${stats['total_cost']:.4f}")
+            print(f"Total interactions: {stats['total_interactions']}")
+            
+            print("\nTool usage:")
+            for tool, count in sorted(stats["tool_usage"].items(), key=lambda x: x[1], reverse=True):
+                print(f"  {tool}: {count}")
+    
+    # Save analysis outputs
+    base_name = Path(filename).stem.replace("_full", "")
+    
+    # Generate LaTeX table
+    latex_file = f"results/latex/{base_name}_analysis.tex"
+    generate_comprehensive_latex_table(model_stats, latex_file, params)
+    
+    # Generate plots
+    plot_dir = f"results/plots/{base_name}"
+    generate_comprehensive_plots(data, plot_dir)
+
+
+def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file: str, params: Dict[str, Any]) -> None:
+    """Generate LaTeX table from comprehensive data."""
+    latex = r"""\begin{table}[h]
+\centering
+\caption{LemonadeBench v0.5 - Comprehensive Results}
+\label{tab:lemonadebench_v05_comprehensive}
+\begin{tabular}{|l|r|r|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Games} & \textbf{Avg Profit (\$)} & \textbf{Std Dev (\$)} & \textbf{Tokens} & \textbf{Cost (\$)} & \textbf{Interactions} \\
+\hline
+"""
+    
+    for model, stats in sorted(model_stats.items()):
+        if stats["games"]:
+            profits = [g["total_profit"] for g in stats["games"]]
+            avg_profit = statistics.mean(profits)
+            std_profit = statistics.stdev(profits) if len(profits) > 1 else 0
+            
+            latex += f"{model} & "
+            latex += f"{len(stats['games'])} & "
+            latex += f"{avg_profit:.2f} & "
+            latex += f"{std_profit:.2f} & "
+            latex += f"{stats['total_tokens']:,} & "
+            latex += f"{stats['total_cost']:.4f} & "
+            latex += f"{stats['total_interactions']} \\\\"
+            latex += "\n\\hline\n"
+    
+    latex += r"""\end{tabular}
+\end{table}"""
+    
+    # Save to file
+    output_path = Path(output_file)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        f.write(latex)
+    
+    print(f"\nLaTeX table saved to: {output_path}")
+
+
+def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
+    """Generate plots from comprehensive data."""
+    if not PLOTTING_AVAILABLE:
+        print("\nSkipping plots - matplotlib not available")
+        return
+    
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Plot 1: Profit trajectories
+    plt.figure(figsize=(12, 8))
+    
+    colors = {
+        "gpt-4.1-nano": "#FF6B6B",
+        "gpt-4.1-mini": "#4ECDC4",
+        "gpt-4.1": "#45B7D1",
+        "o3": "#96CEB4",
+        "o4-mini": "#DDA0DD",
+        "claude-3-haiku": "#F7DC6F",
+        "claude-3.5-sonnet": "#BB8FCE",
+    }
+    
+    for game_data in data["games"]:
+        model = game_data["model"]
+        game_id = game_data["game_id"]
+        
+        # Extract daily cash history from game states
+        cash_history = []
+        for day_data in game_data.get("days", []):
+            if "game_state_after" in day_data:
+                cash_history.append(day_data["game_state_after"]["cash"])
+        
+        if cash_history:
+            days = list(range(len(cash_history)))
+            starting_cash = game_data["parameters"]["starting_cash"]
+            profit_history = [cash - starting_cash for cash in cash_history]
+            
+            plt.plot(
+                days,
+                profit_history,
+                color=colors.get(model, "#808080"),
+                label=f"{model} (Game {game_id})",
+                alpha=0.7,
+                linewidth=2,
+            )
+    
+    plt.xlabel("Day", fontsize=12)
+    plt.ylabel("Cumulative Profit ($)", fontsize=12)
+    plt.title("LemonadeBench v0.5: Profit Trajectories", fontsize=14, fontweight="bold")
+    plt.grid(True, alpha=0.3)
+    plt.axhline(y=0, color="black", linestyle="-", alpha=0.3)
+    
+    # Custom legend with unique models only
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    unique_models = {}
+    for handle, label in zip(handles, labels):
+        model = label.split(" (Game")[0]
+        if model not in unique_models:
+            unique_models[model] = handle
+    
+    plt.legend(
+        unique_models.values(),
+        unique_models.keys(),
+        loc="upper left",
+        framealpha=0.9
+    )
+    
+    plot_file = output_path / "profit_trajectories.png"
+    plt.tight_layout()
+    plt.savefig(plot_file, dpi=300, bbox_inches="tight")
+    plt.close()
+    
+    print(f"Profit plot saved to: {plot_file}")
+    
+    # Plot 2: Tool usage heatmap
+    # ... additional plots can be added here
+
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="Analyze LemonadeBench v0.5 results")
     parser.add_argument(
-        "input_file", nargs="?", help="JSON results file from v0.5 benchmark"
-    )
-    parser.add_argument("--save-report", help="Save detailed metrics report to file")
-    parser.add_argument(
-        "--compare-models", action="store_true", help="Show detailed model comparison"
-    )
-    parser.add_argument(
-        "--latex", help="Generate LaTeX table and save to specified file"
-    )
-    parser.add_argument(
-        "--plots", help="Generate plots and save to specified directory"
-    )
-    parser.add_argument(
-        "--list", action="store_true", help="List all available result files"
+        "--file", help="JSON results file from v0.5 benchmark"
     )
     parser.add_argument(
         "--latest", action="store_true", help="Analyze the most recent result file"
@@ -213,124 +440,10 @@ def main():
 
     args = parser.parse_args()
 
-    # Handle --list option
-    if args.list:
-        results_dir = Path("results/json")
-        if results_dir.exists():
-            json_files = sorted(
-                results_dir.glob("*.json"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            print("Available result files:")
-            for i, file in enumerate(json_files[:20]):  # Show latest 20
-                print(f"{i + 1:3d}. {file.name}")
-        else:
-            print("No results directory found")
-        return
-
-    # Handle --latest option
-    input_file = args.input_file
-    if args.latest:
-        results_dir = Path("results/json")
-        if results_dir.exists():
-            json_files = sorted(
-                results_dir.glob("*.json"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            if json_files:
-                input_file = str(json_files[0])
-                print(f"Analyzing latest file: {input_file}")
-            else:
-                print("No result files found")
-                return
-        else:
-            print("No results directory found")
-            return
-
-    # Load results
-    with open(input_file) as f:
-        data = json.load(f)
-
-    if data.get("version") != "0.5":
-        print(
-            f"Warning: This file appears to be from version {data.get('version', 'unknown')}, not v0.5"
-        )
-
-    # Extract all games
-    analyzer = MetricsAnalyzer()
-    all_game_metrics = []
-
-    for model, model_results in data["results"].items():
-        for game in model_results["individual_games"]:
-            if game["success"]:
-                # Add model info if not present
-                if "model" not in game:
-                    game["model"] = model
-
-                # Add days target if not present
-                if "days_target" not in game:
-                    game["days_target"] = data["parameters"]["days_per_game"]
-
-                game_metrics = analyzer.analyze_game(game)
-                all_game_metrics.append(game_metrics)
-
-    if not all_game_metrics:
-        print("No successful games found to analyze!")
-        return
-
-    # Generate report
-    report = generate_metrics_report(all_game_metrics)
-    print_metrics_summary(report)
-
-    # Save if requested
-    if args.save_report:
-        save_metrics_report(report, args.save_report)
-        print(f"\nDetailed report saved to: {args.save_report}")
-
-    # Show detailed model comparison if requested
-    if args.compare_models and "model_comparison" in report:
-        print("\n" + "=" * 80)
-        print("DETAILED MODEL COMPARISON")
-        print("=" * 80)
-
-        for model, stats in report["model_comparison"].items():
-            print(f"\n--- {model} ---")
-            print(f"Games Analyzed: {stats['games']}")
-            print(
-                f"Average Days Survived: {stats['avg_days_survived']:.1f} / {data['parameters']['days_per_game']}"
-            )
-            print(f"Average Total Profit: ${stats['avg_profit']:.2f}")
-            print(f"Average Service Rate: {stats['avg_service_rate']:.1%}")
-            print(f"Optimal Price Discovery: {stats['price_discovery_rate']:.1%}")
-            print(f"Average Cost per Day: ${stats['avg_cost_per_day']:.4f}")
-
-            # Find best and worst games for this model
-            model_games = [g for g in all_game_metrics if g.model == model]
-            if model_games:
-                best_game = max(model_games, key=lambda g: g.total_profit)
-                worst_game = min(model_games, key=lambda g: g.total_profit)
-
-                print("\nBest Game:")
-                print(f"  - Survived: {best_game.days_survived} days")
-                print(f"  - Profit: ${best_game.total_profit:.2f}")
-                print(f"  - Service Rate: {best_game.overall_service_rate:.1%}")
-
-                print("\nWorst Game:")
-                print(f"  - Survived: {worst_game.days_survived} days")
-                print(f"  - Profit: ${worst_game.total_profit:.2f}")
-                print(f"  - Service Rate: {worst_game.overall_service_rate:.1%}")
-
-    # Generate LaTeX table if requested
-    if args.latex:
-        # Add the game metrics to the report for LaTeX generation
-        report["individual_metrics"] = all_game_metrics
-        generate_latex_table(report, args.latex)
-
-    # Generate plots if requested
-    if args.plots:
-        generate_profit_plots(data, args.plots)
+    if args.latest or not args.file:
+        analyze_results()
+    else:
+        analyze_results(args.file)
 
 
 if __name__ == "__main__":

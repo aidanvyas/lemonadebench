@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 from typing import Any
 
 from openai import OpenAI
@@ -17,7 +18,7 @@ class AIPlayerV05:
 
     def __init__(
         self,
-        model_name: str = "gpt-4.1-mini",
+        model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
     ):
@@ -251,8 +252,16 @@ class AIPlayerV05:
         except Exception as e:
             return json.dumps({"error": str(e)})
 
-    def play_turn(self, game: BusinessGame) -> dict[str, Any]:
-        """Play one turn of the game using OpenAI Responses API (stateless)."""
+    def play_turn(self, game: BusinessGame, recorder=None) -> dict[str, Any]:
+        """Play one turn of the game using OpenAI Responses API (stateless).
+        
+        Args:
+            game: The BusinessGame instance
+            recorder: Optional GameRecorder to record all interactions
+            
+        Returns:
+            Dictionary with success status and attempt information
+        """
         prompt = game.get_turn_prompt()
         max_attempts = 10
         attempts = 0
@@ -269,18 +278,44 @@ class AIPlayerV05:
                             f"  Progress: {list(set(all_tool_calls_this_turn))}"
                         )
 
+                # Build request
                 kwargs = self._build_request_kwargs(conversation, game)
+                
+                # Time the API call
+                start_time = time.time()
                 response = self.client.responses.create(**kwargs)
+                duration_ms = int((time.time() - start_time) * 1000)
 
+                # Extract data from response
                 self._extract_reasoning_summary(response, game, attempts)
                 self._update_token_usage(response)
 
+                # Process the response output
                 (
                     tool_calls_made,
                     tool_results,
                     assistant_message,
                     success,
                 ) = self._process_output(response, game, attempts, all_tool_calls_this_turn)
+
+                # Record the interaction if recorder is provided
+                if recorder:
+                    # Build list of tool executions
+                    tool_executions = []
+                    for tool_result in tool_results:
+                        tool_executions.append({
+                            "tool": tool_result["name"],
+                            "arguments": self._get_tool_args_from_response(response, tool_result["name"]),
+                            "result": json.loads(tool_result["result"]),
+                        })
+                    
+                    recorder.record_interaction(
+                        attempt=attempts,
+                        request=kwargs,
+                        response=response,
+                        tool_executions=tool_executions,
+                        duration_ms=duration_ms,
+                    )
 
                 if success is not None:
                     return success
@@ -295,8 +330,19 @@ class AIPlayerV05:
                 self.errors.append({"day": game.current_day, "error": str(e)})
                 if attempts < max_attempts:
                     logger.warning(f"Error on attempt {attempts}, will retry")
+                    
+                # Record the error if recorder is provided
+                if recorder and hasattr(recorder, 'record_error'):
+                    recorder.record_error(str(e))
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
+    
+    def _get_tool_args_from_response(self, response: Any, tool_name: str) -> dict[str, Any]:
+        """Extract tool arguments from response for a specific tool call."""
+        for item in response.output:
+            if item.type == "function_call" and item.name == tool_name:
+                return json.loads(item.arguments) if item.arguments else {}
+        return {}
 
     def _max_attempts_response(
         self, attempts: int, all_tool_calls: list[str]
