@@ -33,11 +33,11 @@ logger = logging.getLogger(__name__)
 def run_single_game(
     model_name: str,
     game_number: int,
-    days: int = 100,
-    starting_cash: float = 100,
+    days: int = 30,
+    starting_cash: float = 1000,
     seed: int = None,
 ) -> dict[str, Any]:
-    """Run a single 100-day lemonade business game.
+    """Run a single lemonade business game.
 
     Args:
         model_name: AI model to use
