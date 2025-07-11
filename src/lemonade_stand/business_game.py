@@ -403,14 +403,8 @@ class BusinessGame:
         """Check today's supply costs.
 
         Returns:
-            Dictionary with supply costs or error
+            Dictionary with supply costs
         """
-        if not self.today_supply_costs:
-            return {
-                "success": False,
-                "error": "Morning prices not yet available for today."
-            }
-
         return {
             "success": True,
             "prices": self.today_supply_costs.copy()

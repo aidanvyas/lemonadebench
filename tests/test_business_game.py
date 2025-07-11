@@ -42,14 +42,8 @@ class TestBusinessGame:
     def test_check_morning_prices(self):
         """Test checking morning prices."""
         game = BusinessGame(seed=42)
-
-        # Should fail before day starts
-        result = game.check_morning_prices()
-        assert result["success"] is False
-        assert "Morning prices not yet available" in result["error"]
-
-        # Start day and check
         game.start_new_day()
+        
         result = game.check_morning_prices()
 
         assert result["success"] is True
