@@ -16,6 +16,10 @@ class TestBusinessGame:
         assert game.cash == 100
         assert game.hourly_operating_cost == 5
         assert game.yesterday_profit is None
+        
+        # Test default starting cash
+        default_game = BusinessGame()
+        assert default_game.cash == 1000
 
     def test_start_new_day(self):
         """Test starting a new day."""
@@ -26,7 +30,7 @@ class TestBusinessGame:
 
         assert game.current_day == 1
         assert day_info["day"] == 1
-        assert day_info["cash"] == 100
+        assert day_info["cash"] == 1000
         assert "expired_items" in day_info
 
         # Check supply costs were generated
@@ -64,7 +68,7 @@ class TestBusinessGame:
         result = game.order_supplies(cups=100, lemons=50, sugar=50, water=100)
 
         assert result["success"] is True
-        assert result["remaining_cash"] < 100  # Cash decreased
+        assert result["remaining_cash"] < 1000  # Cash decreased
         assert game.inventory.get_available("cups") == 100
         assert game.inventory.get_available("lemons") == 50
 
@@ -333,7 +337,7 @@ class TestBusinessGame:
 
         assert results["days_played"] == 3
         assert results["final_cash"] == game.cash
-        assert results["total_profit"] == game.cash - 100
+        assert results["total_profit"] == game.cash - 1000
         assert results["total_customers"] >= 0
         assert "average_daily_profit" in results
         assert "inventory_value" in results
