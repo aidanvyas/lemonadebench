@@ -408,7 +408,7 @@ class BusinessGame:
         if not self.today_supply_costs:
             return {
                 "success": False,
-                "error": "Day hasn't started yet. Call start_new_day() first."
+                "error": "Morning prices not yet available for today."
             }
 
         return {

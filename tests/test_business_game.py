@@ -46,7 +46,7 @@ class TestBusinessGame:
         # Should fail before day starts
         result = game.check_morning_prices()
         assert result["success"] is False
-        assert "Day hasn't started" in result["error"]
+        assert "Morning prices not yet available" in result["error"]
 
         # Start day and check
         game.start_new_day()
