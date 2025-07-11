@@ -620,9 +620,8 @@ class BusinessGame:
         self.cash += profit
         self.yesterday_profit = profit
 
-        # Create day summary
-        day_summary = {
-            "success": True,
+        # Create day result
+        day_result = {
             "day": self.current_day,
             "price": self.price,
             "open_hour": self.open_hour,
@@ -637,11 +636,11 @@ class BusinessGame:
             "hourly_sales": hourly_sales,
         }
 
-        # Store in history (without the success field)
-        history_entry = {k: v for k, v in day_summary.items() if k != "success"}
-        self.history.append(history_entry)
+        # Store in history
+        self.history.append(day_result)
 
-        return day_summary
+        # Return with success indicator
+        return {"success": True, **day_result}
 
     def get_historical_supply_costs(self) -> list[dict[str, float]]:
         """Get historical supply cost data.
