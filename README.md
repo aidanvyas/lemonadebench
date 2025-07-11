@@ -27,6 +27,7 @@ uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gp
 
 ### Business Operations
 - **Starting capital**: $1,000
+- **Game length**: 30 days (default)
 - **Operating cost**: $5/hour while open
 - **Operating window**: 24 hours (choose any hours)
 - **Demand function**: Q = 50 - 10p with hourly variations

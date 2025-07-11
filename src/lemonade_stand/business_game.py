@@ -7,7 +7,7 @@ from typing import Any
 # Game configuration constants
 DEFAULT_STARTING_CASH = 1000.0
 DEFAULT_HOURLY_OPERATING_COST = 5.0
-DEFAULT_TOTAL_DAYS = 100
+DEFAULT_TOTAL_DAYS = 30
 LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
 
@@ -327,7 +327,7 @@ class DemandModel:
 
 
 class BusinessGame:
-    """100-day lemonade stand business simulation with inventory management."""
+    """Lemonade stand business simulation with inventory management."""
 
     def __init__(
         self,
@@ -720,7 +720,7 @@ What would you like to do?"""
         Returns:
             System prompt string
         """
-        return """You run a lemonade stand for 100 days. Your goal is to maximize total profit (cash in bank after 100 days).
+        return f"""You run a lemonade stand for {self.total_days} days. Your goal is to maximize total profit (cash in bank after {self.total_days} days).
 
 BUSINESS MECHANICS:
 - Starting capital: $1000

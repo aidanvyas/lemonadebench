@@ -17,9 +17,10 @@ class TestBusinessGame:
         assert game.hourly_operating_cost == 5
         assert game.yesterday_profit is None
         
-        # Test default starting cash
+        # Test default starting cash and days
         default_game = BusinessGame()
         assert default_game.cash == 1000
+        assert default_game.total_days == 30
 
     def test_start_new_day(self):
         """Test starting a new day."""
@@ -304,7 +305,7 @@ class TestBusinessGame:
         # First turn should have full prompt
         prompt = game.get_turn_prompt()
         assert "You run a lemonade stand" in prompt
-        assert "100 days" in prompt
+        assert "30 days" in prompt
         assert "AVAILABLE TOOLS" in prompt
 
         # Start day 1
@@ -316,7 +317,7 @@ class TestBusinessGame:
         # Day 2 should have minimal prompt
         game.start_new_day()
         prompt = game.get_turn_prompt()
-        assert "Day 2 of 100" in prompt
+        assert "Day 2 of 30" in prompt
         assert "You made $" in prompt
         assert "AVAILABLE TOOLS" not in prompt  # No system prompt
 
