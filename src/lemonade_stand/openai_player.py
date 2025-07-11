@@ -145,15 +145,15 @@ class AIPlayerV05:
         return {
             "type": "function",
             "name": "set_operating_hours",
-            "description": "Set today's operating hours (must be between 6-21)",
+            "description": "Set today's operating hours (open hour 6-20, close hour 6-21)",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "open_hour": {
                         "type": "integer",
-                        "description": "Opening hour (6-21)",
+                        "description": "Opening hour (6-20)",
                         "minimum": 6,
-                        "maximum": 21,
+                        "maximum": 20,
                     },
                     "close_hour": {
                         "type": "integer",

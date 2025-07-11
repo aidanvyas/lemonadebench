@@ -93,7 +93,7 @@ class TestBusinessGame:
         assert game.hours_set is True
 
         # Invalid hours
-        result = game.set_operating_hours(5, 17)  # Too early
+        result = game.set_operating_hours(21, 22)  # Too late for open
         assert result["success"] is False
         assert "Invalid open hour" in result["error"]
 
