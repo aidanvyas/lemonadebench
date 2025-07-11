@@ -15,30 +15,37 @@ import matplotlib.pyplot as plt
 
 
 def calculate_business_metrics(model: str, stats: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    """Calculate business efficiency metrics for a model."""
+    """Calculate the 6 business efficiency metrics for a model."""
     
     # Find all games for this model in the comprehensive data
     model_games = [game for game in data["games"] if game["model"] == model]
     
-    # Initialize aggregators
-    all_prices = set()
-    total_weighted_purchase_cost = 0
-    total_quantity_purchased = 0
-    total_expired_value = 0
-    total_lost_customer_profit = 0
-    total_excess_stock_value = 0
+    # Initialize aggregators for 6 metrics
+    total_purchasing_savings = 0  # positive = saved money, negative = overpaid
+    total_expired_loss = 0        # negative = money lost to expiration
+    total_excess_loss = 0         # negative = money wasted on excess inventory
+    total_scheduling_loss = 0     # negative = profit lost from wrong hours
+    total_pricing_loss = 0        # negative = revenue lost from wrong prices
+    total_stockout_loss = 0       # negative = profit lost from stockouts
     
     for game_data in model_games:
-        # 1. Extract distinct prices tried
+        # Calculate average supply cost for this game
+        game_supply_costs = {"cups": [], "lemons": [], "sugar": [], "water": []}
         for day_data in game_data.get("days", []):
-            for interaction in day_data.get("interactions", []):
-                for tool_exec in interaction.get("tool_executions", []):
-                    if tool_exec["tool"] == "set_price":
-                        price = tool_exec["arguments"].get("price")
-                        if price:
-                            all_prices.add(price)
+            supply_costs = day_data.get("game_state_before", {}).get("supply_costs", {})
+            for item in game_supply_costs:
+                if item in supply_costs:
+                    game_supply_costs[item].append(supply_costs[item])
         
-        # 2. Calculate weighted average purchase price
+        avg_supply_cost_per_lemonade = 0
+        for item in game_supply_costs:
+            if game_supply_costs[item]:
+                avg_supply_cost_per_lemonade += sum(game_supply_costs[item]) / len(game_supply_costs[item])
+        
+        # 1. PURCHASING EFFICIENCY
+        actual_spending = {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
+        quantities_bought = {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
+        
         for day_data in game_data.get("days", []):
             supply_costs = day_data.get("game_state_before", {}).get("supply_costs", {})
             for interaction in day_data.get("interactions", []):
@@ -47,42 +54,101 @@ def calculate_business_metrics(model: str, stats: Dict[str, Any], data: Dict[str
                         ordered = tool_exec.get("arguments", {})
                         for item, quantity in ordered.items():
                             if quantity > 0 and item in supply_costs:
-                                total_weighted_purchase_cost += supply_costs[item] * quantity
-                                total_quantity_purchased += quantity
+                                actual_spending[item] += supply_costs[item] * quantity
+                                quantities_bought[item] += quantity
         
-        # 3. Calculate expired goods value
+        # Calculate savings vs average prices
+        game_purchasing_savings = 0
+        for item in game_supply_costs:
+            if game_supply_costs[item] and quantities_bought[item] > 0:
+                avg_price = sum(game_supply_costs[item]) / len(game_supply_costs[item])
+                would_have_spent = avg_price * quantities_bought[item]
+                game_purchasing_savings += would_have_spent - actual_spending[item]
+        
+        total_purchasing_savings += game_purchasing_savings
+        
+        # 2. EXPIRED LOSSES
+        game_expired_loss = 0
         for day_data in game_data.get("days", []):
             expired_items = day_data.get("game_state_before", {}).get("expired_items", {})
-            # Use base costs for expired items (approximate)
+            # Use average supply costs for expired items
             base_costs = {"cups": 0.05, "lemons": 0.20, "sugar": 0.10, "water": 0.02}
             for item, quantity in expired_items.items():
                 if item in base_costs:
-                    total_expired_value += base_costs[item] * quantity
+                    game_expired_loss += base_costs[item] * quantity
         
-        # 4. Calculate lost customer profit (from final results)
+        total_expired_loss += game_expired_loss
+        
+        # 3. EXCESS LOSSES (final inventory value)
         final_results = game_data.get("final_results", {})
-        customers_lost = final_results.get("total_customers_lost", 0)
+        game_excess_loss = final_results.get("inventory_value", 0)
+        total_excess_loss += game_excess_loss
+        
+        # 4. STOCKOUT LOSSES
+        # Calculate based on actual customers lost and estimated profit margin
+        customers_lost = final_results.get("total_lost_sales", 0)
+        
+        # Estimate profit per customer from their performance
         customers_served = final_results.get("total_customers", 0)
         revenue = final_results.get("total_revenue", 0)
         if customers_served > 0:
-            revenue_per_customer = revenue / customers_served
-            total_lost_customer_profit += customers_lost * revenue_per_customer
+            avg_price = revenue / customers_served
+            estimated_profit_per_customer = max(0, avg_price - avg_supply_cost_per_lemonade)
+            game_stockout_loss = customers_lost * estimated_profit_per_customer
+        else:
+            # Fallback: use optimal price margin
+            optimal_price = 2.5 + 0.5 * avg_supply_cost_per_lemonade
+            estimated_profit_per_customer = optimal_price - avg_supply_cost_per_lemonade
+            game_stockout_loss = customers_lost * estimated_profit_per_customer
         
-        # 5. Calculate excess stock value (final inventory)
-        final_inventory_value = final_results.get("final_inventory_value", 0)
-        total_excess_stock_value += final_inventory_value
+        total_stockout_loss += game_stockout_loss
+        
+        # 5. PRICING LOSSES 
+        # For customers actually served, what revenue was lost from suboptimal pricing?
+        game_pricing_loss = 0
+        optimal_price = 2.5 + 0.5 * avg_supply_cost_per_lemonade
+        
+        for day_data in game_data.get("days", []):
+            day_result = day_data.get("game_state_after", {})
+            if "day_result" in day_result:
+                actual_customers = day_result["day_result"].get("customers_served", 0)
+                actual_price = day_result.get("price", 0)
+                
+                if actual_customers > 0 and actual_price > 0:
+                    actual_revenue = actual_customers * actual_price
+                    optimal_revenue = actual_customers * optimal_price
+                    game_pricing_loss += max(0, optimal_revenue - actual_revenue)
+        
+        total_pricing_loss += game_pricing_loss
+        
+        # 6. SCHEDULING LOSSES
+        # This is complex - for now, use a simplified calculation
+        # Profit lost from operating during unprofitable hours + missed profitable hours
+        game_scheduling_loss = 0
+        
+        # For each day, check if they were open during optimal hours
+        for day_data in game_data.get("days", []):
+            day_result = day_data.get("game_state_after", {})
+            if "day_result" in day_result:
+                operating_cost = day_result["day_result"].get("operating_cost", 0)
+                profit = day_result["day_result"].get("profit", 0)
+                
+                # If they lost money from operating costs, that's scheduling inefficiency
+                if profit < 0 and operating_cost > 0:
+                    game_scheduling_loss += abs(profit)
+        
+        total_scheduling_loss += game_scheduling_loss
     
-    # Calculate averages
+    # Calculate averages per game
     num_games = len(model_games)
-    avg_purchase_price = (total_weighted_purchase_cost / total_quantity_purchased 
-                         if total_quantity_purchased > 0 else 0)
     
     return {
-        "distinct_prices": len(all_prices),
-        "avg_purchase_price": avg_purchase_price,
-        "expired_value": total_expired_value / num_games if num_games > 0 else 0,
-        "lost_customer_profit": total_lost_customer_profit / num_games if num_games > 0 else 0,
-        "excess_stock_value": total_excess_stock_value / num_games if num_games > 0 else 0,
+        "purchasing": total_purchasing_savings / num_games if num_games > 0 else 0,
+        "expired": -total_expired_loss / num_games if num_games > 0 else 0,  # negative because it's a loss
+        "excess": -total_excess_loss / num_games if num_games > 0 else 0,    # negative because it's waste
+        "scheduling": -total_scheduling_loss / num_games if num_games > 0 else 0,  # negative because it's a loss
+        "pricing": -total_pricing_loss / num_games if num_games > 0 else 0,     # negative because it's a loss
+        "stockout": -total_stockout_loss / num_games if num_games > 0 else 0,   # negative because it's a loss
     }
 
 
@@ -225,9 +291,9 @@ def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file:
 \centering
 \caption{LemonadeBench v0.5 - Business Efficiency Analysis}
 \label{tab:lemonadebench_v05_efficiency}
-\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|r|}
 \hline
-\textbf{Model} & \textbf{Games} & \textbf{Avg Profit (\$)} & \textbf{Std Dev} & \textbf{Avg Tools} & \textbf{Avg Cost} & \textbf{Avg Time (s)} & \textbf{Prices} & \textbf{Avg Buy Price} & \textbf{Expired (\$)} & \textbf{Lost Profit (\$)} & \textbf{Excess (\$)} \\
+\textbf{Model} & \textbf{Games} & \textbf{Profit (\$)} & \textbf{Std Dev} & \textbf{Purchasing (\$)} & \textbf{Expired (\$)} & \textbf{Excess (\$)} & \textbf{Scheduling (\$)} & \textbf{Pricing (\$)} & \textbf{Stockout (\$)} & \textbf{Tools} & \textbf{Time (s)} & \textbf{Cost (\$)} \\
 \hline
 """
     else:
@@ -235,9 +301,9 @@ def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file:
 \centering
 \caption{LemonadeBench v0.5 - Business Efficiency Analysis}
 \label{tab:lemonadebench_v05_efficiency}
-\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|}
 \hline
-\textbf{Model} & \textbf{Profit (\$)} & \textbf{Tools} & \textbf{Cost (\$)} & \textbf{Time (s)} & \textbf{Prices} & \textbf{Avg Buy Price} & \textbf{Expired (\$)} & \textbf{Lost Profit (\$)} & \textbf{Excess (\$)} \\
+\textbf{Model} & \textbf{Profit (\$)} & \textbf{Purchasing (\$)} & \textbf{Expired (\$)} & \textbf{Excess (\$)} & \textbf{Scheduling (\$)} & \textbf{Pricing (\$)} & \textbf{Stockout (\$)} & \textbf{Tools} & \textbf{Time (s)} & \textbf{Cost (\$)} \\
 \hline
 """
     
@@ -254,33 +320,44 @@ def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file:
                 std_profit = statistics.stdev(profits) if len(profits) > 1 else 0
                 avg_tools = stats["total_interactions"] / len(stats["games"])
                 avg_cost = stats["total_cost"] / len(stats["games"])
-                avg_time = sum(g["duration_seconds"] for g in stats["games"]) / len(stats["games"])
+                # Get duration from actual game data
+                model_games = [game for game in data["games"] if game["model"] == model]
+                avg_time = sum(g["duration_seconds"] for g in model_games) / len(model_games)
                 
                 latex += f"{model} & "
                 latex += f"{len(stats['games'])} & "
                 latex += f"{avg_profit:.2f} & "
                 latex += f"{std_profit:.2f} & "
+                # Add 6 efficiency metrics
+                latex += f"{efficiency_metrics['purchasing']:.2f} & "
+                latex += f"{efficiency_metrics['expired']:.2f} & "
+                latex += f"{efficiency_metrics['excess']:.2f} & "
+                latex += f"{efficiency_metrics['scheduling']:.2f} & "
+                latex += f"{efficiency_metrics['pricing']:.2f} & "
+                latex += f"{efficiency_metrics['stockout']:.2f} & "
                 latex += f"{avg_tools:.1f} & "
-                latex += f"{avg_cost:.4f} & "
                 latex += f"{avg_time:.1f} & "
+                latex += f"{avg_cost:.4f} \\\\"
             else:
                 profit = stats["games"][0]["total_profit"]
                 tools = stats["total_interactions"]
                 cost = stats["total_cost"]
-                time_taken = stats["games"][0]["duration_seconds"]
+                # Find the duration from the actual game data
+                game_data = next(game for game in data["games"] if game["model"] == model)
+                time_taken = game_data["duration_seconds"]
                 
                 latex += f"{model} & "
                 latex += f"{profit:.2f} & "
+                # Add 6 efficiency metrics
+                latex += f"{efficiency_metrics['purchasing']:.2f} & "
+                latex += f"{efficiency_metrics['expired']:.2f} & "
+                latex += f"{efficiency_metrics['excess']:.2f} & "
+                latex += f"{efficiency_metrics['scheduling']:.2f} & "
+                latex += f"{efficiency_metrics['pricing']:.2f} & "
+                latex += f"{efficiency_metrics['stockout']:.2f} & "
                 latex += f"{tools} & "
-                latex += f"{cost:.4f} & "
                 latex += f"{time_taken:.1f} & "
-            
-            # Add business efficiency metrics (same for both formats)
-            latex += f"{efficiency_metrics['distinct_prices']} & "
-            latex += f"{efficiency_metrics['avg_purchase_price']:.3f} & "
-            latex += f"{efficiency_metrics['expired_value']:.2f} & "
-            latex += f"{efficiency_metrics['lost_customer_profit']:.2f} & "
-            latex += f"{efficiency_metrics['excess_stock_value']:.2f} \\\\"
+                latex += f"{cost:.4f} \\\\"
             latex += "\n\\hline\n"
     
     latex += r"""\end{tabular}

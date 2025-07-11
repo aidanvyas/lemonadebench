@@ -4,7 +4,7 @@
 ```bash
 # Run benchmark (automatically generates analysis)
 uv run python experiments/run_benchmark.py --days 5                                        # Simple test
-uv run python experiments/run_benchmark.py --games 10 --models gpt-4.1-nano o4-mini      # Research run
+uv run python experiments/run_benchmark.py --days 10 --models gpt-4.1-nano o4-mini      # Research run
 uv run python experiments/run_benchmark.py --games 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3  # Full benchmark
 
 # Analyze results manually

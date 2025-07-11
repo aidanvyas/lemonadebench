@@ -19,8 +19,8 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 # Simple test (5 days, nano)
 uv run python experiments/run_benchmark.py --days 5
 
-# Research run (10 games, nano vs o4-mini)
-uv run python experiments/run_benchmark.py --games 10 --models gpt-4.1-nano o4-mini
+# Research run (10 days, nano vs o4-mini)
+uv run python experiments/run_benchmark.py --days 10 --models gpt-4.1-nano o4-mini
 
 # Full benchmark (30 games, 30 days, multiple models)
 uv run python experiments/run_benchmark.py --games 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3

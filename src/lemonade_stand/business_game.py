@@ -744,13 +744,14 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
             return ""
 
         table = "\nHISTORICAL PERFORMANCE:\n"
-        table += "Day | Profit     | Customers | Ran Out\n"
-        table += "----|------------|-----------|--------\n"
+        table += "Day | Profit     | Customers | Hours Open | Ran Out\n"
+        table += "----|------------|-----------|------------|--------\n"
 
         # Show ALL days
         for day in self.history:
             ran_out = "Yes" if day["customers_lost"] > 0 else "No"
-            table += f"{day['day']:3} | ${day['profit']:9.2f} | {day['customers_served']:9} | {ran_out:^7}\n"
+            hours = f"{day['open_hour']}-{day['close_hour']}"
+            table += f"{day['day']:3} | ${day['profit']:9.2f} | {day['customers_served']:9} | {hours:^10} | {ran_out:^7}\n"
 
         return table
 

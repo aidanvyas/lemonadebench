@@ -403,15 +403,29 @@ class OpenAIPlayer:
         if not hasattr(response, "usage"):
             return
         usage = response.usage
-        self.total_token_usage["input_tokens"] += getattr(usage, "prompt_tokens", 0)
-        self.total_token_usage["output_tokens"] += getattr(usage, "completion_tokens", 0)
-        self.total_token_usage["total_tokens"] += getattr(usage, "total_tokens", 0)
-        if hasattr(usage, "prompt_tokens_details"):
-            cached = getattr(usage.prompt_tokens_details, "cached_tokens", 0)
-            self.total_token_usage["cached_input_tokens"] += cached
-        if hasattr(usage, "completion_tokens_details"):
-            reasoning = getattr(usage.completion_tokens_details, "reasoning_tokens", 0)
-            self.total_token_usage["reasoning_tokens"] += reasoning
+        
+        # The Responses API uses different field names than Chat Completions API
+        # Try both field names to support both APIs
+        input_tokens = getattr(usage, "input_tokens", 0) or getattr(usage, "prompt_tokens", 0)
+        output_tokens = getattr(usage, "output_tokens", 0) or getattr(usage, "completion_tokens", 0)
+        total_tokens = getattr(usage, "total_tokens", 0)
+        
+        self.total_token_usage["input_tokens"] += input_tokens
+        self.total_token_usage["output_tokens"] += output_tokens
+        self.total_token_usage["total_tokens"] += total_tokens
+        
+        # Handle token details (different field names in different APIs)
+        if hasattr(usage, "input_tokens_details") or hasattr(usage, "prompt_tokens_details"):
+            details = getattr(usage, "input_tokens_details", None) or getattr(usage, "prompt_tokens_details", None)
+            if details:
+                cached = getattr(details, "cached_tokens", 0)
+                self.total_token_usage["cached_input_tokens"] += cached
+        
+        if hasattr(usage, "output_tokens_details") or hasattr(usage, "completion_tokens_details"):
+            details = getattr(usage, "output_tokens_details", None) or getattr(usage, "completion_tokens_details", None)
+            if details:
+                reasoning = getattr(details, "reasoning_tokens", 0)
+                self.total_token_usage["reasoning_tokens"] += reasoning
 
     def _process_output(
         self,
@@ -490,9 +504,15 @@ class OpenAIPlayer:
         cached_cost = (
             self.total_token_usage["cached_input_tokens"] / 1_000_000
         ) * pricing["cached_input"]
+        
+        # For reasoning models, output tokens include reasoning tokens
+        # The API charges for all output tokens at the output rate
         output_cost = (self.total_token_usage["output_tokens"] / 1_000_000) * pricing[
             "output"
         ]
+        
+        # Note: reasoning_tokens are already included in output_tokens for billing
+        # So we don't need to add them separately
 
         return {
             "input_cost": input_cost,
