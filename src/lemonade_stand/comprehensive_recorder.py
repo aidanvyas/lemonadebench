@@ -270,9 +270,9 @@ class MetricsAnalyzer:
         customers = game_result["total_customers"]
         return {
             "cups": customers,
-            "lemons": customers * 2,  # Assuming 2 lemons per cup
-            "sugar": customers * 20,  # 20g sugar per cup
-            "water": customers * 200,  # 200ml water per cup
+            "lemons": customers,
+            "sugar": customers,
+            "water": customers,
         }
 
     def _analyze_trend(self, game_result: dict[str, Any]) -> str:
