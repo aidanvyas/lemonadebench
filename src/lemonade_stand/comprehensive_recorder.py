@@ -140,7 +140,7 @@ class MetricsAnalyzer:
         metrics = GameMetrics(
             model=game_result["model"],
             game_number=game_result["game_number"],
-            starting_cash=1000,  # Default, update if in data
+            starting_cash=game_result.get("starting_cash", 1000),
             days_target=game_result.get("days_target", 100),
             days_survived=game_result["days_played"],
             survival_rate=game_result["days_played"]
