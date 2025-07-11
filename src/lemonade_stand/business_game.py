@@ -462,14 +462,10 @@ class BusinessGame:
         self.cash -= total_cost
 
         # Add to inventory
-        if cups > 0:
-            self.inventory.add_items("cups", cups, self.current_day)
-        if lemons > 0:
-            self.inventory.add_items("lemons", lemons, self.current_day)
-        if sugar > 0:
-            self.inventory.add_items("sugar", sugar, self.current_day)
-        if water > 0:
-            self.inventory.add_items("water", water, self.current_day)
+        self.inventory.add_items("cups", cups, self.current_day)
+        self.inventory.add_items("lemons", lemons, self.current_day)
+        self.inventory.add_items("sugar", sugar, self.current_day)
+        self.inventory.add_items("water", water, self.current_day)
 
         return {
             "success": True,
