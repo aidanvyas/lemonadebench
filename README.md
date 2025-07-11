@@ -22,8 +22,8 @@ uv run python experiments/run_benchmark.py --days 5
 # Research run (10 days, nano vs o4-mini)
 uv run python experiments/run_benchmark.py --days 10 --models gpt-4.1-nano o4-mini
 
-# Full benchmark (30 games, 30 days, multiple models)
-uv run python experiments/run_benchmark.py --games 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3
+# Full benchmark (30 days, multiple models)
+uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3
 ```
 
 **Note**: Benchmarks automatically generate analysis (LaTeX tables + plots). Use `--no-analysis` to skip.
