@@ -3,9 +3,9 @@
 ## Common Commands
 ```bash
 # Run benchmark (automatically generates analysis)
-uv run python experiments/run_benchmark.py --games 5    # Run 5 games with gpt-4.1-nano
-uv run python experiments/run_benchmark.py --games 30 --models gpt-4.1-nano o3
-uv run python experiments/run_benchmark.py --games 30 --no-analysis  # Skip automatic analysis
+uv run python experiments/run_benchmark.py --days 5                                        # Simple test
+uv run python experiments/run_benchmark.py --games 10 --models gpt-4.1-nano o4-mini      # Research run
+uv run python experiments/run_benchmark.py --games 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3  # Full benchmark
 
 # Analyze results manually
 uv run python analysis/analyze_results.py --latest     # Analyze most recent results

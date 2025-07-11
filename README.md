@@ -16,12 +16,17 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 
 ### 3. Run Benchmark
 ```bash
-# Quick test (1 model, 10 days)
-uv run python experiments/run_benchmark.py --models gpt-4.1-nano --days 10
+# Simple test (5 days, nano)
+uv run python experiments/run_benchmark.py --days 5
 
-# Full benchmark (5 models, 30 days - default)
-uv run python experiments/run_benchmark.py --models gpt-4.1-nano gpt-4.1-mini gpt-4.1 o4-mini o3
+# Research run (10 games, nano vs o4-mini)
+uv run python experiments/run_benchmark.py --games 10 --models gpt-4.1-nano o4-mini
+
+# Full benchmark (30 games, 30 days, multiple models)
+uv run python experiments/run_benchmark.py --games 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3
 ```
+
+**Note**: Benchmarks automatically generate analysis (LaTeX tables + plots). Use `--no-analysis` to skip.
 
 ## Game Mechanics
 
@@ -55,44 +60,34 @@ lemonade_stand/
 ├── pyproject.toml             # Project config & dependencies
 ├── uv.lock                    # Locked dependency versions
 ├── .python-version            # Python version for pyenv
+├── CLAUDE.md                  # Development guide and common commands
 ├── src/lemonade_stand/        # Core implementation
 │   ├── business_game.py       # Game mechanics + inventory + demand
-│   ├── openai_player.py       # AI player using OpenAI Responses API
-│   └── comprehensive_recorder.py # Metrics tracking and analysis
+│   ├── openai_player.py       # OpenAI-based AI player
+│   └── game_recorder.py       # Comprehensive interaction recording
 ├── experiments/               # Benchmark runners
-│   └── run_benchmark.py       # Main benchmark with rate limiting
-├── analysis/                  # Results analysis
-│   └── analyze_results.py     # Comprehensive metrics report
+│   └── run_benchmark.py       # Orchestrates games + recording + analysis
+├── analysis/                  # Business efficiency analysis
+│   └── analyze_results.py     # Generates LaTeX tables and plots
 ├── tests/                     # Unit tests
 └── results/                   # Experiment outputs
-    └── sample/                # Key results from paper
+    ├── json/                  # Raw results + comprehensive recordings
+    ├── latex/                 # Generated LaTeX tables
+    └── plots/                 # Profit trajectory visualizations
 ```
 
 ## Analysis
 
-View results:
+Analysis is **automatic** when running benchmarks. For manual analysis:
+
 ```bash
-# Analyze specific results file (shows summary statistics)
-uv run python analysis/analyze_results.py results/json/your_results.json
-
-# Save detailed metrics report (exports comprehensive metrics to JSON)
-uv run python analysis/analyze_results.py results/json/your_results.json --save-report metrics.json
-
-# Show detailed model comparison (displays best/worst games per model)
-uv run python analysis/analyze_results.py results/json/your_results.json --compare-models
-
-# List all available result files
-uv run python analysis/analyze_results.py --list
-
-# Analyze the most recent results
+# Analyze most recent results
 uv run python analysis/analyze_results.py --latest
 
-# Generate LaTeX table for paper
-uv run python analysis/analyze_results.py --latest --latex results/tex/benchmark.tex
-
-# Generate profit-over-time plots
-uv run python analysis/analyze_results.py --latest --plots results/plots/
+# Analyze specific comprehensive recording
+uv run python analysis/analyze_results.py --file results/json/[filename]_full.json
 ```
+
 
 ## Roadmap
 
