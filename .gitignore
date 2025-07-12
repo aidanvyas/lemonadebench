@@ -56,11 +56,14 @@ logs/
 archive/
 *.log
 
-# Keep directory structure but ignore data files
-results/json/
-results/plots/
+# Keep directory structure but ignore most data files
+results/json/*
+results/plots/*
 results/tex/
-# But keep sample results for paper
+# But keep paper results and sample results
+!results/json/gpt-4.1-nano-gpt-4.1-mini-gpt-4.1-o4-mini-o3_1games_30days_v05_20250711_184523.json
+!results/json/gpt-4.1-nano-gpt-4.1-mini-gpt-4.1-o4-mini-o3_1games_30days_v05_20250711_184523_full.json
+!results/plots/gpt-4.1-nano-gpt-4.1-mini-gpt-4.1-o4-mini-o3_1games_30days_v05_20250711_184523/
 !results/sample/
 
 # Don't ignore ROADMAP.md - it's our feature planning!
