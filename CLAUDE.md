@@ -5,7 +5,7 @@
 # Run benchmark (automatically generates analysis)
 uv run python experiments/run_benchmark.py --days 5                                        # Simple test
 uv run python experiments/run_benchmark.py --days 10 --models gpt-4.1-nano o4-mini      # Research run
-uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4.1-mini o4-mini o3  # Full benchmark
+uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4.1-mini gpt-4.1 o4-mini o3  # Full benchmark
 
 # Analyze results manually
 uv run python analysis/analyze_results.py --latest     # Analyze most recent results
