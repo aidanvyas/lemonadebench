@@ -144,21 +144,21 @@ class OpenAIPlayer:
         return {
             "type": "function",
             "name": "set_operating_hours",
-            "description": "Set today's operating hours (must be between 6-21)",
+            "description": "Set today's operating hours",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "open_hour": {
                         "type": "integer",
-                        "description": "Opening hour (6-21)",
-                        "minimum": 6,
-                        "maximum": 21,
+                        "description": "Opening hour (0-23)",
+                        "minimum": 0,
+                        "maximum": 23,
                     },
                     "close_hour": {
                         "type": "integer",
-                        "description": "Closing hour (6-21)",
-                        "minimum": 6,
-                        "maximum": 21,
+                        "description": "Closing hour (1-24, must be > open_hour)",
+                        "minimum": 1,
+                        "maximum": 24,
                     },
                 },
                 "required": ["open_hour", "close_hour"],
