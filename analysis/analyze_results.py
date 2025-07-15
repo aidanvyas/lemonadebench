@@ -1,376 +1,266 @@
 #!/usr/bin/env python3
-"""Analyze v0.5 benchmark results with comprehensive metrics, LaTeX tables, and plots."""
-
+"""Analyze v0.5 benchmark results with FINAL efficiency metrics per user specifications."""
 import argparse
 import json
 import statistics
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
-
-sys.path.append(str(Path(__file__).parent.parent))
-
+from typing import Any, Dict, List, Tuple
 import matplotlib.pyplot as plt
 
+# Game constants
+REFERENCE_PRICE = 2.69  # User-specified reference price for pricing loss calculations
+BASE_DEMAND = 50
+PRICE_SENSITIVITY = 10
+INGREDIENT_COST = 0.37  # Cost per lemonade (sum of base costs)
+OPERATING_COST_PER_HOUR = 5
 
-def calculate_business_metrics(model: str, stats: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    """Calculate the 6 business efficiency metrics for a model."""
+# Base supply costs (from business_game.py)
+BASE_COSTS = {
+    "cups": 0.05,
+    "lemons": 0.20,
+    "sugar": 0.10,
+    "water": 0.02
+}
+
+# Hour multipliers (ACTUAL from business_game.py)
+HOUR_MULTIPLIERS = {
+    0: 0.0,   # 12-1am: Closed
+    1: 0.0,   # 1-2am: Closed
+    2: 0.0,   # 2-3am: Closed
+    3: 0.0,   # 3-4am: Closed
+    4: 0.0,   # 4-5am: Closed
+    5: 0.0,   # 5-6am: Closed
+    6: 0.3,   # 6-7am: Early morning (30% of base)
+    7: 0.5,   # 7-8am: Morning commute
+    8: 0.7,   # 8-9am: Morning
+    9: 0.8,   # 9-10am: Mid-morning
+    10: 1.0,  # 10-11am: Late morning (100% base)
+    11: 1.2,  # 11am-12pm: Pre-lunch
+    12: 1.5,  # 12-1pm: Lunch peak (150% of base)
+    13: 1.3,  # 1-2pm: Post-lunch
+    14: 0.9,  # 2-3pm: Afternoon
+    15: 0.8,  # 3-4pm: Mid-afternoon
+    16: 0.9,  # 4-5pm: Late afternoon
+    17: 1.1,  # 5-6pm: Evening commute
+    18: 1.0,  # 6-7pm: Early evening
+    19: 0.7,  # 7-8pm: Evening
+    20: 0.4,  # 8-9pm: Late evening (40% of base)
+    21: 0.0,  # 9-10pm: Closed
+    22: 0.0,  # 10-11pm: Closed
+    23: 0.0,  # 11pm-12am: Closed
+}
+
+
+def calculate_business_metrics_final(model: str, stats: Dict[str, Any], full_data: List[Dict[str, Any]]) -> Dict[str, float]:
+    """Calculate final business efficiency metrics with user-specified sign conventions."""
+    # Find the game data for this model
+    game_data = None
+    for game in full_data:
+        if game.get("model") == model:
+            game_data = game
+            break
     
-    # Find all games for this model in the comprehensive data
-    model_games = [game for game in data["games"] if game["model"] == model]
+    if not game_data:
+        return {}
     
-    # Initialize aggregators for 6 metrics
-    total_purchasing_savings = 0  # positive = saved money, negative = overpaid
-    total_expired_loss = 0        # negative = money lost to expiration
-    total_excess_loss = 0         # negative = money wasted on excess inventory
-    total_scheduling_loss = 0     # negative = profit lost from wrong hours
-    total_pricing_loss = 0        # negative = revenue lost from wrong prices
-    total_stockout_loss = 0       # negative = profit lost from stockouts
+    # Initialize metrics
+    total_purchasing_efficiency = 0
+    total_expired_loss = 0
+    total_excess_loss = 0
+    total_stockout_loss = 0
+    total_pricing_loss = 0
+    total_scheduling_loss = 0
     
-    for game_data in model_games:
-        # Calculate average supply cost for this game
-        game_supply_costs = {"cups": [], "lemons": [], "sugar": [], "water": []}
-        for day_data in game_data.get("days", []):
-            supply_costs = day_data.get("game_state_before", {}).get("supply_costs", {})
-            for item in game_supply_costs:
-                if item in supply_costs:
-                    game_supply_costs[item].append(supply_costs[item])
+    num_games = 1  # For now, assuming 1 game per model
+    
+    # PURCHASING EFFICIENCY: Compare weighted avg purchase price vs base cost
+    # Positive = saved money (bought below base price)
+    # Negative = overpaid (bought above base price)
+    
+    # Get final results first
+    final_result = game_data.get("final_results", {})
+    
+    # Track actual costs paid and quantities
+    actual_costs_by_item = {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
+    quantities_by_item = {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
+    
+    # Look through all days for purchases and their prices
+    for day_data in game_data.get("days", []):
+        # Get the morning supply costs for this day
+        morning_costs = day_data.get("game_state_before", {}).get("supply_costs", {})
         
-        avg_supply_cost_per_lemonade = 0
-        for item in game_supply_costs:
-            if game_supply_costs[item]:
-                avg_supply_cost_per_lemonade += sum(game_supply_costs[item]) / len(game_supply_costs[item])
-        
-        # 1. PURCHASING EFFICIENCY
-        actual_spending = {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
-        quantities_bought = {"cups": 0, "lemons": 0, "sugar": 0, "water": 0}
-        
-        for day_data in game_data.get("days", []):
-            supply_costs = day_data.get("game_state_before", {}).get("supply_costs", {})
-            for interaction in day_data.get("interactions", []):
-                for tool_exec in interaction.get("tool_executions", []):
-                    if tool_exec["tool"] == "order_supplies":
-                        ordered = tool_exec.get("arguments", {})
-                        for item, quantity in ordered.items():
-                            if quantity > 0 and item in supply_costs:
-                                actual_spending[item] += supply_costs[item] * quantity
-                                quantities_bought[item] += quantity
-        
-        # Calculate savings vs average prices
-        game_purchasing_savings = 0
-        for item in game_supply_costs:
-            if game_supply_costs[item] and quantities_bought[item] > 0:
-                avg_price = sum(game_supply_costs[item]) / len(game_supply_costs[item])
-                would_have_spent = avg_price * quantities_bought[item]
-                game_purchasing_savings += would_have_spent - actual_spending[item]
-        
-        total_purchasing_savings += game_purchasing_savings
-        
-        # 2. EXPIRED LOSSES
-        game_expired_loss = 0
-        for day_data in game_data.get("days", []):
-            expired_items = day_data.get("game_state_before", {}).get("expired_items", {})
-            # Use average supply costs for expired items
-            base_costs = {"cups": 0.05, "lemons": 0.20, "sugar": 0.10, "water": 0.02}
-            for item, quantity in expired_items.items():
-                if item in base_costs:
-                    game_expired_loss += base_costs[item] * quantity
-        
-        total_expired_loss += game_expired_loss
-        
-        # 3. EXCESS LOSSES (final inventory value)
-        final_results = game_data.get("final_results", {})
-        game_excess_loss = final_results.get("inventory_value", 0)
-        total_excess_loss += game_excess_loss
-        
-        # 4. STOCKOUT LOSSES
-        # Calculate based on actual customers lost and estimated profit margin
-        customers_lost = final_results.get("total_lost_sales", 0)
-        
-        # Estimate profit per customer from their performance
-        customers_served = final_results.get("total_customers", 0)
-        revenue = final_results.get("total_revenue", 0)
-        if customers_served > 0:
-            avg_price = revenue / customers_served
-            estimated_profit_per_customer = max(0, avg_price - avg_supply_cost_per_lemonade)
-            game_stockout_loss = customers_lost * estimated_profit_per_customer
-        else:
-            # Fallback: use optimal price margin
-            optimal_price = 2.5 + 0.5 * avg_supply_cost_per_lemonade
-            estimated_profit_per_customer = optimal_price - avg_supply_cost_per_lemonade
-            game_stockout_loss = customers_lost * estimated_profit_per_customer
-        
-        total_stockout_loss += game_stockout_loss
-        
-        # 5. PRICING LOSSES 
-        # For customers actually served, what revenue was lost from suboptimal pricing?
-        game_pricing_loss = 0
-        optimal_price = 2.5 + 0.5 * avg_supply_cost_per_lemonade
-        
-        for day_data in game_data.get("days", []):
-            day_result = day_data.get("game_state_after", {})
-            if "day_result" in day_result:
-                actual_customers = day_result["day_result"].get("customers_served", 0)
-                actual_price = day_result.get("price", 0)
+        # Find any purchases made this day
+        for interaction in day_data.get("interactions", []):
+            for tool_exec in interaction.get("tool_executions", []):
+                if tool_exec.get("tool") == "order_supplies":
+                    result = tool_exec.get("result", {})
+                    if result.get("success"):
+                        ordered = result.get("ordered", {})
+                        # Calculate cost for each item using morning prices
+                        for item in ["cups", "lemons", "sugar", "water"]:
+                            qty = ordered.get(item, 0)
+                            if qty > 0:
+                                cost_per_unit = morning_costs.get(item, BASE_COSTS[item])
+                                actual_costs_by_item[item] += qty * cost_per_unit
+                                quantities_by_item[item] += qty
+    
+    # Calculate purchasing efficiency
+    total_purchasing_efficiency = 0
+    for item in ["cups", "lemons", "sugar", "water"]:
+        if quantities_by_item[item] > 0:
+            base_cost = quantities_by_item[item] * BASE_COSTS[item]
+            actual_cost = actual_costs_by_item[item]
+            # Positive if saved money, negative if overpaid
+            total_purchasing_efficiency += base_cost - actual_cost
+    
+    # EXPIRED LOSSES: Use game engine's expired_items tracking (like original)
+    total_expired_loss = 0
+    for day_data in game_data.get("days", []):
+        expired_items = day_data.get("game_state_before", {}).get("expired_items", {})
+        # Use base costs for expired items
+        for item, quantity in expired_items.items():
+            if item in BASE_COSTS:
+                total_expired_loss += BASE_COSTS[item] * quantity
+    
+    # EXCESS LOSSES (negative = loss) 
+    ending_value = final_result.get("inventory_value", 0)
+    total_excess_loss = ending_value
+    
+    # STOCKOUT LOSSES: Lost profit from turning customers away
+    # Use actual prices for each day's lost sales
+    total_stockout_loss = 0
+    
+    for day_data in game_data.get("days", []):
+        day_result = day_data.get("game_state_after", {}).get("day_result", {})
+        if day_result:
+            customers_lost = day_result.get("customers_lost", 0)
+            if customers_lost > 0:
+                # Use the actual price for this day
+                actual_price = day_data.get("game_state_after", {}).get("price", 0)
+                if actual_price > 0:
+                    # Profit margin at actual price
+                    profit_margin = actual_price - INGREDIENT_COST
+                    total_stockout_loss += customers_lost * profit_margin
+    
+    # PRICING LOSSES: Counterfactual with demand elasticity
+    # "If inventory and hours were the same, what would profit be if you changed prices to $2.69?"
+    for day_data in game_data.get("days", []):
+        day_result = day_data.get("game_state_after", {}).get("day_result", {})
+        if day_result:
+            actual_price = day_data.get("game_state_after", {}).get("price", 0)
+            start_hour = day_result.get("open_hour", 0)
+            end_hour = day_result.get("close_hour", 0)
+            
+            # Get actual inventory available (can_make at start of day)
+            can_make = day_data.get("game_state_before", {}).get("inventory", {}).get("can_make", 0)
+            
+            if actual_price > 0 and start_hour < end_hour:
+                # ACTUAL SCENARIO (what really happened)
+                actual_total_demand = 0
+                for hour in range(start_hour, end_hour):
+                    if hour in HOUR_MULTIPLIERS:
+                        hour_demand = (BASE_DEMAND - PRICE_SENSITIVITY * actual_price) * HOUR_MULTIPLIERS[hour]
+                        actual_total_demand += max(0, hour_demand)
                 
-                if actual_customers > 0 and actual_price > 0:
-                    actual_revenue = actual_customers * actual_price
-                    optimal_revenue = actual_customers * optimal_price
-                    game_pricing_loss += max(0, optimal_revenue - actual_revenue)
-        
-        total_pricing_loss += game_pricing_loss
-        
-        # 6. SCHEDULING LOSSES
-        # This is complex - for now, use a simplified calculation
-        # Profit lost from operating during unprofitable hours + missed profitable hours
-        game_scheduling_loss = 0
-        
-        # For each day, check if they were open during optimal hours
-        for day_data in game_data.get("days", []):
-            day_result = day_data.get("game_state_after", {})
-            if "day_result" in day_result:
-                operating_cost = day_result["day_result"].get("operating_cost", 0)
-                profit = day_result["day_result"].get("profit", 0)
+                # Use actual customers served 
+                actual_customers_served = day_result.get("customers_served", 0)
+                actual_sales = actual_customers_served
+                actual_revenue = actual_sales * actual_price
+                actual_ingredient_costs = actual_sales * INGREDIENT_COST
+                actual_operating_costs = (end_hour - start_hour) * OPERATING_COST_PER_HOUR
+                actual_profit = actual_revenue - actual_ingredient_costs - actual_operating_costs
                 
-                # If they lost money from operating costs, that's scheduling inefficiency
-                if profit < 0 and operating_cost > 0:
-                    game_scheduling_loss += abs(profit)
-        
-        total_scheduling_loss += game_scheduling_loss
+                # OPTIMAL PRICING SCENARIO (same supply capacity, same hours, different price)
+                optimal_total_demand = 0
+                for hour in range(start_hour, end_hour):  # SAME HOURS
+                    if hour in HOUR_MULTIPLIERS:
+                        hour_demand = (BASE_DEMAND - PRICE_SENSITIVITY * REFERENCE_PRICE) * HOUR_MULTIPLIERS[hour]
+                        optimal_total_demand += max(0, hour_demand)
+                
+                # Use same supply constraint logic
+                if actual_total_demand >= actual_customers_served:
+                    # Hours were the constraint - pricing change affects demand
+                    optimal_sales = min(optimal_total_demand, actual_customers_served * (optimal_total_demand / actual_total_demand))
+                else:
+                    # Supply was the constraint - pricing change limited by supply
+                    optimal_sales = min(optimal_total_demand, actual_customers_served)
+                optimal_revenue = optimal_sales * REFERENCE_PRICE
+                optimal_ingredient_costs = optimal_sales * INGREDIENT_COST
+                optimal_operating_costs = (end_hour - start_hour) * OPERATING_COST_PER_HOUR  # SAME OPERATING HOURS
+                optimal_profit = optimal_revenue - optimal_ingredient_costs - optimal_operating_costs
+                
+                # Pricing loss: actual vs optimal (negative = loss from suboptimal pricing)
+                day_pricing_loss = actual_profit - optimal_profit
+                total_pricing_loss += day_pricing_loss
     
-    # Calculate averages per game
-    num_games = len(model_games)
+    # SCHEDULING LOSSES: Counterfactual with global optimal hours
+    # "Given my price and inventory, how much am I losing by not using globally optimal hours (6am-8pm)?"
+    OPTIMAL_START_HOUR = 6  # 6am
+    OPTIMAL_END_HOUR = 21   # 8pm (hour 20 is last operable hour)
     
+    for day_data in game_data.get("days", []):
+        day_result = day_data.get("game_state_after", {}).get("day_result", {})
+        if day_result:
+            actual_price = day_data.get("game_state_after", {}).get("price", 0)
+            start_hour = day_result.get("open_hour", 0)
+            end_hour = day_result.get("close_hour", 0)
+            
+            # Get actual inventory available
+            can_make = day_data.get("game_state_before", {}).get("inventory", {}).get("can_make", 0)
+            
+            if actual_price > 0 and start_hour < end_hour:
+                # ACTUAL SCENARIO (what really happened)
+                actual_total_demand = 0
+                for hour in range(start_hour, end_hour):
+                    if hour in HOUR_MULTIPLIERS:
+                        hour_demand = (BASE_DEMAND - PRICE_SENSITIVITY * actual_price) * HOUR_MULTIPLIERS[hour]
+                        actual_total_demand += max(0, hour_demand)
+                
+                # Use actual customers served as the achieved constraint
+                actual_customers_served = day_result.get("customers_served", 0)
+                actual_sales = actual_customers_served  # What they actually achieved
+                actual_revenue = actual_sales * actual_price
+                actual_ingredient_costs = actual_sales * INGREDIENT_COST
+                actual_operating_costs = (end_hour - start_hour) * OPERATING_COST_PER_HOUR
+                actual_profit = actual_revenue - actual_ingredient_costs - actual_operating_costs
+                
+                # OPTIMAL SCHEDULING SCENARIO (same supply capacity, same price, global optimal hours)
+                optimal_total_demand = 0
+                for hour in range(OPTIMAL_START_HOUR, OPTIMAL_END_HOUR):  # 6am-8pm
+                    if hour in HOUR_MULTIPLIERS:
+                        hour_demand = (BASE_DEMAND - PRICE_SENSITIVITY * actual_price) * HOUR_MULTIPLIERS[hour]  # SAME PRICE
+                        optimal_total_demand += max(0, hour_demand)
+                
+                # Key insight: If they were constrained by hours (demand > served), extending helps
+                # If they were constrained by supply (demand <= served), extending doesn't help
+                if actual_total_demand >= actual_customers_served:
+                    # Hours were the constraint - extending hours allows more sales
+                    optimal_sales = min(optimal_total_demand, actual_customers_served * (optimal_total_demand / actual_total_demand))
+                else:
+                    # Supply was the constraint - extending hours doesn't help
+                    optimal_sales = actual_customers_served
+                optimal_revenue = optimal_sales * actual_price  # SAME PRICE
+                optimal_ingredient_costs = optimal_sales * INGREDIENT_COST
+                optimal_operating_costs = (OPTIMAL_END_HOUR - OPTIMAL_START_HOUR) * OPERATING_COST_PER_HOUR  # 15 hours
+                optimal_profit = optimal_revenue - optimal_ingredient_costs - optimal_operating_costs
+                
+                # Scheduling loss: actual vs optimal 
+                # Positive = doing better than optimal (e.g., selling out efficiently with fewer hours)
+                # Negative = doing worse than optimal (e.g., inefficient hours, 24/7 operation)
+                day_scheduling_loss = actual_profit - optimal_profit
+                total_scheduling_loss += day_scheduling_loss
+    
+    # Return metrics with user-specified sign conventions
     return {
-        "purchasing": total_purchasing_savings / num_games if num_games > 0 else 0,
-        "expired": -total_expired_loss / num_games if num_games > 0 else 0,  # negative because it's a loss
-        "excess": -total_excess_loss / num_games if num_games > 0 else 0,    # negative because it's waste
-        "scheduling": -total_scheduling_loss / num_games if num_games > 0 else 0,  # negative because it's a loss
-        "pricing": -total_pricing_loss / num_games if num_games > 0 else 0,     # negative because it's a loss
-        "stockout": -total_stockout_loss / num_games if num_games > 0 else 0,   # negative because it's a loss
+        "purchasing": total_purchasing_efficiency / num_games if num_games > 0 else 0,  # + = saved
+        "expired": -total_expired_loss / num_games if num_games > 0 else 0,            # - = loss
+        "excess": -total_excess_loss / num_games if num_games > 0 else 0,              # - = loss
+        "scheduling": total_scheduling_loss / num_games if num_games > 0 else 0,       # +/- 
+        "pricing": total_pricing_loss / num_games if num_games > 0 else 0,             # - = loss (always)
+        "stockout": -total_stockout_loss / num_games if num_games > 0 else 0,          # - = loss
     }
-
-
-
-def analyze_results(filename: str = None) -> None:
-    """Analyze results from the given filename or the latest results.
-    
-    Args:
-        filename: Path to the JSON results file
-    """
-    if filename:
-        with open(filename) as f:
-            data = json.load(f)
-    else:
-        # Find the latest file
-        results_dir = Path("results/json")
-        if results_dir.exists():
-            json_files = sorted(
-                results_dir.glob("*_full.json"),  # Look for comprehensive recordings first
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            if not json_files:  # Fall back to regular files
-                json_files = sorted(
-                    results_dir.glob("*.json"),
-                    key=lambda p: p.stat().st_mtime,
-                    reverse=True,
-                )
-            if json_files:
-                filename = str(json_files[0])
-                print(f"Analyzing: {filename}")
-                with open(filename) as f:
-                    data = json.load(f)
-            else:
-                print("No result files found")
-                return
-        else:
-            print("No results directory found")
-            return
-    
-    # Check if this is a comprehensive recording
-    if "benchmark_metadata" in data and "games" in data:
-        # New comprehensive format
-        analyze_comprehensive_format(data, filename)
-    else:
-        print("Error: This file is not in the comprehensive recording format.")
-        print("Please run a new benchmark to generate data in the correct format.")
-
-
-def analyze_comprehensive_format(data: Dict[str, Any], filename: str) -> None:
-    """Analyze the new comprehensive recording format."""
-    print("\n" + "=" * 80)
-    print("LEMONADEBENCH v0.5 - COMPREHENSIVE ANALYSIS")
-    print("=" * 80)
-    
-    metadata = data["benchmark_metadata"]
-    params = metadata["parameters"]
-    
-    print(f"\nBenchmark Configuration:")
-    print(f"  Models: {', '.join(params['models'])}")
-    print(f"  Games per model: {params['games_per_model']}")
-    print(f"  Days per game: {params['days_per_game']}")
-    print(f"  Starting cash: ${params['starting_cash']}")
-    print(f"  Duration: {metadata['total_duration_seconds']:.1f} seconds")
-    
-    # Analyze each game
-    model_stats = {}
-    
-    for game_data in data["games"]:
-        model = game_data["model"]
-        if model not in model_stats:
-            model_stats[model] = {
-                "games": [],
-                "total_tokens": 0,
-                "total_cost": 0,
-                "total_interactions": 0,
-                "tool_usage": {},
-            }
-        
-        # Extract key metrics from final results
-        if game_data.get("final_results"):
-            model_stats[model]["games"].append(game_data["final_results"])
-            model_stats[model]["total_tokens"] += game_data.get("total_tokens", 0)
-            model_stats[model]["total_cost"] += game_data.get("total_cost", 0)
-        
-        # Analyze interactions
-        for day_data in game_data.get("days", []):
-            for interaction in day_data.get("interactions", []):
-                model_stats[model]["total_interactions"] += 1
-                
-                # Count tool usage
-                for tool_exec in interaction.get("tool_executions", []):
-                    tool_name = tool_exec["tool"]
-                    if tool_name not in model_stats[model]["tool_usage"]:
-                        model_stats[model]["tool_usage"][tool_name] = 0
-                    model_stats[model]["tool_usage"][tool_name] += 1
-    
-    # Print model comparison
-    print("\n" + "=" * 80)
-    print("MODEL COMPARISON")
-    print("=" * 80)
-    
-    for model, stats in model_stats.items():
-        print(f"\n--- {model} ---")
-        if stats["games"]:
-            profits = [g["total_profit"] for g in stats["games"]]
-            print(f"Games completed: {len(stats['games'])}")
-            print(f"Average profit: ${statistics.mean(profits):.2f}")
-            if len(profits) > 1:
-                print(f"Profit std dev: ${statistics.stdev(profits):.2f}")
-            print(f"Total tokens: {stats['total_tokens']:,}")
-            print(f"Total cost: ${stats['total_cost']:.4f}")
-            print(f"Total interactions: {stats['total_interactions']}")
-            
-            print("\nTool usage:")
-            for tool, count in sorted(stats["tool_usage"].items(), key=lambda x: x[1], reverse=True):
-                print(f"  {tool}: {count}")
-    
-    # Save analysis outputs
-    base_name = Path(filename).stem.replace("_full", "")
-    
-    # Generate LaTeX table
-    latex_file = f"results/latex/{base_name}_analysis.tex"
-    generate_comprehensive_latex_table(model_stats, latex_file, params, data)
-    
-    # Generate plots
-    plot_dir = f"results/plots/{base_name}"
-    generate_comprehensive_plots(data, plot_dir)
-
-
-def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file: str, params: Dict[str, Any], data: Dict[str, Any]) -> None:
-    """Generate LaTeX table with business efficiency metrics."""
-    
-    # Check if any model has multiple games
-    multiple_games = any(len(stats["games"]) > 1 for stats in model_stats.values())
-    
-    # Build dynamic header based on whether we have multiple games
-    if multiple_games:
-        header = r"""\begin{table}[h]
-\centering
-\caption{LemonadeBench v0.5 - Business Efficiency Analysis}
-\label{tab:lemonadebench_v05_efficiency}
-\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|r|}
-\hline
-\textbf{Model} & \textbf{Games} & \textbf{Profit (\$)} & \textbf{Std Dev} & \textbf{Purchasing (\$)} & \textbf{Expired (\$)} & \textbf{Excess (\$)} & \textbf{Scheduling (\$)} & \textbf{Pricing (\$)} & \textbf{Stockout (\$)} & \textbf{Tools} & \textbf{Time (s)} & \textbf{Cost (\$)} \\
-\hline
-"""
-    else:
-        header = r"""\begin{table}[h]
-\centering
-\caption{LemonadeBench v0.5 - Business Efficiency Analysis}
-\label{tab:lemonadebench_v05_efficiency}
-\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|}
-\hline
-\textbf{Model} & \textbf{Profit (\$)} & \textbf{Purchasing (\$)} & \textbf{Expired (\$)} & \textbf{Excess (\$)} & \textbf{Scheduling (\$)} & \textbf{Pricing (\$)} & \textbf{Stockout (\$)} & \textbf{Tools} & \textbf{Time (s)} & \textbf{Cost (\$)} \\
-\hline
-"""
-    
-    latex = header
-    
-    for model, stats in sorted(model_stats.items()):
-        if stats["games"]:
-            # Calculate business efficiency metrics
-            efficiency_metrics = calculate_business_metrics(model, stats, data)
-            
-            if multiple_games:
-                profits = [g["total_profit"] for g in stats["games"]]
-                avg_profit = statistics.mean(profits)
-                std_profit = statistics.stdev(profits) if len(profits) > 1 else 0
-                avg_tools = stats["total_interactions"] / len(stats["games"])
-                avg_cost = stats["total_cost"] / len(stats["games"])
-                # Get duration from actual game data
-                model_games = [game for game in data["games"] if game["model"] == model]
-                avg_time = sum(g["duration_seconds"] for g in model_games) / len(model_games)
-                
-                latex += f"{model} & "
-                latex += f"{len(stats['games'])} & "
-                latex += f"{avg_profit:.2f} & "
-                latex += f"{std_profit:.2f} & "
-                # Add 6 efficiency metrics
-                latex += f"{efficiency_metrics['purchasing']:.2f} & "
-                latex += f"{efficiency_metrics['expired']:.2f} & "
-                latex += f"{efficiency_metrics['excess']:.2f} & "
-                latex += f"{efficiency_metrics['scheduling']:.2f} & "
-                latex += f"{efficiency_metrics['pricing']:.2f} & "
-                latex += f"{efficiency_metrics['stockout']:.2f} & "
-                latex += f"{avg_tools:.1f} & "
-                latex += f"{avg_time:.1f} & "
-                latex += f"{avg_cost:.4f} \\\\"
-            else:
-                profit = stats["games"][0]["total_profit"]
-                tools = stats["total_interactions"]
-                cost = stats["total_cost"]
-                # Find the duration from the actual game data
-                game_data = next(game for game in data["games"] if game["model"] == model)
-                time_taken = game_data["duration_seconds"]
-                
-                latex += f"{model} & "
-                latex += f"{profit:.2f} & "
-                # Add 6 efficiency metrics
-                latex += f"{efficiency_metrics['purchasing']:.2f} & "
-                latex += f"{efficiency_metrics['expired']:.2f} & "
-                latex += f"{efficiency_metrics['excess']:.2f} & "
-                latex += f"{efficiency_metrics['scheduling']:.2f} & "
-                latex += f"{efficiency_metrics['pricing']:.2f} & "
-                latex += f"{efficiency_metrics['stockout']:.2f} & "
-                latex += f"{tools} & "
-                latex += f"{time_taken:.1f} & "
-                latex += f"{cost:.4f} \\\\"
-            latex += "\n\\hline\n"
-    
-    latex += r"""\end{tabular}
-\end{table}"""
-    
-    # Save to file
-    output_path = Path(output_file)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        f.write(latex)
-    
-    print(f"\nLaTeX table saved to: {output_path}")
-
 
 def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
     """Generate average profit trajectory plot."""
@@ -382,7 +272,7 @@ def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
     
     colors = {
         "gpt-4.1-nano": "#FF6B6B",
-        "gpt-4.1-mini": "#4ECDC4",
+        "gpt-4.1-mini": "#4ECDC4", 
         "gpt-4.1": "#45B7D1",
         "o3": "#96CEB4",
         "o4-mini": "#DDA0DD",
@@ -437,27 +327,6 @@ def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
                 markersize=4,
                 alpha=0.9
             )
-            
-            # Add confidence interval if multiple games
-            if len(trajectories) > 1:
-                std_trajectory = []
-                for day in range(len(avg_trajectory)):
-                    day_profits = [traj[day] for traj in trajectories if day < len(traj)]
-                    if len(day_profits) > 1:
-                        std_trajectory.append(statistics.stdev(day_profits))
-                    else:
-                        std_trajectory.append(0)
-                
-                upper_bound = [avg + std for avg, std in zip(avg_trajectory, std_trajectory)]
-                lower_bound = [avg - std for avg, std in zip(avg_trajectory, std_trajectory)]
-                
-                plt.fill_between(
-                    days,
-                    lower_bound,
-                    upper_bound,
-                    color=colors.get(model, "#808080"),
-                    alpha=0.2
-                )
     
     plt.xlabel("Day", fontsize=14)
     plt.ylabel("Cumulative Profit ($)", fontsize=14)
@@ -474,25 +343,327 @@ def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
     
     print(f"Average profit trajectory plot saved to: {plot_file}")
 
+def generate_computational_requirements_table(model_stats: Dict[str, Any], output_file: str, data: List[Dict[str, Any]]) -> None:
+    """Generate LaTeX table with computational requirements and detailed tool usage."""
+    
+    header = r"""\begin{table}[h]
+\centering
+\caption{LemonadeBench v0.5 - Computational Requirements and Tool Usage}
+\label{tab:computational_requirements}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Profit (\$)} & \textbf{Total} & \textbf{Check} & \textbf{Check} & \textbf{Order} & \textbf{Set} & \textbf{Set} & \textbf{Historical} & \textbf{Open} & \textbf{Time (s)} & \textbf{API Cost (\$)} \\
+ & & \textbf{Calls} & \textbf{Inv.} & \textbf{Prices} & \textbf{Supplies} & \textbf{Price} & \textbf{Hours} & \textbf{Data} & \textbf{Business} & & \\
+\hline
+"""
+    
+    latex = header
+    
+    for model in sorted(model_stats.keys()):
+        stats = model_stats[model]
+        if stats["games"]:
+            profits = [g["total_profit"] for g in stats["games"]]
+            avg_profit = statistics.mean(profits)
+            
+            # Get detailed tool usage
+            tool_counts = {
+                "check_inventory": stats["tool_usage"].get("check_inventory", 0),
+                "check_morning_prices": stats["tool_usage"].get("check_morning_prices", 0),
+                "order_supplies": stats["tool_usage"].get("order_supplies", 0),
+                "set_price": stats["tool_usage"].get("set_price", 0),
+                "set_operating_hours": stats["tool_usage"].get("set_operating_hours", 0),
+                "get_historical_supply_costs": stats["tool_usage"].get("get_historical_supply_costs", 0),
+                "open_for_business": stats["tool_usage"].get("open_for_business", 0),
+            }
+            
+            total_tools = sum(tool_counts.values())
+            
+            # Get duration and cost
+            model_games = [game for game in data if game.get("model") == model]
+            avg_time = sum(g.get("duration_seconds", 0) for g in model_games) / len(model_games) if model_games else 0
+            avg_cost = stats["total_cost"] / len(stats["games"])
+            
+            # Format profit with commas
+            profit_str = f"{int(avg_profit):,}"
+            
+            latex += f"{model} & {profit_str} & {total_tools} & "
+            latex += f"{tool_counts['check_inventory']} & "
+            latex += f"{tool_counts['check_morning_prices']} & "
+            latex += f"{tool_counts['order_supplies']} & "
+            latex += f"{tool_counts['set_price']} & "
+            latex += f"{tool_counts['set_operating_hours']} & "
+            latex += f"{tool_counts['get_historical_supply_costs']} & "
+            latex += f"{tool_counts['open_for_business']} & "
+            latex += f"{avg_time:.1f} & "
+            latex += f"{avg_cost:.4f} \\\\\n"
+            latex += "\\hline\n"
+    
+    latex += r"""\end{tabular}
+}%
+\end{table}
+"""
+    
+    # Write to file
+    with open(output_file, "w") as f:
+        f.write(latex)
+    
+    print(f"Computational requirements table saved to: {output_file}")
 
 
+def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file: str, data: List[Dict[str, Any]]) -> None:
+    """Generate LaTeX table with business efficiency metrics."""
+    
+    header = r"""\begin{table}[h]
+\centering
+\caption{LemonadeBench v0.5 - Business Efficiency Analysis}
+\label{tab:lemonadebench_v05_efficiency}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Profit (\$)} & \textbf{Purchasing (\$)} & \textbf{Expired (\$)} & \textbf{Excess (\$)} & \textbf{Scheduling (\$)} & \textbf{Pricing (\$)} & \textbf{Stockout (\$)} & \textbf{Tools} & \textbf{Time (s)} & \textbf{Cost (\$)} \\
+\hline
+"""
+    
+    latex = header
+    
+    for model in sorted(model_stats.keys()):
+        stats = model_stats[model]
+        if stats["games"]:
+            # Calculate business efficiency metrics
+            efficiency = calculate_business_metrics_final(model, stats, data)
+            
+            profits = [g["total_profit"] for g in stats["games"]]
+            avg_profit = statistics.mean(profits)
+            avg_tools = stats["total_interactions"] / len(stats["games"])
+            avg_cost = stats["total_cost"] / len(stats["games"])
+            
+            # Get duration from actual game data
+            model_games = [game for game in data if game.get("model") == model]
+            avg_time = sum(g.get("duration_seconds", 0) for g in model_games) / len(model_games) if model_games else 0
+            
+            latex += f"{model} & "
+            latex += f"{avg_profit:.2f} & "
+            latex += f"{efficiency.get('purchasing', 0):.2f} & "
+            latex += f"{efficiency.get('expired', 0):.2f} & "
+            latex += f"{efficiency.get('excess', 0):.2f} & "
+            latex += f"{efficiency.get('scheduling', 0):.2f} & "
+            latex += f"{efficiency.get('pricing', 0):.2f} & "
+            latex += f"{efficiency.get('stockout', 0):.2f} & "
+            latex += f"{avg_tools:.0f} & "
+            latex += f"{avg_time:.1f} & "
+            latex += f"{avg_cost:.4f} \\\\\n"
+            latex += "\\hline\n"
+    
+    latex += r"""\end{tabular}
+\end{table}
+"""
+    
+    # Write to file
+    with open(output_file, "w") as f:
+        f.write(latex)
+    
+    print(f"LaTeX table saved to: {output_file}")
+
+def analyze_comprehensive_format(data: List[Dict[str, Any]], filename: str):
+    """Analyze comprehensive v0.5 format results."""
+    print(f"\nAnalyzing: {filename}")
+    print("=" * 80)
+    
+    # Group by model and collect comprehensive stats
+    model_stats = {}
+    
+    for game_data in data:
+        model = game_data.get("model", "unknown")
+        
+        if model not in model_stats:
+            model_stats[model] = {
+                "games": [],
+                "total_tokens": 0,
+                "total_cost": 0,
+                "total_interactions": 0,
+                "tool_usage": {},
+                "avg_supply_cost_per_lemonade": INGREDIENT_COST,
+            }
+        
+        stats = model_stats[model]
+        
+        # Add game data
+        final_results = game_data.get("final_results", {})
+        game_info = {
+            "total_profit": final_results.get("total_profit", 0),
+            "total_revenue": final_results.get("total_revenue", 0),
+            "days_played": final_results.get("days_played", 0)
+        }
+        stats["games"].append(game_info)
+        
+        # Token and cost tracking
+        stats["total_tokens"] += game_data.get("total_tokens", 0)
+        stats["total_cost"] += game_data.get("total_cost", 0)
+        
+        # Count tool usage
+        total_tools = 0
+        for day_data in game_data.get("days", []):
+            for interaction in day_data.get("interactions", []):
+                for tool_exec in interaction.get("tool_executions", []):
+                    tool_name = tool_exec.get("tool", "unknown")
+                    total_tools += 1
+                    if tool_name not in stats["tool_usage"]:
+                        stats["tool_usage"][tool_name] = 0
+                    stats["tool_usage"][tool_name] += 1
+        
+        stats["total_interactions"] += total_tools
+    
+    # Print model comparison (like original analyze_results.py)
+    print("\n" + "=" * 80)
+    print("MODEL COMPARISON")
+    print("=" * 80)
+    
+    for model in sorted(model_stats.keys()):
+        stats = model_stats[model]
+        print(f"\n--- {model} ---")
+        if stats["games"]:
+            profits = [g["total_profit"] for g in stats["games"]]
+            print(f"Games completed: {len(stats['games'])}")
+            print(f"Average profit: ${statistics.mean(profits):.2f}")
+            if len(profits) > 1:
+                print(f"Profit std dev: ${statistics.stdev(profits):.2f}")
+            print(f"Total tokens: {stats['total_tokens']:,}")
+            print(f"Total cost: ${stats['total_cost']:.4f}")
+            print(f"Total interactions: {stats['total_interactions']}")
+            
+            print("\nTool usage:")
+            for tool, count in sorted(stats["tool_usage"].items(), key=lambda x: x[1], reverse=True):
+                print(f"  {tool}: {count}")
+    
+    # Calculate and print efficiency metrics
+    print("\n\nBusiness Efficiency Breakdown (FINAL):")
+    print("=" * 120)
+    print("| Model | Profit ($) | Purchasing | Expired | Excess | Scheduling | Pricing | Stockout |")
+    print("|-------|------------|------------|---------|--------|------------|---------|----------|")
+    
+    # Store for LaTeX generation
+    efficiency_data = []
+    
+    for model in sorted(model_stats.keys()):
+        stats = model_stats[model]
+        efficiency = calculate_business_metrics_final(model, stats, data)
+        
+        if efficiency and stats["games"]:
+            profits = [g["total_profit"] for g in stats["games"]]
+            avg_profit = statistics.mean(profits)
+            print(f"| {model:<12} | {avg_profit:>10.2f} | "
+                  f"{efficiency['purchasing']:>+10.2f} | {efficiency['expired']:>7.2f} | "
+                  f"{efficiency['excess']:>6.2f} | {efficiency['scheduling']:>+10.2f} | "
+                  f"{efficiency['pricing']:>7.2f} | {efficiency['stockout']:>8.2f} |")
+            
+            efficiency_data.append({
+                "model": model,
+                "profit": avg_profit,
+                **efficiency
+            })
+    
+    # Generate outputs like original analyze_results.py
+    base_name = Path(filename).stem.replace("_full", "")
+    
+    # Generate LaTeX table
+    latex_file = f"results/latex/{base_name}_final_efficiency.tex"
+    generate_efficiency_latex(efficiency_data, filename)
+    
+    # Generate comprehensive LaTeX table (efficiency metrics)
+    comprehensive_latex_file = f"results/latex/{base_name}_final_analysis.tex"
+    generate_comprehensive_latex_table(model_stats, comprehensive_latex_file, data)
+    
+    # Generate computational requirements table
+    computational_file = f"results/latex/{base_name}_computational_requirements.tex"
+    generate_computational_requirements_table(model_stats, computational_file, data)
+    
+    # Generate plots
+    plot_dir = f"results/plots/{base_name}"
+    generate_comprehensive_plots({"games": data}, plot_dir)
+
+def generate_efficiency_latex(data: List[Dict[str, Any]], filename: str):
+    """Generate LaTeX table for efficiency metrics."""
+    # Create results/latex directory if it doesn't exist
+    latex_dir = Path("results/latex")
+    latex_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate filename
+    base_name = Path(filename).stem
+    latex_file = latex_dir / f"{base_name}_final_efficiency.tex"
+    
+    with open(latex_file, "w") as f:
+        f.write("% Business Efficiency Breakdown (Final Metrics)\n")
+        f.write("\\begin{table}[h]\n")
+        f.write("\\centering\n")
+        f.write("\\caption{Business Efficiency Breakdown}\n")
+        f.write("\\label{tab:efficiency_breakdown}\n")
+        f.write("\\resizebox{\\textwidth}{!}{%\n")
+        f.write("\\begin{tabular}{lccccccc}\n")
+        f.write("\\hline\n")
+        f.write("\\textbf{Model} & \\textbf{Profit (\\$)} & \\textbf{Purchasing} & \\textbf{Expired} & ")
+        f.write("\\textbf{Excess} & \\textbf{Scheduling} & \\textbf{Pricing} & \\textbf{Stockout} \\\\\n")
+        f.write("\\hline\n")
+        
+        for row in data:
+            model = row['model']
+            # Format numbers with appropriate signs
+            purchasing = f"{row['purchasing']:+.2f}" if abs(row['purchasing']) > 0.01 else "0.00"
+            expired = f"{row['expired']:.2f}"
+            excess = f"{row['excess']:.2f}"
+            scheduling = f"{row['scheduling']:+.2f}" if abs(row['scheduling']) > 0.01 else "0.00"
+            pricing = f"{row['pricing']:.2f}"
+            stockout = f"{row['stockout']:.2f}"
+            
+            f.write(f"{model} & {row['profit']:.2f} & {purchasing} & {expired} & ")
+            f.write(f"{excess} & {scheduling} & {pricing} & {stockout} \\\\\n")
+            f.write("\\hline\n")
+        
+        f.write("\\end{tabular}\n")
+        f.write("}%\n")
+        f.write("\\end{table}\n")
+    
+    print(f"\nLaTeX table saved to: {latex_file}")
+
+def analyze_results():
+    """Main analysis function."""
+    parser = argparse.ArgumentParser(description="Analyze v0.5 benchmark results")
+    parser.add_argument("--file", help="Specific results file to analyze")
+    parser.add_argument("--latest", action="store_true", help="Analyze the latest results file")
+    args = parser.parse_args()
+    
+    results_dir = Path("results/json")
+    
+    if args.latest:
+        # Find the latest full results file
+        json_files = list(results_dir.glob("*_full.json"))
+        if not json_files:
+            print("No results files found!")
+            sys.exit(1)
+        latest_file = max(json_files, key=lambda p: p.stat().st_mtime)
+        filename = str(latest_file)
+    elif args.file:
+        filename = args.file
+    else:
+        print("Please specify --file or --latest")
+        sys.exit(1)
+    
+    # Load the results
+    with open(filename) as f:
+        data = json.load(f)
+    
+    # Handle different formats
+    if isinstance(data, dict) and "games" in data:
+        # v0.5 format with metadata
+        analyze_comprehensive_format(data["games"], filename)
+    elif isinstance(data, list) and len(data) > 0 and "model" in data[0]:
+        # Direct list of games
+        analyze_comprehensive_format(data, filename)
+    else:
+        print("Unknown format or empty results")
 
 def main():
-    parser = argparse.ArgumentParser(description="Analyze LemonadeBench v0.5 results")
-    parser.add_argument(
-        "--file", help="JSON results file from v0.5 benchmark"
-    )
-    parser.add_argument(
-        "--latest", action="store_true", help="Analyze the most recent result file"
-    )
-
-    args = parser.parse_args()
-
-    if args.latest or not args.file:
-        analyze_results()
-    else:
-        analyze_results(args.file)
-
+    """Entry point."""
+    analyze_results()
 
 if __name__ == "__main__":
     main()

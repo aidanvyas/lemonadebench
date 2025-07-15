@@ -1,0 +1,23 @@
+\begin{table}[h]
+\centering
+\caption{LemonadeBench v0.5 - Computational Requirements and Tool Usage}
+\label{tab:computational_requirements}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Profit (\$)} & \textbf{Total} & \textbf{Check} & \textbf{Check} & \textbf{Order} & \textbf{Set} & \textbf{Set} & \textbf{Historical} & \textbf{Open} & \textbf{Time (s)} & \textbf{API Cost (\$)} \\
+ & & \textbf{Calls} & \textbf{Inv.} & \textbf{Prices} & \textbf{Supplies} & \textbf{Price} & \textbf{Hours} & \textbf{Data} & \textbf{Business} & & \\
+\hline
+gpt-4.1 & 10,889 & 172 & 30 & 30 & 22 & 30 & 30 & 0 & 30 & 493.7 & 0.3080 \\
+\hline
+gpt-4.1-mini & 5,435 & 180 & 30 & 30 & 30 & 30 & 30 & 0 & 30 & 189.6 & 0.0637 \\
+\hline
+gpt-4.1-nano & 1,191 & 180 & 30 & 30 & 30 & 30 & 30 & 0 & 30 & 114.6 & 0.0130 \\
+\hline
+o3 & 13,300 & 164 & 30 & 25 & 16 & 30 & 30 & 3 & 30 & 1902.7 & 0.9710 \\
+\hline
+o4-mini & 11,195 & 184 & 30 & 30 & 32 & 30 & 30 & 2 & 30 & 2267.4 & 0.8804 \\
+\hline
+\end{tabular}
+}%
+\end{table}
