@@ -182,16 +182,16 @@ class DemandModel:
 
     # Hourly demand multipliers for all 24 hours
     HOURLY_MULTIPLIERS: dict[int, float] = {
-        0: 0.0,   # 12-1am: Closed
-        1: 0.0,   # 1-2am: Closed
-        2: 0.0,   # 2-3am: Closed
-        3: 0.0,   # 3-4am: Closed
-        4: 0.0,   # 4-5am: Closed
-        5: 0.0,   # 5-6am: Closed
-        6: 0.3,   # 6-7am: Early morning (30% of base)
-        7: 0.5,   # 7-8am: Morning commute
-        8: 0.7,   # 8-9am: Morning
-        9: 0.8,   # 9-10am: Mid-morning
+        0: 0.0,  # 12-1am: Closed
+        1: 0.0,  # 1-2am: Closed
+        2: 0.0,  # 2-3am: Closed
+        3: 0.0,  # 3-4am: Closed
+        4: 0.0,  # 4-5am: Closed
+        5: 0.0,  # 5-6am: Closed
+        6: 0.3,  # 6-7am: Early morning (30% of base)
+        7: 0.5,  # 7-8am: Morning commute
+        8: 0.7,  # 8-9am: Morning
+        9: 0.8,  # 9-10am: Mid-morning
         10: 1.0,  # 10-11am: Late morning (100% base)
         11: 1.2,  # 11am-12pm: Pre-lunch
         12: 1.5,  # 12-1pm: Lunch peak (150% of base)
@@ -405,10 +405,7 @@ class BusinessGame:
         Returns:
             Dictionary with supply costs
         """
-        return {
-            "success": True,
-            "prices": self.today_supply_costs.copy()
-        }
+        return {"success": True, "prices": self.today_supply_costs.copy()}
 
     def check_inventory(self) -> dict[str, Any]:
         """Check current inventory levels and expiration dates.
@@ -564,13 +561,13 @@ class BusinessGame:
         if not self.price_set:
             return {
                 "success": False,
-                "error": "Cannot simulate day: price not set. Call set_price() first."
+                "error": "Cannot simulate day: price not set. Call set_price() first.",
             }
 
         if not self.hours_set:
             return {
                 "success": False,
-                "error": "Cannot simulate day: hours not set. Call set_operating_hours() first."
+                "error": "Cannot simulate day: hours not set. Call set_operating_hours() first.",
             }
 
         # Calculate customers for each hour
@@ -778,7 +775,8 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
         return {
             "days_played": self.current_day,
             "final_cash": self.cash,
-            "total_profit": self.cash - self.starting_cash,  # Profit over starting capital
+            "total_profit": self.cash
+            - self.starting_cash,  # Profit over starting capital
             "total_revenue": total_revenue,
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
