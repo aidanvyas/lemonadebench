@@ -33,7 +33,7 @@ class OpenAIPlayer:
         self.include_reasoning_summary = include_reasoning_summary
 
         # For stateless approach - minimal tracking
-        self.reasoning_summaries = []
+        self.reasoning_summaries: list[dict[str, Any]] = []
 
         # Token tracking
         self.total_token_usage = {
@@ -63,7 +63,7 @@ class OpenAIPlayer:
         self.client = OpenAI(api_key=api_key)
 
         # Track errors
-        self.errors = []
+        self.errors: list[dict[str, Any]] = []
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI."""
@@ -522,7 +522,7 @@ class OpenAIPlayer:
             "total_tokens": self.total_token_usage["total_tokens"],
         }
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the player for a new game."""
         self.reasoning_summaries = []
         self.errors = []
