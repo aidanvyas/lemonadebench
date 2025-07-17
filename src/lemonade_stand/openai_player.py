@@ -247,9 +247,9 @@ class OpenAIPlayer:
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
 
-            return json.dumps(result)
+            return json.dumps(result, default=str)
         except Exception as e:
-            return json.dumps({"error": str(e)})
+            return json.dumps({"error": str(e)}, default=str)
 
     def play_turn(
         self, game: BusinessGame, recorder: GameRecorder | None = None

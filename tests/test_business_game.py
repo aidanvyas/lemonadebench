@@ -1,6 +1,8 @@
 """Tests for the business game engine."""
 
 
+from decimal import Decimal
+
 from src.lemonade_stand.business_game import BusinessGame
 
 
@@ -9,17 +11,17 @@ class TestBusinessGame:
 
     def test_init(self):
         """Test game initialization."""
-        game = BusinessGame(days=100, starting_cash=100, seed=42)
+        game = BusinessGame(days=100, starting_cash=Decimal("100"), seed=42)
 
         assert game.total_days == 100
         assert game.current_day == 0
-        assert game.cash == 100
-        assert game.hourly_operating_cost == 5
+        assert game.cash == Decimal("100")
+        assert game.hourly_operating_cost == Decimal("5")
         assert game.yesterday_profit is None
 
         # Test default starting cash and days
         default_game = BusinessGame()
-        assert default_game.cash == 1000
+        assert default_game.cash == Decimal("1000")
         assert default_game.total_days == 30
 
     def test_start_new_day(self):
@@ -31,13 +33,13 @@ class TestBusinessGame:
 
         assert game.current_day == 1
         assert day_info["day"] == 1
-        assert day_info["cash"] == 1000
+        assert day_info["cash"] == Decimal("1000")
         assert "expired_items" in day_info
 
         # Check supply costs were generated
         assert len(game.today_supply_costs) == 4
-        assert 0.04 <= game.today_supply_costs["cups"] <= 0.06  # 0.05 ± 10%
-        assert 0.18 <= game.today_supply_costs["lemons"] <= 0.22  # 0.20 ± 10%
+        assert Decimal("0.04") <= game.today_supply_costs["cups"] <= Decimal("0.06")
+        assert Decimal("0.18") <= game.today_supply_costs["lemons"] <= Decimal("0.22")
 
     def test_check_morning_prices(self):
         """Test checking morning prices."""
@@ -52,7 +54,7 @@ class TestBusinessGame:
         assert "lemons" in prices
         assert "sugar" in prices
         assert "water" in prices
-        assert all(isinstance(p, float) for p in prices.values())
+        assert all(isinstance(p, Decimal) for p in prices.values())
 
     def test_order_supplies_success(self):
         """Test ordering supplies with sufficient funds."""
@@ -63,7 +65,7 @@ class TestBusinessGame:
         result = game.order_supplies(cups=100, lemons=50, sugar=50, water=100)
 
         assert result["success"] is True
-        assert result["remaining_cash"] < 1000  # Cash decreased
+        assert result["remaining_cash"] < Decimal("1000")  # Cash decreased
         assert game.inventory.get_available("cups") == 100
         assert game.inventory.get_available("lemons") == 50
 
@@ -77,7 +79,7 @@ class TestBusinessGame:
 
         assert result["success"] is False
         assert "Insufficient funds" in result["error"]
-        assert game.cash == 10  # Cash unchanged
+        assert game.cash == Decimal("10")  # Cash unchanged
         assert game.inventory.get_available("cups") == 0  # No items added
 
     def test_set_operating_hours(self):
@@ -111,7 +113,7 @@ class TestBusinessGame:
         # Valid price
         result = game.set_price(2.50)
         assert result["success"] is True
-        assert game.price == 2.50
+        assert game.price == Decimal("2.50")
         assert game.price_set is True
 
         # Negative price
@@ -151,10 +153,10 @@ class TestBusinessGame:
         result = game.simulate_day()
 
         assert result["day"] == 1
-        assert result["price"] == 2.0
+        assert result["price"] == Decimal("2.0")
         assert result["hours_open"] == 4
         assert result["customers_served"] >= 0
-        assert result["operating_cost"] == 20  # 4 hours * $5
+        assert result["operating_cost"] == Decimal("20")  # 4 hours * $5
         assert "profit" in result
         assert "hourly_sales" in result
 
@@ -199,7 +201,7 @@ class TestBusinessGame:
         # Check history
         assert len(game.history) == 1
         assert game.history[0]["day"] == 1
-        assert game.history[0]["price"] == 2.5
+        assert game.history[0]["price"] == Decimal("2.5")
         assert game.history[0]["open_hour"] == 9
         assert game.history[0]["close_hour"] == 17
         assert "customers_served" in game.history[0]
@@ -332,7 +334,7 @@ class TestBusinessGame:
 
         assert results["days_played"] == 3
         assert results["final_cash"] == game.cash
-        assert results["total_profit"] == game.cash - 1000
+        assert results["total_profit"] == game.cash - Decimal("1000")
         assert results["total_customers"] >= 0
         assert "average_daily_profit" in results
         assert "inventory_value" in results
