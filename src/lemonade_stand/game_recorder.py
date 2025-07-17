@@ -224,7 +224,7 @@ class GameRecorder:
             filepath: Path to save the JSON file
         """
         with open(filepath, "w") as f:
-            json.dump(self.game_data, f, indent=2)
+            json.dump(self.game_data, f, indent=2, default=str)
 
 
 class BenchmarkRecorder:
@@ -277,4 +277,4 @@ class BenchmarkRecorder:
         """
         self.finalize()
         with open(filepath, "w") as f:
-            json.dump(self.benchmark_data, f, indent=2)
+            json.dump(self.benchmark_data, f, indent=2, default=str)
