@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "interaction": {
+      "type": "object",
+      "properties": {
+        "attempt": {"type": "integer"},
+        "timestamp": {"type": "string"},
+        "request": {"type": "object"},
+        "response": {"type": "object"},
+        "tool_executions": {"type": "array"},
+        "duration_ms": {"type": "integer"}
+      },
+      "required": [
+        "attempt",
+        "timestamp",
+        "request",
+        "response",
+        "tool_executions",
+        "duration_ms"
+      ],
+      "additionalProperties": true
+    },
+    "day": {
+      "type": "object",
+      "properties": {
+        "day": {"type": "integer"},
+        "game_state_before": {"type": "object"},
+        "interactions": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/interaction"}
+        },
+        "game_state_after": {"type": ["object", "null"]},
+        "total_attempts": {"type": "integer"},
+        "total_duration_ms": {"type": "integer"},
+        "start_time": {"type": "string"},
+        "end_time": {"type": ["string", "null"]}
+      },
+      "required": [
+        "day",
+        "game_state_before",
+        "interactions",
+        "total_attempts",
+        "total_duration_ms",
+        "start_time"
+      ],
+      "additionalProperties": true
+    },
+    "game_recording": {
+      "type": "object",
+      "properties": {
+        "game_id": {"type": "integer"},
+        "model": {"type": "string"},
+        "start_time": {"type": "string"},
+        "end_time": {"type": ["string", "null"]},
+        "duration_seconds": {"type": ["number", "null"]},
+        "parameters": {"type": "object"},
+        "days": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/day"}
+        },
+        "final_results": {"type": ["object", "null"]},
+        "total_tokens": {"type": "integer"},
+        "total_cost": {"type": "number"}
+      },
+      "required": [
+        "game_id",
+        "model",
+        "start_time",
+        "parameters",
+        "days",
+        "total_tokens",
+        "total_cost"
+      ],
+      "additionalProperties": true
+    },
+    "benchmark_metadata": {
+      "type": "object",
+      "properties": {
+        "version": {"type": "string"},
+        "timestamp_start": {"type": "string"},
+        "timestamp_end": {"type": ["string", "null"]},
+        "total_duration_seconds": {"type": ["number", "null"]},
+        "parameters": {"type": "object"}
+      },
+      "required": ["version", "timestamp_start", "parameters"],
+      "additionalProperties": true
+    },
+    "benchmark_recording": {
+      "type": "object",
+      "properties": {
+        "benchmark_metadata": {"$ref": "#/definitions/benchmark_metadata"},
+        "games": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/game_recording"}
+        }
+      },
+      "required": ["benchmark_metadata", "games"],
+      "additionalProperties": true
+    }
+  }
+}

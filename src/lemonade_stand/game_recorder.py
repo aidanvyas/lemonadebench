@@ -1,9 +1,22 @@
 """Records complete game interactions for reproducibility and analysis."""
 
 import json
+import jsonschema
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+
+def _get_schema(ref: str) -> dict[str, Any]:
+    """Load the JSON schema and return a ref wrapper."""
+    schema_path = Path(__file__).with_name("recording_schema.json")
+    with open(schema_path) as f:
+        schema = json.load(f)
+    return {
+        "$schema": schema.get("$schema", "http://json-schema.org/draft-07/schema#"),
+        "definitions": schema.get("definitions", {}),
+        "$ref": ref,
+    }
 
 
 class GameRecorder:
@@ -223,6 +236,8 @@ class GameRecorder:
         Args:
             filepath: Path to save the JSON file
         """
+        schema = _get_schema("#/definitions/game_recording")
+        jsonschema.validate(self.game_data, schema)
         with open(filepath, "w") as f:
             json.dump(self.game_data, f, indent=2)
 
@@ -276,5 +291,7 @@ class BenchmarkRecorder:
             filepath: Path to save the JSON file
         """
         self.finalize()
+        schema = _get_schema("#/definitions/benchmark_recording")
+        jsonschema.validate(self.benchmark_data, schema)
         with open(filepath, "w") as f:
             json.dump(self.benchmark_data, f, indent=2)
