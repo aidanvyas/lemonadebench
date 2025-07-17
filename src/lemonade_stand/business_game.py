@@ -14,7 +14,7 @@ LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 class Inventory:
     """Manages perishable inventory with FIFO expiration tracking."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty inventory with shelf life definitions."""
         # Store items as deques of (quantity, expiry_day) tuples
         self.items: dict[str, deque[tuple[int, int]]] = {

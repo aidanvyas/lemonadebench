@@ -42,7 +42,7 @@ class GameRecorder:
         self.current_day_data = None
         self.current_attempt = 0
         
-    def start_day(self, day_number: int, game_state: dict[str, Any]):
+    def start_day(self, day_number: int, game_state: dict[str, Any]) -> None:
         """Start recording a new day.
         
         Args:
@@ -61,9 +61,14 @@ class GameRecorder:
             "start_time": datetime.now().isoformat(),
         }
         
-    def record_interaction(self, attempt: int, request: dict[str, Any], 
-                         response: Any, tool_executions: list[dict[str, Any]],
-                         duration_ms: int):
+    def record_interaction(
+        self,
+        attempt: int,
+        request: dict[str, Any],
+        response: Any,
+        tool_executions: list[dict[str, Any]],
+        duration_ms: int,
+    ) -> None:
         """Record a complete interaction (request/response/tools).
         
         Args:
@@ -162,7 +167,7 @@ class GameRecorder:
                 
         return data
         
-    def end_day(self, game_state_after: dict[str, Any], total_attempts: int):
+    def end_day(self, game_state_after: dict[str, Any], total_attempts: int) -> None:
         """Finish recording the current day.
         
         Args:
@@ -183,7 +188,7 @@ class GameRecorder:
         self.current_day = None
         self.current_day_data = None
         
-    def record_final_results(self, results: dict[str, Any], total_cost: float):
+    def record_final_results(self, results: dict[str, Any], total_cost: float) -> None:
         """Record final game results.
         
         Args:
@@ -234,7 +239,7 @@ class BenchmarkRecorder:
             "games": [],
         }
         
-    def add_game_recording(self, game_recorder: GameRecorder):
+    def add_game_recording(self, game_recorder: GameRecorder) -> None:
         """Add a completed game recording to the benchmark.
         
         Args:
