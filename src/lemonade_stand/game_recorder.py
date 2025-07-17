@@ -3,7 +3,63 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Dict
+
+from pydantic import BaseModel, ValidationError, Extra
+
+
+class GameStateModel(BaseModel):
+    """Expected structure for the game state at the start of a day."""
+
+    cash: float
+    inventory: Dict[str, Any]
+    expired_items: Dict[str, Any]
+    supply_costs: Dict[str, Any]
+
+    class Config:
+        extra = Extra.forbid
+
+
+class ToolExecutionModel(BaseModel):
+    """Structure for a single tool execution."""
+
+    tool: str
+    arguments: Dict[str, Any]
+    result: Dict[str, Any]
+
+    class Config:
+        extra = Extra.forbid
+
+
+class InteractionModel(BaseModel):
+    """Structure of a recorded interaction."""
+
+    attempt: int
+    timestamp: datetime
+    request: Dict[str, Any]
+    response: Dict[str, Any]
+    tool_executions: List[ToolExecutionModel]
+    duration_ms: int
+
+    class Config:
+        extra = Extra.forbid
+
+
+class FinalResultsModel(BaseModel):
+    """Structure for final game results."""
+
+    days_played: int
+    final_cash: float
+    total_profit: float
+    total_revenue: float
+    total_operating_cost: float
+    total_customers: int
+    total_lost_sales: int
+    average_daily_profit: float
+    inventory_value: float
+
+    class Config:
+        extra = Extra.allow
 
 
 class GameRecorder:
@@ -50,11 +106,13 @@ class GameRecorder:
             day_number: Day number (1-based)
             game_state: Complete game state before day starts
         """
+        validated_state = GameStateModel.parse_obj(game_state)
+
         self.current_day = day_number
         self.current_attempt = 0
         self.current_day_data = {
             "day": day_number,
-            "game_state_before": game_state,
+            "game_state_before": validated_state.dict(),
             "interactions": [],
             "game_state_after": None,
             "total_attempts": 0,
@@ -87,14 +145,15 @@ class GameRecorder:
         response_data = self._extract_response_data(response)
 
         # Record the interaction
-        interaction = {
-            "attempt": attempt,
-            "timestamp": datetime.now().isoformat(),
-            "request": request,
-            "response": response_data,
-            "tool_executions": tool_executions,
-            "duration_ms": duration_ms,
-        }
+        interaction_obj = InteractionModel(
+            attempt=attempt,
+            timestamp=datetime.now(),
+            request=request,
+            response=response_data,
+            tool_executions=[ToolExecutionModel(**te) for te in tool_executions],
+            duration_ms=duration_ms,
+        )
+        interaction = interaction_obj.dict()
 
         self.current_day_data["interactions"].append(interaction)
         self.current_day_data["total_duration_ms"] += duration_ms
@@ -206,7 +265,8 @@ class GameRecorder:
             results: Final game results
             total_cost: Total API cost for this game
         """
-        self.game_data["final_results"] = results
+        validated_results = FinalResultsModel.parse_obj(results)
+        self.game_data["final_results"] = validated_results.dict()
         self.game_data["total_cost"] = total_cost
         self.game_data["end_time"] = datetime.now().isoformat()
         self.game_data["duration_seconds"] = (
