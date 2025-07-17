@@ -205,6 +205,8 @@ def run_single_game(
             "days_played": game.current_day,
             "duration_seconds": time.time() - start_time,
         }
+    finally:
+        player.close()
 
 
 def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:

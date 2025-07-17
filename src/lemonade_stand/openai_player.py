@@ -57,13 +57,21 @@ class OpenAIPlayer:
         self.is_reasoning_model = model_name.startswith(("o1", "o3", "o4"))
 
         # Initialize OpenAI client (synchronous)
-        api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not api_key:
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
             raise ValueError("OpenAI API key not found")
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=self.api_key)
 
         # Track errors
         self.errors: list[dict[str, Any]] = []
+
+    def close(self) -> None:
+        """Close the underlying OpenAI client if possible."""
+        if hasattr(self, "client") and hasattr(self.client, "close"):
+            try:
+                self.client.close()
+            except Exception as e:  # pragma: no cover - best effort
+                logger.debug(f"Error closing client: {e}")
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI."""
@@ -555,6 +563,8 @@ class OpenAIPlayer:
 
     def reset(self) -> None:
         """Reset the player for a new game."""
+        self.close()
+        self.client = OpenAI(api_key=self.api_key)
         self.reasoning_summaries = []
         self.errors = []
         self.total_token_usage = {
