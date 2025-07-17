@@ -1,6 +1,5 @@
 """Tests for the business game engine."""
 
-
 from src.lemonade_stand.business_game import BusinessGame
 
 

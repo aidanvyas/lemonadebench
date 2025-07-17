@@ -17,7 +17,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import OpenAIPlayer, BusinessGame, GameRecorder, BenchmarkRecorder
+from src.lemonade_stand import (
+    BenchmarkRecorder,
+    BusinessGame,
+    GameRecorder,
+    OpenAIPlayer,
+)
 
 load_dotenv()
 
@@ -64,7 +69,7 @@ def run_single_game(
             "days": days,
             "starting_cash": starting_cash,
             "seed": seed,
-        }
+        },
     )
 
     # Track additional metrics
@@ -90,7 +95,7 @@ def run_single_game(
                     "inventory": game.check_inventory(),
                     "expired_items": day_info["expired_items"],
                     "supply_costs": supply_costs,
-                }
+                },
             )
 
             # Track expired items
@@ -130,7 +135,7 @@ def run_single_game(
                     "open_hour": game.open_hour,
                     "close_hour": game.close_hour,
                 },
-                total_attempts=turn_result.get("attempts", 1)
+                total_attempts=turn_result.get("attempts", 1),
             )
 
         # Get final results
@@ -147,8 +152,7 @@ def run_single_game(
 
         # Record final results
         recorder.record_final_results(
-            results=final_results,
-            total_cost=cost_info["total_cost"]
+            results=final_results, total_cost=cost_info["total_cost"]
         )
 
         logger.info(
@@ -462,7 +466,10 @@ def main():
             logger.info("Analysis complete!")
         except Exception as e:
             logger.error(f"Failed to generate analysis: {e}")
-            logger.info("You can manually run: python analysis/analyze_results.py --file " + recording_filename)
+            logger.info(
+                "You can manually run: python analysis/analyze_results.py --file "
+                + recording_filename
+            )
 
 
 if __name__ == "__main__":
