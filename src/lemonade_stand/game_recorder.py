@@ -250,13 +250,16 @@ class BenchmarkRecorder:
             "games": [],
         }
 
-    def add_game_recording(self, game_recorder: GameRecorder) -> None:
+    def add_game_recording(self, game_record: GameRecorder | dict[str, Any]) -> None:
         """Add a completed game recording to the benchmark.
 
         Args:
-            game_recorder: Completed GameRecorder instance
+            game_record: Completed ``GameRecorder`` instance or raw game data
         """
-        self.benchmark_data["games"].append(game_recorder.get_recording())
+        if isinstance(game_record, GameRecorder):
+            self.benchmark_data["games"].append(game_record.get_recording())
+        else:
+            self.benchmark_data["games"].append(game_record)
 
     def finalize(self) -> dict[str, Any]:
         """Finalize the benchmark recording."""
