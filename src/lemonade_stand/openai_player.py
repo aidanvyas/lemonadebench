@@ -9,9 +9,9 @@ from typing import Any
 from openai import OpenAI
 
 from .business_game import BusinessGame
+from .game_recorder import GameRecorder
 
 logger = logging.getLogger(__name__)
-
 
 class OpenAIPlayer:
     """AI player that uses OpenAI's API to play the lemonade stand business game."""
@@ -21,7 +21,7 @@ class OpenAIPlayer:
         model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
-    ):
+    ) -> None:
         """Initialize the AI player.
 
         Args:
@@ -33,7 +33,7 @@ class OpenAIPlayer:
         self.include_reasoning_summary = include_reasoning_summary
 
         # For stateless approach - minimal tracking
-        self.reasoning_summaries = []
+        self.reasoning_summaries: list[dict[str, Any]] = []
 
         # Token tracking
         self.total_token_usage = {
@@ -63,7 +63,7 @@ class OpenAIPlayer:
         self.client = OpenAI(api_key=api_key)
 
         # Track errors
-        self.errors = []
+        self.errors: list[dict[str, Any]] = []
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI."""
@@ -229,6 +229,7 @@ class OpenAIPlayer:
             JSON string with the result
         """
         try:
+            result: Any
             if tool_name == "check_morning_prices":
                 result = game.check_morning_prices()
             elif tool_name == "check_inventory":
@@ -250,13 +251,15 @@ class OpenAIPlayer:
         except Exception as e:
             return json.dumps({"error": str(e)})
 
-    def play_turn(self, game: BusinessGame, recorder=None) -> dict[str, Any]:
+    def play_turn(
+        self, game: BusinessGame, recorder: GameRecorder | None = None
+    ) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API (stateless).
-        
+
         Args:
             game: The BusinessGame instance
             recorder: Optional GameRecorder to record all interactions
-            
+
         Returns:
             Dictionary with success status and attempt information
         """
@@ -278,7 +281,7 @@ class OpenAIPlayer:
 
                 # Build request
                 kwargs = self._build_request_kwargs(conversation, game)
-                
+
                 # Time the API call
                 start_time = time.time()
                 response = self.client.responses.create(**kwargs)
@@ -294,7 +297,9 @@ class OpenAIPlayer:
                     tool_results,
                     assistant_message,
                     success,
-                ) = self._process_output(response, game, attempts, all_tool_calls_this_turn)
+                ) = self._process_output(
+                    response, game, attempts, all_tool_calls_this_turn
+                )
 
                 # Record the interaction if recorder is provided
                 if recorder:
@@ -306,7 +311,7 @@ class OpenAIPlayer:
                             "arguments": self._get_tool_args_from_response(response, tool_result["name"]),
                             "result": json.loads(tool_result["result"]),
                         })
-                    
+
                     recorder.record_interaction(
                         attempt=attempts,
                         request=kwargs,
@@ -319,7 +324,9 @@ class OpenAIPlayer:
                     return success
 
                 if tool_results:
-                    self._append_tool_results_to_conversation(tool_results, conversation)
+                    self._append_tool_results_to_conversation(
+                        tool_results, conversation
+                    )
 
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
@@ -328,13 +335,13 @@ class OpenAIPlayer:
                 self.errors.append({"day": game.current_day, "error": str(e)})
                 if attempts < max_attempts:
                     logger.warning(f"Error on attempt {attempts}, will retry")
-                    
+
                 # Record the error if recorder is provided
-                if recorder and hasattr(recorder, 'record_error'):
+                if recorder and hasattr(recorder, "record_error"):
                     recorder.record_error(str(e))
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
-    
+
     def _get_tool_args_from_response(self, response: Any, tool_name: str) -> dict[str, Any]:
         """Extract tool arguments from response for a specific tool call."""
         for item in response.output:
@@ -355,7 +362,7 @@ class OpenAIPlayer:
     def _build_request_kwargs(
         self, conversation: list[dict[str, Any]], game: BusinessGame
     ) -> dict[str, Any]:
-        kwargs = {
+        kwargs: dict[str, Any] = {
             "model": self.model_name,
             "input": conversation,
             "tools": self.get_tools(),
@@ -368,7 +375,9 @@ class OpenAIPlayer:
                 kwargs["reasoning"]["summary"] = "auto"
         return kwargs
 
-    def _extract_reasoning_summary(self, response: Any, game: BusinessGame, attempts: int) -> None:
+    def _extract_reasoning_summary(
+        self, response: Any, game: BusinessGame, attempts: int
+    ) -> None:
         if not (self.is_reasoning_model and hasattr(response, "output")):
             return
         for item in response.output:
@@ -390,37 +399,51 @@ class OpenAIPlayer:
                         "day": game.current_day,
                         "attempt": attempts,
                         "summary": reasoning_text,
-                        "summary_type": response.reasoning.summary if hasattr(response, "reasoning") else None,
-                        "effort": response.reasoning.effort if hasattr(response, "reasoning") else None,
+                        "summary_type": response.reasoning.summary
+                        if hasattr(response, "reasoning")
+                        else None,
+                        "effort": response.reasoning.effort
+                        if hasattr(response, "reasoning")
+                        else None,
                     }
                 )
                 if game.current_day == 1 and attempts == 1:
                     logger.info(
-                        f"Captured reasoning summary: {reasoning_text[:200]}..." if reasoning_text else "No reasoning text"
+                        f"Captured reasoning summary: {reasoning_text[:200]}..."
+                        if reasoning_text
+                        else "No reasoning text"
                     )
 
     def _update_token_usage(self, response: Any) -> None:
         if not hasattr(response, "usage"):
             return
         usage = response.usage
-        
+
         # The Responses API uses different field names than Chat Completions API
         # Try both field names to support both APIs
-        input_tokens = getattr(usage, "input_tokens", 0) or getattr(usage, "prompt_tokens", 0)
-        output_tokens = getattr(usage, "output_tokens", 0) or getattr(usage, "completion_tokens", 0)
+        input_tokens = getattr(usage, "input_tokens", 0) or getattr(
+            usage, "prompt_tokens", 0
+        )
+        output_tokens = getattr(usage, "output_tokens", 0) or getattr(
+            usage, "completion_tokens", 0
+        )
         total_tokens = getattr(usage, "total_tokens", 0)
-        
+
         self.total_token_usage["input_tokens"] += input_tokens
         self.total_token_usage["output_tokens"] += output_tokens
         self.total_token_usage["total_tokens"] += total_tokens
-        
+
         # Handle token details (different field names in different APIs)
-        if hasattr(usage, "input_tokens_details") or hasattr(usage, "prompt_tokens_details"):
-            details = getattr(usage, "input_tokens_details", None) or getattr(usage, "prompt_tokens_details", None)
+        if hasattr(usage, "input_tokens_details") or hasattr(
+            usage, "prompt_tokens_details"
+        ):
+            details: Any = getattr(usage, "input_tokens_details", None) or getattr(
+                usage, "prompt_tokens_details", None
+            )
             if details:
                 cached = getattr(details, "cached_tokens", 0)
                 self.total_token_usage["cached_input_tokens"] += cached
-        
+
         if hasattr(usage, "output_tokens_details") or hasattr(usage, "completion_tokens_details"):
             details = getattr(usage, "output_tokens_details", None) or getattr(usage, "completion_tokens_details", None)
             if details:
@@ -433,7 +456,9 @@ class OpenAIPlayer:
         game: BusinessGame,
         attempts: int,
         all_tool_calls_this_turn: list[str],
-    ) -> tuple[list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None]:
+    ) -> tuple[
+        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None
+    ]:
         tool_calls_made: list[str] = []
         tool_results: list[dict[str, Any]] = []
         assistant_message: dict[str, Any] | None = None
@@ -447,7 +472,9 @@ class OpenAIPlayer:
                 result = self.execute_tool(item.name, args, game)
                 tool_calls_made.append(item.name)
                 all_tool_calls_this_turn.append(item.name)
-                tool_results.append({"name": item.name, "result": result, "id": item.id})
+                tool_results.append(
+                    {"name": item.name, "result": result, "id": item.id}
+                )
                 if item.name == "open_for_business":
                     result_dict = json.loads(result)
                     if result_dict.get("success", False):
@@ -471,7 +498,9 @@ class OpenAIPlayer:
                 elif isinstance(assistant_message["content"], str):
                     assistant_message["content"] += "\n" + item.text
                 else:
-                    assistant_message["content"].append({"type": "text", "text": item.text})
+                    assistant_message["content"].append(
+                        {"type": "text", "text": item.text}
+                    )
 
         return tool_calls_made, tool_results, assistant_message, None
 
@@ -480,7 +509,9 @@ class OpenAIPlayer:
     ) -> None:
         results_message = "Here are the results of the tool calls:\n\n"
         for tool_result in tool_results:
-            results_message += f"{tool_result['name']} result:\n{tool_result['result']}\n\n"
+            results_message += (
+                f"{tool_result['name']} result:\n{tool_result['result']}\n\n"
+            )
         results_message += "Please continue with the next steps."
         conversation.append({"role": "user", "content": results_message})
 
@@ -504,13 +535,13 @@ class OpenAIPlayer:
         cached_cost = (
             self.total_token_usage["cached_input_tokens"] / 1_000_000
         ) * pricing["cached_input"]
-        
+
         # For reasoning models, output tokens include reasoning tokens
         # The API charges for all output tokens at the output rate
         output_cost = (self.total_token_usage["output_tokens"] / 1_000_000) * pricing[
             "output"
         ]
-        
+
         # Note: reasoning_tokens are already included in output_tokens for billing
         # So we don't need to add them separately
 
@@ -522,7 +553,7 @@ class OpenAIPlayer:
             "total_tokens": self.total_token_usage["total_tokens"],
         }
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the player for a new game."""
         self.reasoning_summaries = []
         self.errors = []

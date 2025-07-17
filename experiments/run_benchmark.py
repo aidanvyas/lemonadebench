@@ -55,7 +55,7 @@ def run_single_game(
     # Initialize game and player
     game = BusinessGame(days=days, starting_cash=starting_cash, seed=seed)
     player = OpenAIPlayer(model_name=model_name)
-    
+
     # Initialize GameRecorder
     recorder = GameRecorder(
         model=model_name,
@@ -80,7 +80,7 @@ def run_single_game(
             # Start new day
             day_info = game.start_new_day()
             daily_cash_history.append(game.cash)
-            
+
             # Record game state at start of day
             supply_costs = game.check_morning_prices()["prices"]
             recorder.start_day(
@@ -144,7 +144,7 @@ def run_single_game(
         )
 
         duration = time.time() - start_time
-        
+
         # Record final results
         recorder.record_final_results(
             results=final_results,
@@ -328,7 +328,7 @@ def main():
             "seed": args.seed,
         }
     )
-    
+
     # Run benchmark for each model
     all_results = {}
     overall_start = time.time()
@@ -352,11 +352,11 @@ def main():
                 starting_cash=args.starting_cash,
                 seed=game_seed,
             )
-            
+
             # Extract recorder and add to benchmark recorder
             if result.get("success") and "recorder" in result:
                 benchmark_recorder.add_game_recording(result["recorder"])
-                
+
             # Remove recorder from result before appending (to avoid duplication)
             result_copy = result.copy()
             result_copy.pop("recorder", None)
@@ -395,13 +395,13 @@ def main():
     # Save results
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     models_str = "-".join(args.models) if len(args.models) > 1 else args.models[0]
-    
+
     # Save comprehensive recording
     recording_filename = f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}_full.json"
     filename = f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}.json"
 
     Path("results/json").mkdir(parents=True, exist_ok=True)
-    
+
     # Save the comprehensive recording
     benchmark_recorder.save_to_file(Path(recording_filename))
     logger.info(f"Full recording saved to: {recording_filename}")
@@ -450,12 +450,12 @@ def main():
                     f"{results['stockout_rate']['mean']:<9.1%} "
                     f"${results['cost_per_game']:<9.4f}"
                 )
-    
+
     # Run analysis if not skipped
     if not args.no_analysis:
         logger.info("\nGenerating analysis report...")
         from analysis.analyze_results import analyze_results
-        
+
         try:
             # Pass the full recording filename to analyze_results
             analyze_results(recording_filename)
