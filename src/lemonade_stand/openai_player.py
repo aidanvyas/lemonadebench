@@ -6,7 +6,19 @@ import os
 import time
 from typing import Any
 
-from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    OpenAI,
+    RateLimitError,
+)
+from tenacity import (
+    RetryCallState,
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from .business_game import BusinessGame
 from .game_recorder import GameRecorder
@@ -21,6 +33,9 @@ class OpenAIPlayer:
         model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
+        max_attempts: int = 10,
+        retry_min_wait: float = 1.0,
+        retry_max_wait: float = 60.0,
     ) -> None:
         """Initialize the AI player.
 
@@ -28,9 +43,15 @@ class OpenAIPlayer:
             model_name: OpenAI model to use
             api_key: OpenAI API key (uses env var if not provided)
             include_reasoning_summary: Whether to request reasoning summaries for o* models
+            max_attempts: Maximum number of attempts per turn
+            retry_min_wait: Minimum wait time between retries in seconds
+            retry_max_wait: Maximum wait time between retries in seconds
         """
         self.model_name = model_name
         self.include_reasoning_summary = include_reasoning_summary
+        self.max_attempts = max_attempts
+        self.retry_min_wait = retry_min_wait
+        self.retry_max_wait = retry_max_wait
 
         # For stateless approach - minimal tracking
         self.reasoning_summaries: list[dict[str, Any]] = []
@@ -64,6 +85,33 @@ class OpenAIPlayer:
 
         # Track errors
         self.errors: list[dict[str, Any]] = []
+
+    def _call_openai(self, **kwargs: Any) -> Any:
+        """Call the OpenAI API with retries."""
+
+        def _log_before_sleep(retry_state: RetryCallState) -> None:
+            exc = retry_state.outcome.exception()
+            if isinstance(exc, RateLimitError):
+                logger.warning(
+                    "Rate limit error: %s. Retrying...", exc,
+                )
+            else:
+                logger.warning(
+                    "Network error: %s. Retrying...", exc,
+                )
+
+        retryer = Retrying(
+            stop=stop_after_attempt(self.max_attempts),
+            wait=wait_exponential(
+                min=self.retry_min_wait, max=self.retry_max_wait
+            ),
+            retry=retry_if_exception_type(
+                (RateLimitError, APIConnectionError, APITimeoutError)
+            ),
+            before_sleep=_log_before_sleep,
+            reraise=True,
+        )
+        return retryer(self.client.responses.create, **kwargs)
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI."""
@@ -264,12 +312,11 @@ class OpenAIPlayer:
             Dictionary with success status and attempt information
         """
         prompt = game.get_turn_prompt()
-        max_attempts = 10
         attempts = 0
         all_tool_calls_this_turn: list[str] = []
         conversation = [{"role": "user", "content": prompt}]
 
-        while attempts < max_attempts:
+        while attempts < self.max_attempts:
             attempts += 1
             try:
                 if attempts <= 2:
@@ -284,7 +331,7 @@ class OpenAIPlayer:
 
                 # Time the API call
                 start_time = time.time()
-                response = self.client.responses.create(**kwargs)
+                response = self._call_openai(**kwargs)
                 duration_ms = int((time.time() - start_time) * 1000)
 
                 # Extract data from response
@@ -333,7 +380,7 @@ class OpenAIPlayer:
             except Exception as e:
                 logger.error(f"Error in turn: {e}")
                 self.errors.append({"day": game.current_day, "error": str(e)})
-                if attempts < max_attempts:
+                if attempts < self.max_attempts:
                     logger.warning(f"Error on attempt {attempts}, will retry")
 
                 # Record the error if recorder is provided
