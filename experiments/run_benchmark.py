@@ -17,7 +17,14 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import OpenAIPlayer, BusinessGame, GameRecorder, BenchmarkRecorder
+from src.lemonade_stand import (
+    APICallError,
+    BenchmarkRecorder,
+    BusinessGame,
+    GameError,
+    GameRecorder,
+    OpenAIPlayer,
+)
 
 load_dotenv()
 
@@ -190,6 +197,20 @@ def run_single_game(
             "recorder": recorder,  # Include recorder for saving later
         }
 
+    except (GameError, APICallError) as e:
+        logger.error(f"Fatal error in game {game_number}: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return {
+            "game_number": game_number,
+            "model": model_name,
+            "success": False,
+            "starting_cash": starting_cash,
+            "error": str(e),
+            "days_played": game.current_day,
+            "duration_seconds": time.time() - start_time,
+        }
     except Exception as e:
         logger.error(f"Fatal error in game {game_number}: {e}")
         import traceback

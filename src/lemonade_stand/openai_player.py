@@ -6,9 +6,10 @@ import os
 import time
 from typing import Any
 
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
 from .business_game import BusinessGame
+from .errors import APICallError, GameError
 from .game_recorder import GameRecorder
 
 logger = logging.getLogger(__name__)
@@ -246,11 +247,11 @@ class OpenAIPlayer:
             elif tool_name == "open_for_business":
                 result = game.open_for_business()
             else:
-                result = {"error": f"Unknown tool: {tool_name}"}
+                raise GameError(f"Unknown tool: {tool_name}")
 
             return json.dumps(result)
-        except Exception as e:
-            return json.dumps({"error": str(e)})
+        except Exception as e:  # pragma: no cover - just in case
+            raise GameError(str(e)) from e
 
     def play_turn(
         self, game: BusinessGame, recorder: GameRecorder | None = None
@@ -335,15 +336,20 @@ class OpenAIPlayer:
 
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
-            except Exception as e:
+            except GameError:
+                raise
+            except OpenAIError as e:
                 logger.error(f"Error in turn: {e}")
                 self.errors.append({"day": game.current_day, "error": str(e)})
-                if attempts < max_attempts:
-                    logger.warning(f"Error on attempt {attempts}, will retry")
-
-                # Record the error if recorder is provided
                 if recorder and hasattr(recorder, "record_error"):
                     recorder.record_error(str(e))
+                raise APICallError(str(e)) from e
+            except Exception as e:  # pragma: no cover - unexpected errors
+                logger.error(f"Error in turn: {e}")
+                self.errors.append({"day": game.current_day, "error": str(e)})
+                if recorder and hasattr(recorder, "record_error"):
+                    recorder.record_error(str(e))
+                raise GameError(str(e)) from e
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
 
