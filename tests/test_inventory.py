@@ -189,4 +189,4 @@ class TestInventory:
         inv.add_items("sugar", 75, current_day=1)  # 75 * 0.10 = 7.50
         inv.add_items("water", 200, current_day=1)  # 200 * 0.02 = 4.00
 
-        assert inv.get_total_value() == pytest.approx(26.50)
+        assert float(inv.get_total_value()) == pytest.approx(26.50)

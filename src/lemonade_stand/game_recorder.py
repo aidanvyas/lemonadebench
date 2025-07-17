@@ -4,6 +4,14 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from decimal import Decimal
+
+
+def _decimal_default(obj: Any) -> Any:
+    """JSON serializer for Decimal objects."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 class GameRecorder:
@@ -199,7 +207,7 @@ class GameRecorder:
         self.current_day = None
         self.current_day_data = None
 
-    def record_final_results(self, results: dict[str, Any], total_cost: float) -> None:
+    def record_final_results(self, results: dict[str, Any], total_cost: Decimal) -> None:
         """Record final game results.
 
         Args:
@@ -207,7 +215,7 @@ class GameRecorder:
             total_cost: Total API cost for this game
         """
         self.game_data["final_results"] = results
-        self.game_data["total_cost"] = total_cost
+        self.game_data["total_cost"] = Decimal(str(total_cost))
         self.game_data["end_time"] = datetime.now().isoformat()
         self.game_data["duration_seconds"] = (
             datetime.now() - self.start_time
@@ -224,7 +232,7 @@ class GameRecorder:
             filepath: Path to save the JSON file
         """
         with open(filepath, "w") as f:
-            json.dump(self.game_data, f, indent=2)
+            json.dump(self.game_data, f, indent=2, default=_decimal_default)
 
 
 class BenchmarkRecorder:
@@ -277,4 +285,4 @@ class BenchmarkRecorder:
         """
         self.finalize()
         with open(filepath, "w") as f:
-            json.dump(self.benchmark_data, f, indent=2)
+            json.dump(self.benchmark_data, f, indent=2, default=_decimal_default)

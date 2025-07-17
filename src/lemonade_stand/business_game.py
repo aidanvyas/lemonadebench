@@ -2,11 +2,12 @@
 
 import random
 from collections import deque
+from decimal import Decimal
 from typing import Any
 
 # Game configuration constants
-DEFAULT_STARTING_CASH = 1000.0
-DEFAULT_HOURLY_OPERATING_COST = 5.0
+DEFAULT_STARTING_CASH = Decimal("1000.00")
+DEFAULT_HOURLY_OPERATING_COST = Decimal("5.00")
 DEFAULT_TOTAL_DAYS = 30
 LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
@@ -33,11 +34,11 @@ class Inventory:
         }
 
         # Base costs for reference (actual costs vary daily)
-        self.base_costs: dict[str, float] = {
-            "cups": 0.05,
-            "lemons": 0.20,
-            "sugar": 0.10,
-            "water": 0.02,
+        self.base_costs: dict[str, Decimal] = {
+            "cups": Decimal("0.05"),
+            "lemons": Decimal("0.20"),
+            "sugar": Decimal("0.10"),
+            "water": Decimal("0.02"),
         }
 
     def add_items(self, item_type: str, quantity: int, current_day: int) -> None:
@@ -150,16 +151,16 @@ class Inventory:
 
         return expired
 
-    def get_total_value(self) -> float:
+    def get_total_value(self) -> Decimal:
         """Calculate total value of inventory at base costs.
 
         Returns:
             Total value in dollars
         """
-        total = 0.0
+        total = Decimal("0.00")
         for item_type in self.items:
             quantity = self.get_available(item_type)
-            total += quantity * self.base_costs[item_type]
+            total += Decimal(quantity) * self.base_costs[item_type]
         return total
 
     def can_make_lemonade(self) -> int:
@@ -321,8 +322,8 @@ class BusinessGame:
     def __init__(
         self,
         days: int = DEFAULT_TOTAL_DAYS,
-        starting_cash: float = DEFAULT_STARTING_CASH,
-        hourly_operating_cost: float = DEFAULT_HOURLY_OPERATING_COST,
+        starting_cash: Decimal = DEFAULT_STARTING_CASH,
+        hourly_operating_cost: Decimal = DEFAULT_HOURLY_OPERATING_COST,
         seed: int | None = None,
     ):
         """Initialize the business game.
@@ -335,9 +336,9 @@ class BusinessGame:
         """
         self.total_days = days
         self.current_day = 0
-        self.starting_cash = starting_cash
-        self.cash = starting_cash
-        self.hourly_operating_cost = hourly_operating_cost
+        self.starting_cash = Decimal(str(starting_cash))
+        self.cash = Decimal(str(starting_cash))
+        self.hourly_operating_cost = Decimal(str(hourly_operating_cost))
 
         # Initialize components
         self.inventory = Inventory()
@@ -351,19 +352,19 @@ class BusinessGame:
             self.rng = random.Random()
 
         # Daily state tracking
-        self.today_supply_costs: dict[str, float] = {}
+        self.today_supply_costs: dict[str, Decimal] = {}
         self.price_set = False
         self.hours_set = False
         self.open_hour: int | None = None
         self.close_hour: int | None = None
-        self.price: float | None = None
+        self.price: Decimal | None = None
 
         # History tracking
         self.history: list[dict[str, Any]] = []
-        self.supply_cost_history: list[dict[str, float]] = []
+        self.supply_cost_history: list[dict[str, Decimal]] = []
 
         # Yesterday's profit for display
-        self.yesterday_profit: float | None = None
+        self.yesterday_profit: Decimal | None = None
 
         # Recipe for making lemonade
         self.recipe = LEMONADE_RECIPE.copy()
@@ -382,8 +383,10 @@ class BusinessGame:
         # Generate today's supply costs (±10% variation)
         self.today_supply_costs = {}
         for item, base_cost in self.inventory.base_costs.items():
-            variation = self.rng.uniform(0.9, 1.1)
-            self.today_supply_costs[item] = round(base_cost * variation, 4)
+            variation = Decimal(str(self.rng.uniform(0.9, 1.1)))
+            self.today_supply_costs[item] = (base_cost * variation).quantize(
+                Decimal("0.0001")
+            )
 
         # Store in history
         self.supply_cost_history.append(
@@ -442,11 +445,12 @@ class BusinessGame:
 
         # Calculate total cost
         total_cost = (
-            cups * self.today_supply_costs["cups"]
-            + lemons * self.today_supply_costs["lemons"]
-            + sugar * self.today_supply_costs["sugar"]
-            + water * self.today_supply_costs["water"]
+            Decimal(cups) * self.today_supply_costs["cups"]
+            + Decimal(lemons) * self.today_supply_costs["lemons"]
+            + Decimal(sugar) * self.today_supply_costs["sugar"]
+            + Decimal(water) * self.today_supply_costs["water"]
         )
+        total_cost = total_cost.quantize(Decimal("0.01"))
 
         # Check if enough cash
         if total_cost > self.cash:
@@ -457,6 +461,7 @@ class BusinessGame:
 
         # Process order
         self.cash -= total_cost
+        self.cash = self.cash.quantize(Decimal("0.01"))
 
         # Add to inventory
         self.inventory.add_items("cups", cups, self.current_day)
@@ -523,7 +528,7 @@ class BusinessGame:
         if price < 0:
             return {"success": False, "error": "Price cannot be negative."}
 
-        self.price = round(price, 2)
+        self.price = Decimal(str(price)).quantize(Decimal("0.01"))
         self.price_set = True
 
         return {"success": True, "price": self.price}
@@ -575,7 +580,7 @@ class BusinessGame:
         assert self.open_hour is not None
         assert self.close_hour is not None
         hourly_customers = self.demand_model.calculate_daily_customers(
-            self.price,
+            float(self.price),
             self.open_hour,
             self.close_hour,
         )
@@ -613,13 +618,15 @@ class BusinessGame:
             total_customers_lost += lost
 
         # Calculate financials
-        revenue = total_customers_served * self.price
+        revenue = Decimal(total_customers_served) * self.price
         operating_hours = self.close_hour - self.open_hour
-        operating_cost = operating_hours * self.hourly_operating_cost
+        operating_cost = Decimal(operating_hours) * self.hourly_operating_cost
         profit = revenue - operating_cost
+        profit = profit.quantize(Decimal("0.01"))
 
         # Update cash
         self.cash += profit
+        self.cash = self.cash.quantize(Decimal("0.01"))
         self.yesterday_profit = profit
 
         # Create day result
@@ -644,7 +651,7 @@ class BusinessGame:
         # Return with success indicator
         return {"success": True, **day_result}
 
-    def get_historical_supply_costs(self) -> list[dict[str, float]]:
+    def get_historical_supply_costs(self) -> list[dict[str, Decimal]]:
         """Get historical supply cost data.
 
         Returns:
@@ -772,22 +779,25 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
         Returns:
             Summary of game performance
         """
-        total_revenue = sum(day["revenue"] for day in self.history)
-        total_operating_cost = sum(day["operating_cost"] for day in self.history)
+        total_revenue = sum(Decimal(day["revenue"]) for day in self.history)
+        total_operating_cost = sum(
+            Decimal(day["operating_cost"]) for day in self.history
+        )
         total_customers = sum(day["customers_served"] for day in self.history)
         total_lost_sales = sum(day["customers_lost"] for day in self.history)
 
         return {
             "days_played": self.current_day,
             "final_cash": self.cash,
-            "total_profit": self.cash
-            - self.starting_cash,  # Profit over starting capital
+            "total_profit": self.cash - self.starting_cash,
             "total_revenue": total_revenue,
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
             "total_lost_sales": total_lost_sales,
-            "average_daily_profit": (self.cash - self.starting_cash) / self.current_day
-            if self.current_day > 0
-            else 0,
+            "average_daily_profit": (
+                (self.cash - self.starting_cash) / Decimal(self.current_day)
+                if self.current_day > 0
+                else Decimal("0.00")
+            ),
             "inventory_value": self.inventory.get_total_value(),
         }
