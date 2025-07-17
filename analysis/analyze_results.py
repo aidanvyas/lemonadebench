@@ -7,6 +7,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+from pydantic import ValidationError
+
+from src.lemonade_stand.recording_schema import BenchmarkRecording
 import matplotlib.pyplot as plt
 
 # Game constants
@@ -624,42 +628,44 @@ def generate_efficiency_latex(data: list[dict[str, Any]], filename: str):
 
     print(f"\nLaTeX table saved to: {latex_file}")
 
-def analyze_results():
+def analyze_results(filename: str | None = None) -> None:
     """Main analysis function."""
-    parser = argparse.ArgumentParser(description="Analyze v0.5 benchmark results")
-    parser.add_argument("--file", help="Specific results file to analyze")
-    parser.add_argument("--latest", action="store_true", help="Analyze the latest results file")
-    args = parser.parse_args()
+    if filename is None:
+        parser = argparse.ArgumentParser(description="Analyze v0.5 benchmark results")
+        parser.add_argument("--file", help="Specific results file to analyze")
+        parser.add_argument("--latest", action="store_true", help="Analyze the latest results file")
+        args = parser.parse_args()
 
-    results_dir = Path("results/json")
+        results_dir = Path("results/json")
 
-    if args.latest:
-        # Find the latest full results file
-        json_files = list(results_dir.glob("*_full.json"))
-        if not json_files:
-            print("No results files found!")
+        if args.latest:
+            json_files = list(results_dir.glob("*_full.json"))
+            if not json_files:
+                print("No results files found!")
+                sys.exit(1)
+            latest_file = max(json_files, key=lambda p: p.stat().st_mtime)
+            filename = str(latest_file)
+        elif args.file:
+            filename = args.file
+        else:
+            print("Please specify --file or --latest")
             sys.exit(1)
-        latest_file = max(json_files, key=lambda p: p.stat().st_mtime)
-        filename = str(latest_file)
-    elif args.file:
-        filename = args.file
-    else:
-        print("Please specify --file or --latest")
+
+    if filename is None:
+        print("No file provided for analysis")
         sys.exit(1)
 
-    # Load the results
+    # Load and validate recording
     with open(filename) as f:
-        data = json.load(f)
+        raw = json.load(f)
+    try:
+        recording = BenchmarkRecording.parse_obj(raw)
+    except ValidationError as e:
+        print(f"Invalid recording file: {e}")
+        sys.exit(1)
 
-    # Handle different formats
-    if isinstance(data, dict) and "games" in data:
-        # v0.5 format with metadata
-        analyze_comprehensive_format(data["games"], filename)
-    elif isinstance(data, list) and len(data) > 0 and "model" in data[0]:
-        # Direct list of games
-        analyze_comprehensive_format(data, filename)
-    else:
-        print("Unknown format or empty results")
+    games_data = [g.dict() for g in recording.games]
+    analyze_comprehensive_format(games_data, filename)
 
 def main():
     """Entry point."""

@@ -5,6 +5,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
+from .recording_schema import BenchmarkRecording, GameRecording
+
 
 class GameRecorder:
     """Records all game interactions, API calls, and state changes."""
@@ -223,6 +227,11 @@ class GameRecorder:
         Args:
             filepath: Path to save the JSON file
         """
+        try:
+            GameRecording.parse_obj(self.game_data)
+        except ValidationError as e:
+            raise ValueError(f"Invalid game recording: {e}") from e
+
         with open(filepath, "w") as f:
             json.dump(self.game_data, f, indent=2)
 
@@ -275,6 +284,11 @@ class BenchmarkRecorder:
         Args:
             filepath: Path to save the JSON file
         """
-        self.finalize()
+        recording = self.finalize()
+        try:
+            BenchmarkRecording.parse_obj(recording)
+        except ValidationError as e:
+            raise ValueError(f"Invalid benchmark recording: {e}") from e
+
         with open(filepath, "w") as f:
-            json.dump(self.benchmark_data, f, indent=2)
+            json.dump(recording, f, indent=2)
