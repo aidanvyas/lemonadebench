@@ -8,8 +8,11 @@ from typing import Any
 
 from openai import OpenAI
 
+from dataclasses import asdict
+
 from .business_game import BusinessGame
 from .game_recorder import GameRecorder
+from .types import GameError, Result
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +250,11 @@ class OpenAIPlayer:
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
 
+            if isinstance(result, Result):
+                return json.dumps(result.asdict())
             return json.dumps(result)
+        except GameError as ge:
+            return json.dumps(ge.asdict())
         except Exception as e:
             return json.dumps({"error": str(e)})
 

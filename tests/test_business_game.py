@@ -1,7 +1,10 @@
 """Tests for the business game engine."""
 
 
+import pytest
+
 from src.lemonade_stand.business_game import BusinessGame
+from src.lemonade_stand.types import GameError, Result
 
 
 class TestBusinessGame:
@@ -46,8 +49,8 @@ class TestBusinessGame:
 
         result = game.check_morning_prices()
 
-        assert result["success"] is True
-        prices = result["prices"]
+        assert isinstance(result, Result)
+        prices = result.data["prices"]
         assert "cups" in prices
         assert "lemons" in prices
         assert "sugar" in prices
@@ -62,8 +65,8 @@ class TestBusinessGame:
         # Order some supplies
         result = game.order_supplies(cups=100, lemons=50, sugar=50, water=100)
 
-        assert result["success"] is True
-        assert result["remaining_cash"] < 1000  # Cash decreased
+        assert isinstance(result, Result)
+        assert result.data["remaining_cash"] < 1000  # Cash decreased
         assert game.inventory.get_available("cups") == 100
         assert game.inventory.get_available("lemons") == 50
 
@@ -73,10 +76,8 @@ class TestBusinessGame:
         game.start_new_day()
 
         # Try to order too much
-        result = game.order_supplies(cups=1000, lemons=1000)
-
-        assert result["success"] is False
-        assert "Insufficient funds" in result["error"]
+        with pytest.raises(GameError, match="Insufficient funds"):
+            game.order_supplies(cups=1000, lemons=1000)
         assert game.cash == 10  # Cash unchanged
         assert game.inventory.get_available("cups") == 0  # No items added
 
@@ -86,23 +87,20 @@ class TestBusinessGame:
 
         # Valid hours
         result = game.set_operating_hours(9, 17)
-        assert result["success"] is True
+        assert isinstance(result, Result)
         assert game.open_hour == 9
         assert game.close_hour == 17
         assert game.hours_set is True
 
         # Invalid hours
-        result = game.set_operating_hours(-1, 17)  # Too early
-        assert result["success"] is False
-        assert "Invalid open hour" in result["error"]
+        with pytest.raises(GameError, match="Invalid open hour"):
+            game.set_operating_hours(-1, 17)  # Too early
 
-        result = game.set_operating_hours(9, 25)  # Too late
-        assert result["success"] is False
-        assert "Invalid close hour" in result["error"]
+        with pytest.raises(GameError, match="Invalid close hour"):
+            game.set_operating_hours(9, 25)  # Too late
 
-        result = game.set_operating_hours(17, 9)  # Backwards
-        assert result["success"] is False
-        assert "must be after open hour" in result["error"]
+        with pytest.raises(GameError, match="after open hour"):
+            game.set_operating_hours(17, 9)  # Backwards
 
     def test_set_price(self):
         """Test setting price."""
@@ -110,14 +108,13 @@ class TestBusinessGame:
 
         # Valid price
         result = game.set_price(2.50)
-        assert result["success"] is True
+        assert isinstance(result, Result)
         assert game.price == 2.50
         assert game.price_set is True
 
         # Negative price
-        result = game.set_price(-1)
-        assert result["success"] is False
-        assert "cannot be negative" in result["error"]
+        with pytest.raises(GameError, match="cannot be negative"):
+            game.set_price(-1)
 
     def test_simulate_day_validations(self):
         """Test day simulation validations."""
@@ -125,15 +122,13 @@ class TestBusinessGame:
         game.start_new_day()
 
         # Should fail without price
-        result = game.simulate_day()
-        assert result["success"] is False
-        assert "price not set" in result["error"]
+        with pytest.raises(GameError, match="price not set"):
+            game.simulate_day()
 
         # Set price, should still fail without hours
         game.set_price(2.0)
-        result = game.simulate_day()
-        assert result["success"] is False
-        assert "hours not set" in result["error"]
+        with pytest.raises(GameError, match="hours not set"):
+            game.simulate_day()
 
     def test_simulate_day_success(self):
         """Test successful day simulation."""
@@ -150,13 +145,15 @@ class TestBusinessGame:
         # Simulate
         result = game.simulate_day()
 
-        assert result["day"] == 1
-        assert result["price"] == 2.0
-        assert result["hours_open"] == 4
-        assert result["customers_served"] >= 0
-        assert result["operating_cost"] == 20  # 4 hours * $5
-        assert "profit" in result
-        assert "hourly_sales" in result
+        assert isinstance(result, Result)
+        data = result.data
+        assert data["day"] == 1
+        assert data["price"] == 2.0
+        assert data["hours_open"] == 4
+        assert data["customers_served"] >= 0
+        assert data["operating_cost"] == 20  # 4 hours * $5
+        assert "profit" in data
+        assert "hourly_sales" in data
 
         # Check inventory was used
         assert game.inventory.get_available("cups") < 100
@@ -175,9 +172,12 @@ class TestBusinessGame:
 
         result = game.simulate_day()
 
+        assert isinstance(result, Result)
+        data = result.data
+
         # Should have lost sales
-        assert result["customers_lost"] > 0
-        assert result["customers_served"] == 5  # Only what we could make
+        assert data["customers_lost"] > 0
+        assert data["customers_served"] == 5  # Only what we could make
 
         # All inventory used
         assert game.inventory.can_make_lemonade() == 0

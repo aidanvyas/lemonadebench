@@ -4,6 +4,8 @@ import random
 from collections import deque
 from typing import Any
 
+from .types import GameError, Result
+
 # Game configuration constants
 DEFAULT_STARTING_CASH = 1000.0
 DEFAULT_HOURLY_OPERATING_COST = 5.0
@@ -399,13 +401,13 @@ class BusinessGame:
 
         return {"day": self.current_day, "expired_items": expired, "cash": self.cash}
 
-    def check_morning_prices(self) -> dict[str, Any]:
+    def check_morning_prices(self) -> Result:
         """Check today's supply costs.
 
         Returns:
-            Dictionary with supply costs
+            Result containing today's supply costs
         """
-        return {"success": True, "prices": self.today_supply_costs.copy()}
+        return Result({"prices": self.today_supply_costs.copy()})
 
     def check_inventory(self) -> dict[str, Any]:
         """Check current inventory levels and expiration dates.
@@ -424,7 +426,7 @@ class BusinessGame:
 
     def order_supplies(
         self, cups: int = 0, lemons: int = 0, sugar: int = 0, water: int = 0
-    ) -> dict[str, Any]:
+    ) -> Result:
         """Order supplies for immediate delivery.
 
         Args:
@@ -434,11 +436,11 @@ class BusinessGame:
             water: Amount of water to order
 
         Returns:
-            Order confirmation or error
+            Result with order confirmation
         """
         # Validate quantities
         if any(q < 0 for q in [cups, lemons, sugar, water]):
-            return {"success": False, "error": "Cannot order negative quantities"}
+            raise GameError("Cannot order negative quantities")
 
         # Calculate total cost
         total_cost = (
@@ -450,10 +452,9 @@ class BusinessGame:
 
         # Check if enough cash
         if total_cost > self.cash:
-            return {
-                "success": False,
-                "error": f"Insufficient funds. Cost: ${total_cost:.2f}, Available: ${self.cash:.2f}",
-            }
+            raise GameError(
+                f"Insufficient funds. Cost: ${total_cost:.2f}, Available: ${self.cash:.2f}"
+            )
 
         # Process order
         self.cash -= total_cost
@@ -464,14 +465,20 @@ class BusinessGame:
         self.inventory.add_items("sugar", sugar, self.current_day)
         self.inventory.add_items("water", water, self.current_day)
 
-        return {
-            "success": True,
-            "ordered": {"cups": cups, "lemons": lemons, "sugar": sugar, "water": water},
-            "total_cost": total_cost,
-            "remaining_cash": self.cash,
-        }
+        return Result(
+            {
+                "ordered": {
+                    "cups": cups,
+                    "lemons": lemons,
+                    "sugar": sugar,
+                    "water": water,
+                },
+                "total_cost": total_cost,
+                "remaining_cash": self.cash,
+            }
+        )
 
-    def set_operating_hours(self, open_hour: int, close_hour: int) -> dict[str, Any]:
+    def set_operating_hours(self, open_hour: int, close_hour: int) -> Result:
         """Set today's operating hours.
 
         Args:
@@ -479,96 +486,91 @@ class BusinessGame:
             close_hour: Closing hour (1-24, must be > open_hour)
 
         Returns:
-            Confirmation or error
+            Result confirming the hours
         """
         # Validate hours
         if open_hour < 0 or open_hour > 23:
-            return {
-                "success": False,
-                "error": f"Invalid open hour: {open_hour}. Must be between 0-23.",
-            }
+            raise GameError(
+                f"Invalid open hour: {open_hour}. Must be between 0-23."
+            )
 
         if close_hour < 1 or close_hour > 24:
-            return {
-                "success": False,
-                "error": f"Invalid close hour: {close_hour}. Must be between 1-24.",
-            }
+            raise GameError(
+                f"Invalid close hour: {close_hour}. Must be between 1-24."
+            )
 
         if close_hour <= open_hour:
-            return {
-                "success": False,
-                "error": f"Close hour ({close_hour}) must be after open hour ({open_hour}).",
-            }
+            raise GameError(
+                f"Close hour ({close_hour}) must be after open hour ({open_hour})."
+            )
 
         self.open_hour = open_hour
         self.close_hour = close_hour
         self.hours_set = True
 
-        return {
-            "success": True,
-            "open_hour": open_hour,
-            "close_hour": close_hour,
-            "hours_open": close_hour - open_hour,
-        }
+        return Result(
+            {
+                "open_hour": open_hour,
+                "close_hour": close_hour,
+                "hours_open": close_hour - open_hour,
+            }
+        )
 
-    def set_price(self, price: float) -> dict[str, Any]:
+    def set_price(self, price: float) -> Result:
         """Set today's lemonade price.
 
         Args:
             price: Price per lemonade (must be >= 0)
 
         Returns:
-            Confirmation or error
+            Result confirming the price
         """
         if price < 0:
-            return {"success": False, "error": "Price cannot be negative."}
+            raise GameError("Price cannot be negative.")
 
         self.price = round(price, 2)
         self.price_set = True
 
-        return {"success": True, "price": self.price}
+        return Result({"price": self.price})
 
-    def open_for_business(self) -> dict[str, Any]:
+    def open_for_business(self) -> Result:
         """Attempt to open the stand for business today.
 
         This must be called after setting price and operating hours.
 
         Returns:
-            Dict with success status and error details if not ready
+            Result confirming readiness
         """
         ready, missing = self.check_ready_for_next_day()
 
         if not ready:
-            return {
-                "success": False,
-                "error": "Cannot open for business - required actions not completed",
-                "missing_actions": missing,
-                "hint": "You must set both price and operating hours before opening",
+            raise GameError(
+                "Cannot open for business - required actions not completed",
+                {"missing_actions": missing, "hint": "You must set both price and operating hours before opening"},
+            )
+
+        return Result(
+            {
+                "message": f"Ready to open! Hours: {self.open_hour}-{self.close_hour}, Price: ${self.price:.2f}. The stand is now open for business and the day will play out automatically.",
             }
+        )
 
-        return {
-            "success": True,
-            "message": f"Ready to open! Hours: {self.open_hour}-{self.close_hour}, Price: ${self.price:.2f}. The stand is now open for business and the day will play out automatically.",
-        }
-
-    def simulate_day(self) -> dict[str, Any]:
+    def simulate_day(self) -> Result:
         """Simulate the day's business after all decisions are made.
 
         Returns:
-            Day's results
+            Result containing the day's summary
         """
         # Check required actions
         if not self.price_set:
-            return {
-                "success": False,
-                "error": "Cannot simulate day: price not set. Call set_price() first.",
-            }
+            raise GameError(
+                "Cannot simulate day: price not set. Call set_price() first."
+            )
 
         if not self.hours_set:
-            return {
-                "success": False,
-                "error": "Cannot simulate day: hours not set. Call set_operating_hours() first.",
-            }
+            raise GameError(
+                "Cannot simulate day: hours not set. Call set_operating_hours() first."
+            )
 
         # Calculate customers for each hour
         assert self.price is not None
@@ -642,7 +644,7 @@ class BusinessGame:
         self.history.append(day_result)
 
         # Return with success indicator
-        return {"success": True, **day_result}
+        return Result(day_result)
 
     def get_historical_supply_costs(self) -> list[dict[str, float]]:
         """Get historical supply cost data.

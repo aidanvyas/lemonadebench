@@ -4,6 +4,7 @@
 from .business_game import BusinessGame
 from .game_recorder import BenchmarkRecorder, GameRecorder
 from .openai_player import OpenAIPlayer
+from .types import GameError, Result
 
 __version__ = "0.5.0"
 __all__ = [
@@ -11,4 +12,6 @@ __all__ = [
     "OpenAIPlayer",
     "GameRecorder",
     "BenchmarkRecorder",
+    "GameError",
+    "Result",
 ]
