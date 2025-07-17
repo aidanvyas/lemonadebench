@@ -1,0 +1,52 @@
+This is BibTeX, Version 0.99d (TeX Live 2021)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: lemonadebench.aux
+The style file: plainnat.bst
+Database file #1: references.bib
+Reallocated buffer (elt_size=1) to 40000 items from 20000.
+Reallocated sv_buffer (elt_size=1) to 40000 items from 20000.
+Reallocated ex_buf (elt_size=1) to 40000 items from 20000.
+Reallocated out_buf (elt_size=1) to 40000 items from 20000.
+Reallocated name_tok (elt_size=4) to 40000 items from 20000.
+Reallocated name_sep_char (elt_size=1) to 40000 items from 20000.
+You've used 8 entries,
+            2773 wiz_defined-function locations,
+            628 strings with 26934 characters,
+and the built_in function-call counts, 59714 in all, are:
+= -- 3655
+> -- 10390
+< -- 2
++ -- 3464
+- -- 3456
+* -- 7030
+:= -- 10666
+add.period$ -- 24
+call.type$ -- 8
+change.case$ -- 1176
+chr.to.int$ -- 8
+cite$ -- 16
+duplicate$ -- 126
+empty$ -- 263
+format.name$ -- 3466
+if$ -- 10838
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 0
+newline$ -- 48
+num.names$ -- 32
+pop$ -- 2377
+preamble$ -- 1
+purify$ -- 1168
+quote$ -- 0
+skip$ -- 1259
+stack$ -- 0
+substring$ -- 16
+swap$ -- 8
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 88
+warning$ -- 0
+while$ -- 24
+width$ -- 0
+write$ -- 103
