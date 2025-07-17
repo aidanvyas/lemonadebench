@@ -17,7 +17,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import OpenAIPlayer, BusinessGame, GameRecorder, BenchmarkRecorder
+from src.lemonade_stand import (
+    BenchmarkRecorder,
+    BusinessGame,
+    GameRecorder,
+    OpenAIPlayer,
+)
 
 load_dotenv()
 
@@ -28,6 +33,42 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+# Benchmark progress tracking
+benchmark_start_time: float | None = None
+total_games: int = 0
+total_days: int = 0
+completed_games: int = 0
+completed_days: int = 0
+last_eta_log_time: float = 0.0
+ETA_LOG_INTERVAL = 60  # seconds between ETA logs
+
+
+def log_eta(force: bool = False) -> None:
+    """Log the estimated time remaining for the benchmark."""
+    global last_eta_log_time
+
+    if benchmark_start_time is None or completed_days == 0:
+        return
+
+    now = time.time()
+    if not force and now - last_eta_log_time < ETA_LOG_INTERVAL:
+        return
+
+    elapsed = now - benchmark_start_time
+    avg_sec_per_day = elapsed / completed_days
+    remaining_days = max(total_days - completed_days, 0)
+    eta_seconds = avg_sec_per_day * remaining_days
+
+    logger.info(
+        "  Overall progress: %d/%d games, %d/%d days - ETA %.1fm",
+        completed_games,
+        total_games,
+        completed_days,
+        total_days,
+        eta_seconds / 60,
+    )
+    last_eta_log_time = now
 
 
 def run_single_game(
@@ -133,6 +174,11 @@ def run_single_game(
                 total_attempts=turn_result.get("attempts", 1)
             )
 
+            # Update overall progress
+            global completed_days
+            completed_days += 1
+            log_eta()
+
         # Get final results
         final_results = game.get_final_results()
         cost_info = player.calculate_cost()
@@ -157,6 +203,10 @@ def run_single_game(
             f"Customers={final_results['total_customers']}, "
             f"Duration={duration:.1f}s"
         )
+
+        global completed_games
+        completed_games += 1
+        log_eta(force=True)
 
         return {
             "game_number": game_number,
@@ -195,6 +245,10 @@ def run_single_game(
         import traceback
 
         traceback.print_exc()
+
+        global completed_games
+        completed_games += 1
+        log_eta(force=True)
 
         return {
             "game_number": game_number,
@@ -317,6 +371,13 @@ def main():
     logger.info(f"Starting cash: ${args.starting_cash}")
     logger.info(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("")
+
+    global benchmark_start_time, total_games, total_days, completed_games, completed_days
+    benchmark_start_time = time.time()
+    total_games = args.games * len(args.models)
+    total_days = total_games * args.days
+    completed_games = 0
+    completed_days = 0
 
     # Initialize benchmark recorder
     benchmark_recorder = BenchmarkRecorder(
