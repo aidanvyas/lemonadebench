@@ -4,9 +4,9 @@ import argparse
 import json
 import statistics
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
+
 import matplotlib.pyplot as plt
 
 # Game constants
