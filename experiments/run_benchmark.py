@@ -8,6 +8,8 @@ import statistics
 import sys
 import time
 from datetime import datetime
+
+from tqdm import tqdm
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +19,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import OpenAIPlayer, BusinessGame, GameRecorder, BenchmarkRecorder
+from src.lemonade_stand import (
+    OpenAIPlayer,
+    BusinessGame,
+    GameRecorder,
+    BenchmarkRecorder,
+)
 
 load_dotenv()
 
@@ -64,7 +71,7 @@ def run_single_game(
             "days": days,
             "starting_cash": starting_cash,
             "seed": seed,
-        }
+        },
     )
 
     # Track additional metrics
@@ -75,11 +82,20 @@ def run_single_game(
     turn_attempts = []
 
     try:
-        # Play the game day by day
+        # Play the game day by day with progress bar
+        day_bar = tqdm(
+            total=days,
+            desc=f"Game {game_number} Days",
+            leave=False,
+            position=2,
+        )
         while not game.is_game_over():
             # Start new day
             day_info = game.start_new_day()
             daily_cash_history.append(game.cash)
+
+            # Update progress bar
+            day_bar.update(1)
 
             # Record game state at start of day
             supply_costs = game.check_morning_prices()["prices"]
@@ -90,7 +106,7 @@ def run_single_game(
                     "inventory": game.check_inventory(),
                     "expired_items": day_info["expired_items"],
                     "supply_costs": supply_costs,
-                }
+                },
             )
 
             # Track expired items
@@ -130,8 +146,10 @@ def run_single_game(
                     "open_hour": game.open_hour,
                     "close_hour": game.close_hour,
                 },
-                total_attempts=turn_result.get("attempts", 1)
+                total_attempts=turn_result.get("attempts", 1),
             )
+
+        day_bar.close()
 
         # Get final results
         final_results = game.get_final_results()
@@ -147,8 +165,7 @@ def run_single_game(
 
         # Record final results
         recorder.record_final_results(
-            results=final_results,
-            total_cost=cost_info["total_cost"]
+            results=final_results, total_cost=cost_info["total_cost"]
         )
 
         logger.info(
@@ -333,7 +350,7 @@ def main():
     all_results = {}
     overall_start = time.time()
 
-    for model in args.models:
+    for model in tqdm(args.models, desc="Models", position=0, leave=False):
         logger.info(f"\nTesting model: {model}")
         logger.info("-" * 50)
 
@@ -341,7 +358,13 @@ def main():
         games = []
 
         # Run multiple games
-        for game_num in range(1, args.games + 1):
+        games_bar = tqdm(
+            range(1, args.games + 1),
+            desc=f"{model} Games",
+            position=1,
+            leave=False,
+        )
+        for game_num in games_bar:
             # Use different seed for each game if base seed provided
             game_seed = (args.seed + game_num) if args.seed else None
 
@@ -364,9 +387,11 @@ def main():
 
             # Log progress
             if result["success"]:
-                logger.info(f"  Game {game_num}/{args.games} complete")
+                games_bar.set_postfix(status="done")
             else:
-                logger.error(f"  Game {game_num}/{args.games} failed")
+                games_bar.set_postfix(status="failed")
+
+        games_bar.close()
 
         # Aggregate results for this model
         model_results = aggregate_results(games)
@@ -462,7 +487,10 @@ def main():
             logger.info("Analysis complete!")
         except Exception as e:
             logger.error(f"Failed to generate analysis: {e}")
-            logger.info("You can manually run: python analysis/analyze_results.py --file " + recording_filename)
+            logger.info(
+                "You can manually run: python analysis/analyze_results.py --file "
+                + recording_filename
+            )
 
 
 if __name__ == "__main__":
