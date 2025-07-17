@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import concurrent.futures
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -329,53 +330,57 @@ def main():
         }
     )
 
-    # Run benchmark for each model
-    all_results = {}
+    # Run benchmark for all models/games concurrently
+    all_results: dict[str, list[dict[str, Any]]] = {m: [] for m in args.models}
     overall_start = time.time()
+    futures: list[concurrent.futures.Future] = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for model in args.models:
+            logger.info(f"\nTesting model: {model}")
+            logger.info("-" * 50)
 
-    for model in args.models:
-        logger.info(f"\nTesting model: {model}")
-        logger.info("-" * 50)
+            for game_num in range(1, args.games + 1):
+                game_seed = (args.seed + game_num) if args.seed else None
+                futures.append(
+                    executor.submit(
+                        run_single_game,
+                        model_name=model,
+                        game_number=game_num,
+                        days=args.days,
+                        starting_cash=args.starting_cash,
+                        seed=game_seed,
+                    )
+                )
 
-        model_start = time.time()
-        games = []
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
 
-        # Run multiple games
-        for game_num in range(1, args.games + 1):
-            # Use different seed for each game if base seed provided
-            game_seed = (args.seed + game_num) if args.seed else None
-
-            result = run_single_game(
-                model_name=model,
-                game_number=game_num,
-                days=args.days,
-                starting_cash=args.starting_cash,
-                seed=game_seed,
-            )
-
-            # Extract recorder and add to benchmark recorder
             if result.get("success") and "recorder" in result:
                 benchmark_recorder.add_game_recording(result["recorder"])
 
-            # Remove recorder from result before appending (to avoid duplication)
             result_copy = result.copy()
             result_copy.pop("recorder", None)
-            games.append(result_copy)
+            all_results[result["model"]].append(result_copy)
 
-            # Log progress
             if result["success"]:
-                logger.info(f"  Game {game_num}/{args.games} complete")
+                logger.info(
+                    f"  {result['model']} game {result['game_number']}/{args.games} complete"
+                )
             else:
-                logger.error(f"  Game {game_num}/{args.games} failed")
+                logger.error(
+                    f"  {result['model']} game {result['game_number']}/{args.games} failed"
+                )
 
-        # Aggregate results for this model
+    aggregated_results: dict[str, Any] = {}
+    for model, games in all_results.items():
         model_results = aggregate_results(games)
         model_results["model"] = model
-        model_results["duration"] = time.time() - model_start
+        model_results["duration"] = sum(g["duration_seconds"] for g in games)
+        aggregated_results[model] = model_results
 
-        all_results[model] = model_results
+    all_results = aggregated_results
 
-        # Summary for this model
+    for model, model_results in aggregated_results.items():
         logger.info(f"\n{model} Summary:")
         logger.info(
             f"  Successful games: {model_results['successful_games']}/{args.games}"
