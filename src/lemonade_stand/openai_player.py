@@ -13,7 +13,6 @@ from .game_recorder import GameRecorder
 
 logger = logging.getLogger(__name__)
 
-
 class OpenAIPlayer:
     """AI player that uses OpenAI's API to play the lemonade stand business game."""
 
@@ -22,7 +21,7 @@ class OpenAIPlayer:
         model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
-    ):
+    ) -> None:
         """Initialize the AI player.
 
         Args:
@@ -307,15 +306,11 @@ class OpenAIPlayer:
                     # Build list of tool executions
                     tool_executions = []
                     for tool_result in tool_results:
-                        tool_executions.append(
-                            {
-                                "tool": tool_result["name"],
-                                "arguments": self._get_tool_args_from_response(
-                                    response, tool_result["name"]
-                                ),
-                                "result": json.loads(tool_result["result"]),
-                            }
-                        )
+                        tool_executions.append({
+                            "tool": tool_result["name"],
+                            "arguments": self._get_tool_args_from_response(response, tool_result["name"]),
+                            "result": json.loads(tool_result["result"]),
+                        })
 
                     recorder.record_interaction(
                         attempt=attempts,
@@ -347,9 +342,7 @@ class OpenAIPlayer:
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
 
-    def _get_tool_args_from_response(
-        self, response: Any, tool_name: str
-    ) -> dict[str, Any]:
+    def _get_tool_args_from_response(self, response: Any, tool_name: str) -> dict[str, Any]:
         """Extract tool arguments from response for a specific tool call."""
         for item in response.output:
             if item.type == "function_call" and item.name == tool_name:
@@ -451,14 +444,10 @@ class OpenAIPlayer:
                 cached = getattr(details, "cached_tokens", 0)
                 self.total_token_usage["cached_input_tokens"] += cached
 
-        if hasattr(usage, "output_tokens_details") or hasattr(
-            usage, "completion_tokens_details"
-        ):
-            output_details: Any = getattr(
-                usage, "output_tokens_details", None
-            ) or getattr(usage, "completion_tokens_details", None)
-            if output_details:
-                reasoning = getattr(output_details, "reasoning_tokens", 0)
+        if hasattr(usage, "output_tokens_details") or hasattr(usage, "completion_tokens_details"):
+            details = getattr(usage, "output_tokens_details", None) or getattr(usage, "completion_tokens_details", None)
+            if details:
+                reasoning = getattr(details, "reasoning_tokens", 0)
                 self.total_token_usage["reasoning_tokens"] += reasoning
 
     def _process_output(
