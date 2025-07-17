@@ -2,7 +2,7 @@
 
 # Version 0.5 - Business simulation with inventory management
 from .business_game import BusinessGame
-from .game_recorder import GameRecorder, BenchmarkRecorder
+from .game_recorder import BenchmarkRecorder, GameRecorder
 try:
     from .openai_player import OpenAIPlayer
 except ModuleNotFoundError:  # openai package not installed
