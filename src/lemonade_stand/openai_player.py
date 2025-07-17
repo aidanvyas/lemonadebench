@@ -575,3 +575,11 @@ class OpenAIPlayer:
             "total_tokens": 0,
             "cached_input_tokens": 0,
         }
+
+    def close(self) -> None:
+        """Close the underlying OpenAI client if possible."""
+        if hasattr(self, "client") and hasattr(self.client, "close"):
+            try:
+                self.client.close()
+            except Exception as e:  # pragma: no cover - don't fail if close errors
+                logger.warning("Failed to close OpenAI client: %s", e)

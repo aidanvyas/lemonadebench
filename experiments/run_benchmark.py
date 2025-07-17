@@ -206,6 +206,12 @@ def run_single_game(
             "duration_seconds": time.time() - start_time,
         }
 
+    finally:
+        try:
+            player.close()
+        except Exception as close_error:  # pragma: no cover - log but continue
+            logger.warning("Error closing player: %s", close_error)
+
 
 def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate results from multiple games.
