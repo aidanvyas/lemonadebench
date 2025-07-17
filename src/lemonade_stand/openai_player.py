@@ -252,11 +252,11 @@ class OpenAIPlayer:
 
     def play_turn(self, game: BusinessGame, recorder=None) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API (stateless).
-        
+
         Args:
             game: The BusinessGame instance
             recorder: Optional GameRecorder to record all interactions
-            
+
         Returns:
             Dictionary with success status and attempt information
         """
@@ -278,7 +278,7 @@ class OpenAIPlayer:
 
                 # Build request
                 kwargs = self._build_request_kwargs(conversation, game)
-                
+
                 # Time the API call
                 start_time = time.time()
                 response = self.client.responses.create(**kwargs)
@@ -306,7 +306,7 @@ class OpenAIPlayer:
                             "arguments": self._get_tool_args_from_response(response, tool_result["name"]),
                             "result": json.loads(tool_result["result"]),
                         })
-                    
+
                     recorder.record_interaction(
                         attempt=attempts,
                         request=kwargs,
@@ -328,13 +328,13 @@ class OpenAIPlayer:
                 self.errors.append({"day": game.current_day, "error": str(e)})
                 if attempts < max_attempts:
                     logger.warning(f"Error on attempt {attempts}, will retry")
-                    
+
                 # Record the error if recorder is provided
                 if recorder and hasattr(recorder, 'record_error'):
                     recorder.record_error(str(e))
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
-    
+
     def _get_tool_args_from_response(self, response: Any, tool_name: str) -> dict[str, Any]:
         """Extract tool arguments from response for a specific tool call."""
         for item in response.output:
@@ -403,24 +403,24 @@ class OpenAIPlayer:
         if not hasattr(response, "usage"):
             return
         usage = response.usage
-        
+
         # The Responses API uses different field names than Chat Completions API
         # Try both field names to support both APIs
         input_tokens = getattr(usage, "input_tokens", 0) or getattr(usage, "prompt_tokens", 0)
         output_tokens = getattr(usage, "output_tokens", 0) or getattr(usage, "completion_tokens", 0)
         total_tokens = getattr(usage, "total_tokens", 0)
-        
+
         self.total_token_usage["input_tokens"] += input_tokens
         self.total_token_usage["output_tokens"] += output_tokens
         self.total_token_usage["total_tokens"] += total_tokens
-        
+
         # Handle token details (different field names in different APIs)
         if hasattr(usage, "input_tokens_details") or hasattr(usage, "prompt_tokens_details"):
             details = getattr(usage, "input_tokens_details", None) or getattr(usage, "prompt_tokens_details", None)
             if details:
                 cached = getattr(details, "cached_tokens", 0)
                 self.total_token_usage["cached_input_tokens"] += cached
-        
+
         if hasattr(usage, "output_tokens_details") or hasattr(usage, "completion_tokens_details"):
             details = getattr(usage, "output_tokens_details", None) or getattr(usage, "completion_tokens_details", None)
             if details:
@@ -504,13 +504,13 @@ class OpenAIPlayer:
         cached_cost = (
             self.total_token_usage["cached_input_tokens"] / 1_000_000
         ) * pricing["cached_input"]
-        
+
         # For reasoning models, output tokens include reasoning tokens
         # The API charges for all output tokens at the output rate
         output_cost = (self.total_token_usage["output_tokens"] / 1_000_000) * pricing[
             "output"
         ]
-        
+
         # Note: reasoning_tokens are already included in output_tokens for billing
         # So we don't need to add them separately
 

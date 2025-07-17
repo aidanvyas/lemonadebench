@@ -16,7 +16,7 @@ class TestBusinessGame:
         assert game.cash == 100
         assert game.hourly_operating_cost == 5
         assert game.yesterday_profit is None
-        
+
         # Test default starting cash and days
         default_game = BusinessGame()
         assert default_game.cash == 1000
@@ -43,7 +43,7 @@ class TestBusinessGame:
         """Test checking morning prices."""
         game = BusinessGame(seed=42)
         game.start_new_day()
-        
+
         result = game.check_morning_prices()
 
         assert result["success"] is True
