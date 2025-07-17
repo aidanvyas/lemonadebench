@@ -1,5 +1,7 @@
 """Tests for the inventory management system."""
 
+import threading
+
 import pytest
 
 from src.lemonade_stand.business_game import Inventory
@@ -190,3 +192,41 @@ class TestInventory:
         inv.add_items("water", 200, current_day=1)  # 200 * 0.02 = 4.00
 
         assert inv.get_total_value() == pytest.approx(26.50)
+
+    def test_concurrent_add_items(self):
+        """Adding items from multiple threads should be safe."""
+        inv = Inventory()
+
+        def worker() -> None:
+            inv.add_items("cups", 10, current_day=1)
+
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert inv.get_available("cups") == 100
+
+    def test_concurrent_use_items(self):
+        """Using items concurrently should not overdraw inventory."""
+        inv = Inventory()
+        inv.add_items("cups", 100, current_day=1)
+        inv.add_items("lemons", 100, current_day=1)
+        inv.add_items("sugar", 100, current_day=1)
+        inv.add_items("water", 100, current_day=1)
+
+        recipe = {"cups": 10, "lemons": 10, "sugar": 10, "water": 10}
+        results: list[bool] = []
+
+        def worker() -> None:
+            results.append(inv.use_items(recipe))
+
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert all(results)
+        assert inv.get_available("cups") == 0

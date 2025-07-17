@@ -1,6 +1,7 @@
 """Main game engine for the lemonade stand business simulation."""
 
 import random
+import threading
 from collections import deque
 from typing import Any
 
@@ -12,10 +13,16 @@ LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
 
 class Inventory:
-    """Manages perishable inventory with FIFO expiration tracking."""
+    """Manages perishable inventory with FIFO expiration tracking.
+
+    The class is safe for use from multiple threads. A :class:`threading.Lock`
+    protects all access to :attr:`items`, ensuring atomic updates when
+    inventory is modified or read.
+    """
 
     def __init__(self) -> None:
         """Initialize empty inventory with shelf life definitions."""
+        self._lock = threading.RLock()
         # Store items as deques of (quantity, expiry_day) tuples
         self.items: dict[str, deque[tuple[int, float]]] = {
             "cups": deque(),
@@ -61,7 +68,8 @@ class Inventory:
             expiry_day = current_day + self.shelf_life[item_type]
 
         # Add to inventory queue
-        self.items[item_type].append((quantity, expiry_day))
+        with self._lock:
+            self.items[item_type].append((quantity, expiry_day))
 
     def get_available(self, item_type: str) -> int:
         """Get total available quantity of an item type.
@@ -72,10 +80,11 @@ class Inventory:
         Returns:
             Total quantity available
         """
-        if item_type not in self.items:
-            return 0
+        with self._lock:
+            if item_type not in self.items:
+                return 0
 
-        return sum(quantity for quantity, _ in self.items[item_type])
+            return sum(quantity for quantity, _ in self.items[item_type])
 
     def get_inventory_details(self) -> dict[str, list[dict[str, Any]]]:
         """Get detailed inventory information including expiration dates.
@@ -83,16 +92,17 @@ class Inventory:
         Returns:
             Dictionary with item types as keys and list of batches as values
         """
-        details: dict[str, list[dict[str, Any]]] = {}
-        for item_type, batches in self.items.items():
-            details[item_type] = []
-            for quantity, expiry in batches:
-                batch_info = {
-                    "quantity": quantity,
-                    "expires_day": expiry if expiry != float("inf") else "never",
-                }
-                details[item_type].append(batch_info)
-        return details
+        with self._lock:
+            details: dict[str, list[dict[str, Any]]] = {}
+            for item_type, batches in self.items.items():
+                details[item_type] = []
+                for quantity, expiry in batches:
+                    batch_info = {
+                        "quantity": quantity,
+                        "expires_day": expiry if expiry != float("inf") else "never",
+                    }
+                    details[item_type].append(batch_info)
+            return details
 
     def use_items(self, recipe: dict[str, int]) -> bool:
         """Use items according to recipe, FIFO style.
@@ -103,28 +113,32 @@ class Inventory:
         Returns:
             True if all items were available and used, False otherwise
         """
-        # First check if we have enough of everything
-        for item_type, needed in recipe.items():
-            if self.get_available(item_type) < needed:
-                return False
+        with self._lock:
+            # First check if we have enough of everything
+            for item_type, needed in recipe.items():
+                if self.get_available(item_type) < needed:
+                    return False
 
-        # Use items FIFO
-        for item_type, needed in recipe.items():
-            remaining_needed = needed
+            # Use items FIFO
+            for item_type, needed in recipe.items():
+                remaining_needed = needed
 
-            while remaining_needed > 0 and self.items[item_type]:
-                quantity, expiry = self.items[item_type][0]
+                while remaining_needed > 0 and self.items[item_type]:
+                    quantity, expiry = self.items[item_type][0]
 
-                if quantity <= remaining_needed:
-                    # Use entire batch
-                    self.items[item_type].popleft()
-                    remaining_needed -= quantity
-                else:
-                    # Use part of batch
-                    self.items[item_type][0] = (quantity - remaining_needed, expiry)
-                    remaining_needed = 0
+                    if quantity <= remaining_needed:
+                        # Use entire batch
+                        self.items[item_type].popleft()
+                        remaining_needed -= quantity
+                    else:
+                        # Use part of batch
+                        self.items[item_type][0] = (
+                            quantity - remaining_needed,
+                            expiry,
+                        )
+                        remaining_needed = 0
 
-        return True
+            return True
 
     def remove_expired(self, current_day: int) -> dict[str, int]:
         """Remove expired items from inventory.
@@ -135,20 +149,21 @@ class Inventory:
         Returns:
             Dictionary of item_type -> quantity expired
         """
-        expired = {}
+        with self._lock:
+            expired = {}
 
-        for item_type, batches in self.items.items():
-            expired_quantity = 0
+            for item_type, batches in self.items.items():
+                expired_quantity = 0
 
-            # Remove expired batches from front of queue
-            while batches and batches[0][1] <= current_day:
-                quantity, _ = batches.popleft()
-                expired_quantity += quantity
+                # Remove expired batches from front of queue
+                while batches and batches[0][1] <= current_day:
+                    quantity, _ = batches.popleft()
+                    expired_quantity += quantity
 
-            if expired_quantity > 0:
-                expired[item_type] = expired_quantity
+                if expired_quantity > 0:
+                    expired[item_type] = expired_quantity
 
-        return expired
+            return expired
 
     def get_total_value(self) -> float:
         """Calculate total value of inventory at base costs.
@@ -156,11 +171,12 @@ class Inventory:
         Returns:
             Total value in dollars
         """
-        total = 0.0
-        for item_type in self.items:
-            quantity = self.get_available(item_type)
-            total += quantity * self.base_costs[item_type]
-        return total
+        with self._lock:
+            total = 0.0
+            for item_type in self.items:
+                quantity = self.get_available(item_type)
+                total += quantity * self.base_costs[item_type]
+            return total
 
     def can_make_lemonade(self) -> int:
         """Calculate how many lemonades can be made with current inventory.
@@ -169,12 +185,13 @@ class Inventory:
             Maximum number of lemonades possible (limited by scarcest ingredient)
         """
         # Recipe: 1 of each item per lemonade
-        return min(
-            self.get_available("cups"),
-            self.get_available("lemons"),
-            self.get_available("sugar"),
-            self.get_available("water"),
-        )
+        with self._lock:
+            return min(
+                self.get_available("cups"),
+                self.get_available("lemons"),
+                self.get_available("sugar"),
+                self.get_available("water"),
+            )
 
 
 class DemandModel:
@@ -786,8 +803,10 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
             "total_lost_sales": total_lost_sales,
-            "average_daily_profit": (self.cash - self.starting_cash) / self.current_day
-            if self.current_day > 0
-            else 0,
+            "average_daily_profit": (
+                (self.cash - self.starting_cash) / self.current_day
+                if self.current_day > 0
+                else 0
+            ),
             "inventory_value": self.inventory.get_total_value(),
         }
