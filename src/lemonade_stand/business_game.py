@@ -8,14 +8,19 @@ operations are lock-free and may observe intermediate states.
 import random
 import threading
 from collections import deque
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP, getcontext
 from typing import Any
 
 from .utils import to_decimal
 
+# Global decimal context for currency (two decimal places)
+getcontext().prec = 28
+getcontext().rounding = ROUND_HALF_UP
+TWOPLACES = Decimal("0.01")
+
 # Game configuration constants
-DEFAULT_STARTING_CASH = Decimal("1000")
-DEFAULT_HOURLY_OPERATING_COST = Decimal("5")
+DEFAULT_STARTING_CASH = Decimal("1000.00")
+DEFAULT_HOURLY_OPERATING_COST = Decimal("5.00")
 DEFAULT_TOTAL_DAYS = 30
 LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
@@ -178,7 +183,7 @@ class Inventory:
         for item_type in self.items:
             quantity = self.get_available(item_type)
             total += to_decimal(quantity) * self.base_costs[item_type]
-        return total
+        return total.quantize(TWOPLACES)
 
     def can_make_lemonade(self) -> int:
         """Calculate how many lemonades can be made with current inventory.
@@ -353,9 +358,9 @@ class BusinessGame:
         """
         self.total_days = days
         self.current_day = 0
-        self.starting_cash = to_decimal(starting_cash)
-        self.cash = to_decimal(starting_cash)
-        self.hourly_operating_cost = to_decimal(hourly_operating_cost)
+        self.starting_cash = to_decimal(starting_cash).quantize(TWOPLACES)
+        self.cash = to_decimal(starting_cash).quantize(TWOPLACES)
+        self.hourly_operating_cost = to_decimal(hourly_operating_cost).quantize(TWOPLACES)
 
         # Initialize components
         self.inventory = Inventory()
@@ -474,7 +479,7 @@ class BusinessGame:
             }
 
         # Process order
-        self.cash -= total_cost
+        self.cash = (self.cash - total_cost).quantize(TWOPLACES)
 
         # Add to inventory
         self.inventory.add_items("cups", cups, self.current_day)
@@ -541,7 +546,7 @@ class BusinessGame:
         if price < 0:
             return {"success": False, "error": "Price cannot be negative."}
 
-        self.price = to_decimal(round(price, 2))
+        self.price = to_decimal(price).quantize(TWOPLACES)
         self.price_set = True
 
         return {"success": True, "price": self.price}
@@ -637,8 +642,8 @@ class BusinessGame:
         profit = revenue - operating_cost
 
         # Update cash
-        self.cash += profit
-        self.yesterday_profit = profit
+        self.cash = (self.cash + profit).quantize(TWOPLACES)
+        self.yesterday_profit = profit.quantize(TWOPLACES)
 
         # Create day result
         day_result = {
