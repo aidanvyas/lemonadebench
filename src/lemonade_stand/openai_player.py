@@ -21,6 +21,9 @@ class OpenAIPlayer:
         model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
+        *,
+        api_max_retries: int = 3,
+        api_backoff: float = 1.0,
     ) -> None:
         """Initialize the AI player.
 
@@ -28,9 +31,13 @@ class OpenAIPlayer:
             model_name: OpenAI model to use
             api_key: OpenAI API key (uses env var if not provided)
             include_reasoning_summary: Whether to request reasoning summaries for o* models
+            api_max_retries: Number of times to retry failed API calls
+            api_backoff: Initial backoff delay (seconds) for retries
         """
         self.model_name = model_name
         self.include_reasoning_summary = include_reasoning_summary
+        self.api_max_retries = api_max_retries
+        self.api_backoff = api_backoff
 
         # For stateless approach - minimal tracking
         self.reasoning_summaries: list[dict[str, Any]] = []
@@ -300,7 +307,7 @@ class OpenAIPlayer:
 
                 # Time the API call
                 start_time = time.time()
-                response = self.client.responses.create(**kwargs)
+                response = self._create_with_retry(**kwargs)
                 duration_ms = int((time.time() - start_time) * 1000)
 
                 # Extract data from response
@@ -396,6 +403,23 @@ class OpenAIPlayer:
             if self.include_reasoning_summary:
                 kwargs["reasoning"]["summary"] = "auto"
         return kwargs
+
+    def _create_with_retry(self, **kwargs: Any) -> Any:
+        """Call the OpenAI API with exponential backoff."""
+        attempt = 0
+        while True:
+            try:
+                return self.client.responses.create(**kwargs)
+            except Exception as e:  # noqa: BLE001
+                attempt += 1
+                if attempt > self.api_max_retries:
+                    logger.error(f"OpenAI call failed after {attempt - 1} retries: {e}")
+                    raise
+                delay = self.api_backoff * (2 ** (attempt - 1))
+                logger.warning(
+                    f"OpenAI call error: {e}. Retry {attempt}/{self.api_max_retries} in {delay:.1f}s"
+                )
+                time.sleep(delay)
 
     def _extract_reasoning_summary(
         self, response: Any, game: BusinessGame, attempts: int
