@@ -7,8 +7,10 @@ import logging
 import statistics
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 # Add src to path
@@ -329,50 +331,61 @@ def main():
         }
     )
 
-    # Run benchmark for each model
-    all_results = {}
+    # Run benchmark for each model/game combination in parallel
+    all_results: dict[str, Any] = {}
     overall_start = time.time()
 
-    for model in args.models:
-        logger.info(f"\nTesting model: {model}")
-        logger.info("-" * 50)
+    results_by_model: dict[str, list[dict[str, Any]]] = {
+        model: [] for model in args.models
+    }
+    recorder_lock = Lock()
 
-        model_start = time.time()
-        games = []
+    futures = {}
+    with ThreadPoolExecutor() as executor:
+        for model in args.models:
+            logger.info(f"\nTesting model: {model}")
+            logger.info("-" * 50)
+            for game_num in range(1, args.games + 1):
+                game_seed = (args.seed + game_num) if args.seed else None
+                future = executor.submit(
+                    run_single_game,
+                    model_name=model,
+                    game_number=game_num,
+                    days=args.days,
+                    starting_cash=args.starting_cash,
+                    seed=game_seed,
+                )
+                futures[future] = (model, game_num)
 
-        # Run multiple games
-        for game_num in range(1, args.games + 1):
-            # Use different seed for each game if base seed provided
-            game_seed = (args.seed + game_num) if args.seed else None
+        for future in as_completed(futures):
+            model, game_num = futures[future]
+            result = future.result()
 
-            result = run_single_game(
-                model_name=model,
-                game_number=game_num,
-                days=args.days,
-                starting_cash=args.starting_cash,
-                seed=game_seed,
-            )
-
-            # Extract recorder and add to benchmark recorder
             if result.get("success") and "recorder" in result:
-                benchmark_recorder.add_game_recording(result["recorder"])
+                with recorder_lock:
+                    benchmark_recorder.add_game_recording(result["recorder"])
 
-            # Remove recorder from result before appending (to avoid duplication)
             result_copy = result.copy()
             result_copy.pop("recorder", None)
-            games.append(result_copy)
+            results_by_model[model].append(result_copy)
 
-            # Log progress
-            if result["success"]:
-                logger.info(f"  Game {game_num}/{args.games} complete")
+            if result.get("success"):
+                logger.info(
+                    f"  Game {game_num}/{args.games} complete for {model}"
+                )
             else:
-                logger.error(f"  Game {game_num}/{args.games} failed")
+                logger.error(
+                    f"  Game {game_num}/{args.games} failed for {model}"
+                )
 
-        # Aggregate results for this model
+    # Aggregate results after all tasks complete
+    for model in args.models:
+        games = results_by_model[model]
         model_results = aggregate_results(games)
         model_results["model"] = model
-        model_results["duration"] = time.time() - model_start
-
+        model_results["duration"] = sum(
+            g.get("duration_seconds", 0) for g in games
+        )
         all_results[model] = model_results
 
         # Summary for this model
