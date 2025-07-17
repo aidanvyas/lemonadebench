@@ -6,12 +6,13 @@ import os
 import time
 from typing import Any
 
-from openai import OpenAI
+from openai import OpenAI  # type: ignore
 
 from .business_game import BusinessGame
 from .game_recorder import GameRecorder
 
 logger = logging.getLogger(__name__)
+
 
 class OpenAIPlayer:
     """AI player that uses OpenAI's API to play the lemonade stand business game."""
@@ -21,6 +22,9 @@ class OpenAIPlayer:
         model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
+        *,
+        api_max_retries: int = 3,
+        api_backoff: float = 1.0,
     ) -> None:
         """Initialize the AI player.
 
@@ -28,9 +32,13 @@ class OpenAIPlayer:
             model_name: OpenAI model to use
             api_key: OpenAI API key (uses env var if not provided)
             include_reasoning_summary: Whether to request reasoning summaries for o* models
+            api_max_retries: Number of times to retry failed API calls
+            api_backoff: Initial backoff delay (seconds) for retries
         """
         self.model_name = model_name
         self.include_reasoning_summary = include_reasoning_summary
+        self.api_max_retries = api_max_retries
+        self.api_backoff = api_backoff
 
         # For stateless approach - minimal tracking
         self.reasoning_summaries: list[dict[str, Any]] = []
@@ -284,7 +292,7 @@ class OpenAIPlayer:
 
                 # Time the API call
                 start_time = time.time()
-                response = self.client.responses.create(**kwargs)
+                response = self._create_with_retry(**kwargs)
                 duration_ms = int((time.time() - start_time) * 1000)
 
                 # Extract data from response
@@ -306,11 +314,15 @@ class OpenAIPlayer:
                     # Build list of tool executions
                     tool_executions = []
                     for tool_result in tool_results:
-                        tool_executions.append({
-                            "tool": tool_result["name"],
-                            "arguments": self._get_tool_args_from_response(response, tool_result["name"]),
-                            "result": json.loads(tool_result["result"]),
-                        })
+                        tool_executions.append(
+                            {
+                                "tool": tool_result["name"],
+                                "arguments": self._get_tool_args_from_response(
+                                    response, tool_result["name"]
+                                ),
+                                "result": json.loads(tool_result["result"]),
+                            }
+                        )
 
                     recorder.record_interaction(
                         attempt=attempts,
@@ -342,7 +354,9 @@ class OpenAIPlayer:
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
 
-    def _get_tool_args_from_response(self, response: Any, tool_name: str) -> dict[str, Any]:
+    def _get_tool_args_from_response(
+        self, response: Any, tool_name: str
+    ) -> dict[str, Any]:
         """Extract tool arguments from response for a specific tool call."""
         for item in response.output:
             if item.type == "function_call" and item.name == tool_name:
@@ -374,6 +388,23 @@ class OpenAIPlayer:
             if self.include_reasoning_summary:
                 kwargs["reasoning"]["summary"] = "auto"
         return kwargs
+
+    def _create_with_retry(self, **kwargs: Any) -> Any:
+        """Call the OpenAI API with exponential backoff."""
+        attempt = 0
+        while True:
+            try:
+                return self.client.responses.create(**kwargs)
+            except Exception as e:  # noqa: BLE001
+                attempt += 1
+                if attempt > self.api_max_retries:
+                    logger.error(f"OpenAI call failed after {attempt - 1} retries: {e}")
+                    raise
+                delay = self.api_backoff * (2 ** (attempt - 1))
+                logger.warning(
+                    f"OpenAI call error: {e}. Retry {attempt}/{self.api_max_retries} in {delay:.1f}s"
+                )
+                time.sleep(delay)
 
     def _extract_reasoning_summary(
         self, response: Any, game: BusinessGame, attempts: int
@@ -444,8 +475,12 @@ class OpenAIPlayer:
                 cached = getattr(details, "cached_tokens", 0)
                 self.total_token_usage["cached_input_tokens"] += cached
 
-        if hasattr(usage, "output_tokens_details") or hasattr(usage, "completion_tokens_details"):
-            details = getattr(usage, "output_tokens_details", None) or getattr(usage, "completion_tokens_details", None)
+        if hasattr(usage, "output_tokens_details") or hasattr(
+            usage, "completion_tokens_details"
+        ):
+            details = getattr(usage, "output_tokens_details", None) or getattr(
+                usage, "completion_tokens_details", None
+            )
             if details:
                 reasoning = getattr(details, "reasoning_tokens", 0)
                 self.total_token_usage["reasoning_tokens"] += reasoning
