@@ -6,7 +6,8 @@ import statistics
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Tuple
+
 import matplotlib.pyplot as plt
 
 # Game constants
@@ -53,7 +54,7 @@ HOUR_MULTIPLIERS = {
 }
 
 
-def calculate_business_metrics_final(model: str, stats: Dict[str, Any], full_data: List[Dict[str, Any]]) -> Dict[str, float]:
+def calculate_business_metrics_final(model: str, stats: dict[str, Any], full_data: list[dict[str, Any]]) -> dict[str, float]:
     """Calculate final business efficiency metrics with user-specified sign conventions."""
     # Find the game data for this model
     game_data = None
@@ -262,7 +263,7 @@ def calculate_business_metrics_final(model: str, stats: Dict[str, Any], full_dat
         "stockout": -total_stockout_loss / num_games if num_games > 0 else 0,          # - = loss
     }
 
-def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
+def generate_comprehensive_plots(data: dict[str, Any], output_dir: str) -> None:
     """Generate average profit trajectory plot."""
     
     output_path = Path(output_dir)
@@ -343,7 +344,7 @@ def generate_comprehensive_plots(data: Dict[str, Any], output_dir: str) -> None:
     
     print(f"Average profit trajectory plot saved to: {plot_file}")
 
-def generate_computational_requirements_table(model_stats: Dict[str, Any], output_file: str, data: List[Dict[str, Any]]) -> None:
+def generate_computational_requirements_table(model_stats: dict[str, Any], output_file: str, data: list[dict[str, Any]]) -> None:
     """Generate LaTeX table with computational requirements and detailed tool usage."""
     
     header = r"""\begin{table}[h]
@@ -411,7 +412,7 @@ def generate_computational_requirements_table(model_stats: Dict[str, Any], outpu
     print(f"Computational requirements table saved to: {output_file}")
 
 
-def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file: str, data: List[Dict[str, Any]]) -> None:
+def generate_comprehensive_latex_table(model_stats: dict[str, Any], output_file: str, data: list[dict[str, Any]]) -> None:
     """Generate LaTeX table with business efficiency metrics."""
     
     header = r"""\begin{table}[h]
@@ -464,7 +465,7 @@ def generate_comprehensive_latex_table(model_stats: Dict[str, Any], output_file:
     
     print(f"LaTeX table saved to: {output_file}")
 
-def analyze_comprehensive_format(data: List[Dict[str, Any]], filename: str):
+def analyze_comprehensive_format(data: list[dict[str, Any]], filename: str):
     """Analyze comprehensive v0.5 format results."""
     print(f"\nAnalyzing: {filename}")
     print("=" * 80)
@@ -581,7 +582,7 @@ def analyze_comprehensive_format(data: List[Dict[str, Any]], filename: str):
     plot_dir = f"results/plots/{base_name}"
     generate_comprehensive_plots({"games": data}, plot_dir)
 
-def generate_efficiency_latex(data: List[Dict[str, Any]], filename: str):
+def generate_efficiency_latex(data: list[dict[str, Any]], filename: str):
     """Generate LaTeX table for efficiency metrics."""
     # Create results/latex directory if it doesn't exist
     latex_dir = Path("results/latex")
