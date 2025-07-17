@@ -1,6 +1,12 @@
-"""Main game engine for the lemonade stand business simulation."""
+"""Main game engine for the lemonade stand business simulation.
+
+Inventory operations are protected by a :class:`threading.Lock` so that
+multiple threads can safely modify the same inventory instance. Read
+operations are lock-free and may observe intermediate states.
+"""
 
 import random
+import threading
 from collections import deque
 from typing import Any
 
@@ -40,6 +46,9 @@ class Inventory:
             "water": 0.02,
         }
 
+        # Lock protecting inventory modifications
+        self.lock = threading.Lock()
+
     def add_items(self, item_type: str, quantity: int, current_day: int) -> None:
         """Add items to inventory with expiration date.
 
@@ -54,14 +63,15 @@ class Inventory:
         if quantity <= 0:
             return
 
-        # Calculate expiry day (infinite for water)
-        if self.shelf_life[item_type] == float("inf"):
-            expiry_day = float("inf")
-        else:
-            expiry_day = current_day + self.shelf_life[item_type]
+        with self.lock:
+            # Calculate expiry day (infinite for water)
+            if self.shelf_life[item_type] == float("inf"):
+                expiry_day = float("inf")
+            else:
+                expiry_day = current_day + self.shelf_life[item_type]
 
-        # Add to inventory queue
-        self.items[item_type].append((quantity, expiry_day))
+            # Add to inventory queue
+            self.items[item_type].append((quantity, expiry_day))
 
     def get_available(self, item_type: str) -> int:
         """Get total available quantity of an item type.
@@ -103,26 +113,30 @@ class Inventory:
         Returns:
             True if all items were available and used, False otherwise
         """
-        # First check if we have enough of everything
-        for item_type, needed in recipe.items():
-            if self.get_available(item_type) < needed:
-                return False
+        with self.lock:
+            # First check if we have enough of everything
+            for item_type, needed in recipe.items():
+                if self.get_available(item_type) < needed:
+                    return False
 
-        # Use items FIFO
-        for item_type, needed in recipe.items():
-            remaining_needed = needed
+            # Use items FIFO
+            for item_type, needed in recipe.items():
+                remaining_needed = needed
 
-            while remaining_needed > 0 and self.items[item_type]:
-                quantity, expiry = self.items[item_type][0]
+                while remaining_needed > 0 and self.items[item_type]:
+                    quantity, expiry = self.items[item_type][0]
 
-                if quantity <= remaining_needed:
-                    # Use entire batch
-                    self.items[item_type].popleft()
-                    remaining_needed -= quantity
-                else:
-                    # Use part of batch
-                    self.items[item_type][0] = (quantity - remaining_needed, expiry)
-                    remaining_needed = 0
+                    if quantity <= remaining_needed:
+                        # Use entire batch
+                        self.items[item_type].popleft()
+                        remaining_needed -= quantity
+                    else:
+                        # Use part of batch
+                        self.items[item_type][0] = (
+                            quantity - remaining_needed,
+                            expiry,
+                        )
+                        remaining_needed = 0
 
         return True
 
@@ -137,16 +151,17 @@ class Inventory:
         """
         expired = {}
 
-        for item_type, batches in self.items.items():
-            expired_quantity = 0
+        with self.lock:
+            for item_type, batches in self.items.items():
+                expired_quantity = 0
 
-            # Remove expired batches from front of queue
-            while batches and batches[0][1] <= current_day:
-                quantity, _ = batches.popleft()
-                expired_quantity += quantity
+                # Remove expired batches from front of queue
+                while batches and batches[0][1] <= current_day:
+                    quantity, _ = batches.popleft()
+                    expired_quantity += quantity
 
-            if expired_quantity > 0:
-                expired[item_type] = expired_quantity
+                if expired_quantity > 0:
+                    expired[item_type] = expired_quantity
 
         return expired
 
