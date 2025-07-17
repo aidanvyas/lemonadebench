@@ -62,6 +62,22 @@ class OpenAIPlayer:
             raise ValueError("OpenAI API key not found")
         self.client = OpenAI(api_key=api_key)
 
+    def close(self) -> None:
+        """Close the underlying OpenAI client."""
+        try:
+            close_method = getattr(self.client, "close", None)
+            if callable(close_method):
+                close_method()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(f"Failed to close OpenAI client: {exc}")
+
+    # Support use as a context manager
+    def __enter__(self) -> "OpenAIPlayer":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - trivial
+        self.close()
+
         # Track errors
         self.errors: list[dict[str, Any]] = []
 
