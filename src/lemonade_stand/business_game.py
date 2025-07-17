@@ -40,19 +40,24 @@ class Inventory:
             "water": 0.02,
         }
 
-    def add_items(self, item_type: str, quantity: int, current_day: int) -> None:
+    def add_items(
+        self, item_type: str, quantity: int, current_day: int
+    ) -> dict[str, Any]:
         """Add items to inventory with expiration date.
 
         Args:
             item_type: Type of item ('cups', 'lemons', 'sugar', 'water')
             quantity: Number of items to add
             current_day: Current day number for calculating expiry
+
+        Returns:
+            Result dictionary with success status and details
         """
         if item_type not in self.items:
-            raise ValueError(f"Unknown item type: {item_type}")
+            return {"success": False, "error": f"Unknown item type: {item_type}"}
 
         if quantity <= 0:
-            return
+            return {"success": True, "added": 0, "expiry_day": None}
 
         # Calculate expiry day (infinite for water)
         if self.shelf_life[item_type] == float("inf"):
@@ -62,6 +67,12 @@ class Inventory:
 
         # Add to inventory queue
         self.items[item_type].append((quantity, expiry_day))
+
+        return {
+            "success": True,
+            "added": quantity,
+            "expiry_day": expiry_day if expiry_day != float("inf") else "never",
+        }
 
     def get_available(self, item_type: str) -> int:
         """Get total available quantity of an item type.
@@ -94,19 +105,19 @@ class Inventory:
                 details[item_type].append(batch_info)
         return details
 
-    def use_items(self, recipe: dict[str, int]) -> bool:
+    def use_items(self, recipe: dict[str, int]) -> dict[str, Any]:
         """Use items according to recipe, FIFO style.
 
         Args:
             recipe: Dictionary of item_type -> quantity needed
 
         Returns:
-            True if all items were available and used, False otherwise
+            Result dictionary indicating success
         """
         # First check if we have enough of everything
         for item_type, needed in recipe.items():
             if self.get_available(item_type) < needed:
-                return False
+                return {"success": False, "error": "Insufficient inventory"}
 
         # Use items FIFO
         for item_type, needed in recipe.items():
@@ -124,7 +135,7 @@ class Inventory:
                     self.items[item_type][0] = (quantity - remaining_needed, expiry)
                     remaining_needed = 0
 
-        return True
+        return {"success": True}
 
     def remove_expired(self, current_day: int) -> dict[str, int]:
         """Remove expired items from inventory.

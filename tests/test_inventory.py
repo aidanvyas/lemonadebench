@@ -40,11 +40,13 @@ class TestInventory:
         assert inv.get_available("cups") == 150
 
     def test_add_invalid_item_type(self):
-        """Test adding invalid item type raises error."""
+        """Test adding invalid item type returns error."""
         inv = Inventory()
 
-        with pytest.raises(ValueError, match="Unknown item type"):
-            inv.add_items("invalid_item", 10, current_day=1)
+        result = inv.add_items("invalid_item", 10, current_day=1)
+
+        assert result["success"] is False
+        assert "Unknown item type" in result["error"]
 
     def test_use_items_success(self):
         """Test using items when sufficient inventory."""
@@ -60,7 +62,7 @@ class TestInventory:
         recipe = {"cups": 5, "lemons": 5, "sugar": 5, "water": 5}
         result = inv.use_items(recipe)
 
-        assert result is True
+        assert result["success"] is True
         assert inv.get_available("cups") == 5
         assert inv.get_available("lemons") == 5
         assert inv.get_available("sugar") == 5
@@ -80,7 +82,7 @@ class TestInventory:
         recipe = {"cups": 5, "lemons": 5, "sugar": 5, "water": 5}
         result = inv.use_items(recipe)
 
-        assert result is False
+        assert result["success"] is False
         # Inventory should be unchanged
         assert inv.get_available("cups") == 10
         assert inv.get_available("lemons") == 2
