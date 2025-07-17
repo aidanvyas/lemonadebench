@@ -6,6 +6,7 @@ import os
 import time
 from typing import Any
 
+import openai
 from openai import OpenAI
 
 from .business_game import BusinessGame
@@ -22,6 +23,9 @@ class OpenAIPlayer:
         model_name: str = "gpt-4.1-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
+        max_attempts: int = 10,
+        backoff_initial: float = 1.0,
+        backoff_factor: float = 2.0,
     ):
         """Initialize the AI player.
 
@@ -32,6 +36,9 @@ class OpenAIPlayer:
         """
         self.model_name = model_name
         self.include_reasoning_summary = include_reasoning_summary
+        self.max_attempts = max_attempts
+        self.backoff_initial = backoff_initial
+        self.backoff_factor = backoff_factor
 
         # For stateless approach - minimal tracking
         self.reasoning_summaries: list[dict[str, Any]] = []
@@ -253,20 +260,32 @@ class OpenAIPlayer:
             return json.dumps({"error": str(e)})
 
     def play_turn(
-        self, game: BusinessGame, recorder: GameRecorder | None = None
+        self,
+        game: BusinessGame,
+        recorder: GameRecorder | None = None,
+        max_attempts: int | None = None,
+        backoff_initial: float | None = None,
+        backoff_factor: float | None = None,
     ) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API (stateless).
 
         Args:
             game: The BusinessGame instance
             recorder: Optional GameRecorder to record all interactions
+            max_attempts: Override the maximum number of attempts for this turn
+            backoff_initial: Override the initial backoff delay in seconds
+            backoff_factor: Override the multiplier applied after each retry
 
         Returns:
             Dictionary with success status and attempt information
         """
         prompt = game.get_turn_prompt()
-        max_attempts = 10
+        max_attempts = max_attempts or self.max_attempts
+        backoff_initial = backoff_initial or self.backoff_initial
+        backoff_factor = backoff_factor or self.backoff_factor
+
         attempts = 0
+        backoff = backoff_initial
         all_tool_calls_this_turn: list[str] = []
         conversation = [{"role": "user", "content": prompt}]
 
@@ -335,15 +354,29 @@ class OpenAIPlayer:
 
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
+            except openai.OpenAIError as e:
+                logger.warning(
+                    f"API error on attempt {attempts}: {e}. Retrying in {backoff:.1f}s"
+                )
+                self.errors.append({"day": game.current_day, "error": str(e)})
+                if recorder and hasattr(recorder, "record_error"):
+                    recorder.record_error(str(e))
+                if attempts < max_attempts:
+                    time.sleep(backoff)
+                    backoff *= backoff_factor
+                else:
+                    logger.error("Max attempts reached due to API errors")
             except Exception as e:
                 logger.error(f"Error in turn: {e}")
                 self.errors.append({"day": game.current_day, "error": str(e)})
-                if attempts < max_attempts:
-                    logger.warning(f"Error on attempt {attempts}, will retry")
-
-                # Record the error if recorder is provided
                 if recorder and hasattr(recorder, "record_error"):
                     recorder.record_error(str(e))
+                if attempts < max_attempts:
+                    logger.warning(
+                        f"Error on attempt {attempts}, retrying in {backoff:.1f}s"
+                    )
+                    time.sleep(backoff)
+                    backoff *= backoff_factor
 
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
 
