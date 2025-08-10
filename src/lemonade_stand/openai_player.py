@@ -49,12 +49,15 @@ class OpenAIPlayer:
             "gpt-4.1-nano": {"input": 0.10, "cached_input": 0.025, "output": 0.40},
             "gpt-4.1-mini": {"input": 0.40, "cached_input": 0.10, "output": 1.60},
             "gpt-4.1": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
+            "gpt-5": {"input": 1.25, "cached_input": 0.125, "output": 10.00},
+            "gpt-5-mini": {"input": 0.25, "cached_input": 0.025, "output": 2.00},
+            "gpt-5-nano": {"input": 0.05, "cached_input": 0.005, "output": 0.40},
             "o3": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
             "o4-mini": {"input": 1.10, "cached_input": 0.275, "output": 4.40},
         }
 
         # Check if this is a reasoning model
-        self.is_reasoning_model = model_name.startswith(("o1", "o3", "o4"))
+        self.is_reasoning_model = model_name.startswith(("o1", "o3", "o4", "gpt-5", "gpt-5-mini", "gpt-5-nano"))
 
         # Initialize OpenAI client (synchronous)
         api_key = api_key or os.getenv("OPENAI_API_KEY")

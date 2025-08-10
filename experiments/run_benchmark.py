@@ -4,9 +4,11 @@
 import argparse
 import json
 import logging
+import os
 import statistics
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 
 from tqdm import tqdm
@@ -42,7 +44,8 @@ def run_single_game(
     game_number: int,
     days: int = 30,
     starting_cash: float = 1000,
-    seed: int = None,
+    seed: int | None = None,
+    results_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Run a single lemonade business game.
 
@@ -72,6 +75,14 @@ def run_single_game(
             "starting_cash": starting_cash,
             "seed": seed,
         },
+    )
+
+    if results_dir is None:
+        results_dir = Path("results/json")
+    results_dir.mkdir(parents=True, exist_ok=True)
+    unique_ts = int(time.time() * 1000)
+    recording_path = (
+        results_dir / f"{model_name}_game{game_number}_{unique_ts}_{os.getpid()}.json"
     )
 
     # Track additional metrics
@@ -175,7 +186,7 @@ def run_single_game(
             f"Duration={duration:.1f}s"
         )
 
-        return {
+        result_dict = {
             "game_number": game_number,
             "model": model_name,
             "success": True,
@@ -204,8 +215,11 @@ def run_single_game(
             "duration_seconds": duration,
             "game_history": game.history,  # Full game history for detailed analysis
             "supply_cost_history": game.supply_cost_history,
-            "recorder": recorder,  # Include recorder for saving later
         }
+
+        recorder.save_to_file(recording_path)
+        result_dict["recording_path"] = str(recording_path)
+        return result_dict
 
     except Exception as e:
         logger.error(f"Fatal error in game {game_number}: {e}")
@@ -213,6 +227,8 @@ def run_single_game(
 
         traceback.print_exc()
 
+        recorder.record_final_results({}, player.calculate_cost()["total_cost"])
+        recorder.save_to_file(recording_path)
         return {
             "game_number": game_number,
             "model": model_name,
@@ -221,6 +237,7 @@ def run_single_game(
             "error": str(e),
             "days_played": game.current_day,
             "duration_seconds": time.time() - start_time,
+            "recording_path": str(recording_path),
         }
     finally:
         player.close()
@@ -325,6 +342,12 @@ def main():
     parser.add_argument(
         "--no-analysis", action="store_true", help="Skip automatic analysis generation"
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of parallel worker processes",
+    )
     args = parser.parse_args()
 
     logger.info("=" * 70)
@@ -334,6 +357,7 @@ def main():
     logger.info(f"Games per model: {args.games}")
     logger.info(f"Days per game: {args.days}")
     logger.info(f"Starting cash: ${args.starting_cash}")
+    logger.info(f"Workers: {args.workers}")
     logger.info(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("")
 
@@ -357,43 +381,54 @@ def main():
         logger.info("-" * 50)
 
         model_start = time.time()
-        games = []
+        games: list[dict[str, Any]] = []
 
-        # Run multiple games
-        games_bar = tqdm(
-            range(1, args.games + 1),
-            desc=f"{model} Games",
-            position=1,
-            leave=False,
-        )
-        for game_num in games_bar:
-            # Use different seed for each game if base seed provided
-            game_seed = (args.seed + game_num) if args.seed else None
+        # Use ProcessPoolExecutor with tqdm progress bar
+        with ProcessPoolExecutor(max_workers=args.workers) as executor:
+            futures = []
+            for game_num in range(1, args.games + 1):
+                game_seed = (args.seed + game_num) if args.seed else None
+                futures.append(
+                    executor.submit(
+                        run_single_game,
+                        model,
+                        game_num,
+                        args.days,
+                        args.starting_cash,
+                        game_seed,
+                        Path("results/json"),
+                    )
+                )
 
-            result = run_single_game(
-                model_name=model,
-                game_number=game_num,
-                days=args.days,
-                starting_cash=args.starting_cash,
-                seed=game_seed,
+            # Progress bar for game completion
+            games_bar = tqdm(
+                total=args.games,
+                desc=f"{model} Games",
+                position=1,
+                leave=False,
             )
+            
+            for future in as_completed(futures):
+                result = future.result()
+                record_path = Path(result.get("recording_path"))
+                if result.get("success"):
+                    with open(record_path) as f:
+                        record_data = json.load(f)
+                    benchmark_recorder.add_game_recording(record_data)
+                game_result = result.copy()
+                game_result.pop("recording_path", None)
+                games.append(game_result)
 
-            # Extract recorder and add to benchmark recorder
-            if result.get("success") and "recorder" in result:
-                benchmark_recorder.add_game_recording(result["recorder"])
+                # Update progress bar and log
+                games_bar.update(1)
+                if result["success"]:
+                    games_bar.set_postfix(status="done")
+                    logger.info(f"  Game {result['game_number']}/{args.games} complete")
+                else:
+                    games_bar.set_postfix(status="failed")
+                    logger.error(f"  Game {result['game_number']}/{args.games} failed")
 
-            # Remove recorder from result before appending (to avoid duplication)
-            result_copy = result.copy()
-            result_copy.pop("recorder", None)
-            games.append(result_copy)
-
-            # Log progress
-            if result["success"]:
-                games_bar.set_postfix(status="done")
-            else:
-                games_bar.set_postfix(status="failed")
-
-        games_bar.close()
+            games_bar.close()
 
         # Aggregate results for this model
         model_results = aggregate_results(games)
