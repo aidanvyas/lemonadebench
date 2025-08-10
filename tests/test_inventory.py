@@ -1,5 +1,7 @@
 """Tests for the inventory management system."""
 
+import threading
+
 import pytest
 
 from src.lemonade_stand.business_game import Inventory
@@ -190,3 +192,50 @@ class TestInventory:
         inv.add_items("water", 200, current_day=1)  # 200 * 0.02 = 4.00
 
         assert inv.get_total_value() == pytest.approx(26.50)
+
+    def test_concurrent_add_items(self):
+        """Adding items from multiple threads should be safe."""
+        inv = Inventory()
+
+        def worker():
+            inv.add_items("lemons", 10, current_day=1)
+
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert inv.get_available("lemons") == 100
+
+    def test_concurrent_use_items(self):
+        """Using items concurrently should not corrupt counts."""
+        inv = Inventory()
+        inv.add_items("cups", 100, current_day=1)
+
+        def worker():
+            assert inv.use_items({"cups": 10}) is True
+
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert inv.get_available("cups") == 0
+
+    def test_concurrent_remove_expired(self):
+        """Removing expired items concurrently should work."""
+        inv = Inventory()
+        inv.add_items("sugar", 50, current_day=0)
+
+        def worker():
+            inv.remove_expired(current_day=100)
+
+        threads = [threading.Thread(target=worker) for _ in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert inv.get_available("sugar") == 0
