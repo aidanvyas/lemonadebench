@@ -323,48 +323,105 @@ class GameUI {
      * Show day results
      */
     showResultsPhase(dayResult) {
+        console.log('🔧 showResultsPhase called with:', dayResult);
+        
         const gamePhase = document.getElementById('game-phase');
         const template = document.getElementById('results-phase-template');
-        gamePhase.innerHTML = template.innerHTML;
-
-        this.displayDayResults(dayResult);
-        this.bindResultsEventHandlers();
+        
+        console.log('🔧 Elements found:', {
+            gamePhase: !!gamePhase,
+            template: !!template,
+            templateContent: template ? template.innerHTML.length : 0
+        });
+        
+        if (!gamePhase) {
+            console.error('❌ game-phase element not found');
+            alert('Error: Could not find game-phase element');
+            return;
+        }
+        
+        if (!template) {
+            console.error('❌ results-phase-template not found');
+            alert('Error: Could not find results template');
+            return;
+        }
+        
+        try {
+            gamePhase.innerHTML = template.innerHTML;
+            console.log('🔧 Template inserted successfully');
+            
+            this.displayDayResults(dayResult);
+            this.bindResultsEventHandlers();
+            
+            console.log('🔧 showResultsPhase completed successfully');
+        } catch (error) {
+            console.error('❌ Error in showResultsPhase:', error);
+            alert(`Error displaying results: ${error.message}`);
+        }
     }
 
     /**
      * Display day results in a grid
      */
     displayDayResults(dayResult) {
+        console.log('🔧 displayDayResults called with:', dayResult);
+        
         const resultsDiv = document.getElementById('day-results');
+        
+        if (!resultsDiv) {
+            console.error('❌ day-results element not found');
+            alert('Error: Could not find day-results element');
+            return;
+        }
+        
+        // Validate dayResult properties
+        const requiredProps = ['customersServed', 'customersLost', 'revenue', 'operatingCost', 'profit', 'endingCash'];
+        for (const prop of requiredProps) {
+            if (dayResult[prop] === undefined || dayResult[prop] === null) {
+                console.error(`❌ dayResult.${prop} is ${dayResult[prop]}`);
+                alert(`Error: Missing result data for ${prop}`);
+                return;
+            }
+        }
         
         const profitClass = dayResult.profit >= 0 ? 'positive' : 'negative';
         
-        resultsDiv.innerHTML = `
-            <div class="result-card">
-                <div class="result-label">Customers Served</div>
-                <div class="result-value">${dayResult.customersServed}</div>
-            </div>
-            <div class="result-card">
-                <div class="result-label">Customers Lost</div>
-                <div class="result-value">${dayResult.customersLost}</div>
-            </div>
-            <div class="result-card">
-                <div class="result-label">Revenue</div>
-                <div class="result-value">$${dayResult.revenue.toFixed(2)}</div>
-            </div>
-            <div class="result-card">
-                <div class="result-label">Operating Cost</div>
-                <div class="result-value">$${dayResult.operatingCost.toFixed(2)}</div>
-            </div>
-            <div class="result-card">
-                <div class="result-label">Profit</div>
-                <div class="result-value ${profitClass}">$${dayResult.profit.toFixed(2)}</div>
-            </div>
-            <div class="result-card">
-                <div class="result-label">Ending Cash</div>
-                <div class="result-value">$${dayResult.endingCash.toFixed(2)}</div>
-            </div>
-        `;
+        console.log('🔧 Building results HTML...');
+        
+        try {
+            resultsDiv.innerHTML = `
+                <div class="result-card">
+                    <div class="result-label">Customers Served</div>
+                    <div class="result-value">${dayResult.customersServed}</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Customers Lost</div>
+                    <div class="result-value">${dayResult.customersLost}</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Revenue</div>
+                    <div class="result-value">$${dayResult.revenue.toFixed(2)}</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Operating Cost</div>
+                    <div class="result-value">$${dayResult.operatingCost.toFixed(2)}</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Profit</div>
+                    <div class="result-value ${profitClass}">$${dayResult.profit.toFixed(2)}</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-label">Ending Cash</div>
+                    <div class="result-value">$${dayResult.endingCash.toFixed(2)}</div>
+                </div>
+            `;
+            
+            console.log('🔧 Results HTML set successfully');
+            
+        } catch (error) {
+            console.error('❌ Error setting results HTML:', error);
+            alert(`Error displaying results: ${error.message}`);
+        }
     }
 
     /**

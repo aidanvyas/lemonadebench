@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LemonadeBench - Live Debug Monitor</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; margin: 0; padding: 20px; }
+        .container { display: grid; grid-template-columns: 1fr 400px; gap: 20px; height: 100vh; }
+        .game-frame { background: white; border: 2px solid #00ff00; }
+        .debug-panel { background: #000; border: 2px solid #00ff00; padding: 10px; overflow-y: auto; }
+        .debug-title { color: #ff6600; font-size: 18px; margin-bottom: 10px; }
+        .log-entry { margin-bottom: 5px; font-size: 12px; }
+        .log-error { color: #ff4444; }
+        .log-warn { color: #ffaa00; }
+        .log-info { color: #00ff00; }
+        .log-debug { color: #66aaff; }
+        .clear-btn { 
+            background: #333; color: #fff; border: 1px solid #666; 
+            padding: 5px 10px; margin-bottom: 10px; cursor: pointer; 
+        }
+        .clear-btn:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <iframe src="/" class="game-frame" id="gameFrame"></iframe>
+        <div class="debug-panel">
+            <div class="debug-title">🔧 Live Console Monitor</div>
+            <button class="clear-btn" onclick="clearLogs()">Clear Logs</button>
+            <div id="logOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        let logCount = 0;
+        const logOutput = document.getElementById('logOutput');
+        
+        // Override console methods in the iframe
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'console') {
+                addLog(event.data.level, event.data.message, event.data.args);
+            }
+        });
+
+        function addLog(level, message, args = []) {
+            logCount++;
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${level}`;
+            
+            let argsStr = '';
+            if (args && args.length > 0) {
+                argsStr = ' ' + args.map(arg => {
+                    if (typeof arg === 'object') {
+                        return JSON.stringify(arg, null, 2);
+                    }
+                    return String(arg);
+                }).join(' ');
+            }
+            
+            logEntry.innerHTML = `<span style="color: #666">[${timestamp}]</span> ${message}${argsStr}`;
+            
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+            
+            // Limit to 1000 log entries
+            if (logCount > 1000) {
+                logOutput.removeChild(logOutput.firstChild);
+                logCount--;
+            }
+        }
+
+        function clearLogs() {
+            logOutput.innerHTML = '';
+            logCount = 0;
+        }
+
+        // Inject console monitoring script into iframe when it loads
+        document.getElementById('gameFrame').addEventListener('load', function() {
+            try {
+                const iframe = this;
+                const iframeWindow = iframe.contentWindow;
+                const iframeDocument = iframe.contentDocument;
+
+                // Only proceed if we can access the iframe content (same origin)
+                if (iframeDocument) {
+                    // Inject console monitoring script
+                    const script = iframeDocument.createElement('script');
+                    script.textContent = `
+                        // Override console methods to send to parent
+                        const originalConsole = {
+                            log: console.log,
+                            error: console.error,
+                            warn: console.warn,
+                            info: console.info,
+                            debug: console.debug
+                        };
+
+                        function sendToParent(level, args) {
+                            const message = args.length > 0 ? String(args[0]) : '';
+                            const restArgs = args.length > 1 ? Array.from(args).slice(1) : [];
+                            
+                            window.parent.postMessage({
+                                type: 'console',
+                                level: level,
+                                message: message,
+                                args: restArgs
+                            }, '*');
+                            
+                            // Also call original console method
+                            originalConsole[level].apply(console, args);
+                        }
+
+                        console.log = function(...args) { sendToParent('info', args); };
+                        console.error = function(...args) { sendToParent('error', args); };
+                        console.warn = function(...args) { sendToParent('warn', args); };
+                        console.info = function(...args) { sendToParent('info', args); };
+                        console.debug = function(...args) { sendToParent('debug', args); };
+                        
+                        // Also capture window errors
+                        window.addEventListener('error', function(e) {
+                            sendToParent('error', ['Window Error:', e.message, 'at', e.filename + ':' + e.lineno]);
+                        });
+
+                        // Add status indicator
+                        const indicator = document.createElement('div');
+                        indicator.style.cssText = 'position: fixed; top: 10px; right: 10px; background: #00ff00; color: #000; padding: 5px 10px; font-size: 12px; font-weight: bold; z-index: 10000; border-radius: 3px;';
+                        indicator.textContent = '🔧 DEBUG MODE';
+                        document.body.appendChild(indicator);
+                        
+                        sendToParent('info', ['🔧 Debug monitoring active']);
+                    `;
+                    iframeDocument.head.appendChild(script);
+                }
+            } catch (e) {
+                addLog('error', 'Could not inject monitoring script: ' + e.message);
+            }
+        });
+
+        // Initial log
+        addLog('info', '🔧 Debug monitor started. Loading game...');
+    </script>
+</body>
+</html>
