@@ -131,18 +131,3 @@ class DemandModel {
         return totalDemand;
     }
 }
-
-/**
- * Simple seedable random number generator for reproducible results
- */
-class SeededRandom {
-    constructor(seed) {
-        this.seed = seed % 2147483647;
-        if (this.seed <= 0) this.seed += 2147483646;
-    }
-
-    random() {
-        this.seed = this.seed * 16807 % 2147483647;
-        return (this.seed - 1) / 2147483646;
-    }
-}

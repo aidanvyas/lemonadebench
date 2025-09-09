@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Console Test</h1>
+    <p>Open browser console to see errors</p>
+    
+    <script src="js/inventory.js"></script>
+    <script src="js/demand.js"></script>
+    <script src="js/game-engine.js"></script>
+    <script>
+        console.log('Testing game engine...');
+        try {
+            const game = new BusinessGame();
+            console.log('✅ Game created successfully');
+            
+            game.startNewDay();
+            console.log('✅ Day started successfully');
+            
+            const orderResult = game.orderSupplies({cups: 10, lemons: 10, sugar: 10, water: 10});
+            console.log('✅ Order placed:', orderResult);
+            
+            const priceResult = game.setPrice(2.50);
+            console.log('✅ Price set:', priceResult);
+            
+            const hoursResult = game.setOperatingHours(9, 17);
+            console.log('✅ Hours set:', hoursResult);
+            
+            const dayResult = game.simulateDay();
+            console.log('✅ Day simulated:', dayResult);
+            
+        } catch (error) {
+            console.error('❌ Error:', error);
+            console.error('Stack:', error.stack);
+        }
+    </script>
+</body>
+</html>

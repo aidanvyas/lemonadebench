@@ -249,41 +249,74 @@ class GameUI {
      * Open for business - set price, hours, and simulate day
      */
     openForBusiness() {
-        const price = parseFloat(document.getElementById('lemonade-price').value);
-        const openHour = parseInt(document.getElementById('open-hour').value);
-        const closeHour = parseInt(document.getElementById('close-hour').value);
+        try {
+            console.log('🔧 Debug: openForBusiness() called');
+            
+            const priceElement = document.getElementById('lemonade-price');
+            const openHourElement = document.getElementById('open-hour');
+            const closeHourElement = document.getElementById('close-hour');
+            
+            console.log('🔧 Debug: Elements found:', {
+                priceElement: !!priceElement,
+                openHourElement: !!openHourElement,
+                closeHourElement: !!closeHourElement
+            });
+            
+            if (!priceElement || !openHourElement || !closeHourElement) {
+                alert('Error: Could not find form elements. Please refresh and try again.');
+                return;
+            }
+            
+            const price = parseFloat(priceElement.value);
+            const openHour = parseInt(openHourElement.value);
+            const closeHour = parseInt(closeHourElement.value);
+            
+            console.log('🔧 Debug: Values:', { price, openHour, closeHour });
 
-        // Validate inputs
-        if (!price || price < 0) {
-            alert('Please enter a valid price');
-            return;
+            // Validate inputs
+            if (!price || price < 0) {
+                alert('Please enter a valid price');
+                return;
+            }
+
+            // Set price and hours
+            console.log('🔧 Debug: Setting price and hours...');
+            const priceResult = this.game.setPrice(price);
+            const hoursResult = this.game.setOperatingHours(openHour, closeHour);
+            
+            console.log('🔧 Debug: Results:', { priceResult, hoursResult });
+
+            if (!priceResult.success) {
+                alert(priceResult.error);
+                return;
+            }
+
+            if (!hoursResult.success) {
+                alert(hoursResult.error);
+                return;
+            }
+
+            // Simulate the day
+            console.log('🔧 Debug: Simulating day...');
+            const dayResult = this.game.simulateDay();
+            console.log('🔧 Debug: Day result:', dayResult);
+            
+            if (!dayResult.success) {
+                alert(dayResult.error);
+                return;
+            }
+
+            this.currentPhase = 'results';
+            this.showResultsPhase(dayResult);
+            this.updateDisplay();
+            
+            console.log('🔧 Debug: openForBusiness() completed successfully');
+            
+        } catch (error) {
+            console.error('❌ Error in openForBusiness():', error);
+            console.error('Stack trace:', error.stack);
+            alert(`An error occurred: ${error.message}. Please check the console for details.`);
         }
-
-        // Set price and hours
-        const priceResult = this.game.setPrice(price);
-        const hoursResult = this.game.setOperatingHours(openHour, closeHour);
-
-        if (!priceResult.success) {
-            alert(priceResult.error);
-            return;
-        }
-
-        if (!hoursResult.success) {
-            alert(hoursResult.error);
-            return;
-        }
-
-        // Simulate the day
-        const dayResult = this.game.simulateDay();
-        
-        if (!dayResult.success) {
-            alert(dayResult.error);
-            return;
-        }
-
-        this.currentPhase = 'results';
-        this.showResultsPhase(dayResult);
-        this.updateDisplay();
     }
 
     /**
