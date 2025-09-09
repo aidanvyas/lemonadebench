@@ -25,8 +25,6 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
-    "mypy>=1.5.0",
-    "black>=23.0.0",
 ]
 
 [project.scripts]
@@ -60,15 +58,6 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG001"]  # unused function argument
 
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-no_implicit_optional = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --strict-markers"
@@ -83,26 +72,3 @@ dev = [
     "ruff>=0.12.1",
 ]
 
-# Type checking configuration for ty
-[tool.ty]
-target-version = "py311"
-strict = true
-
-# Enable specific checks for comprehensive type analysis
-select = [
-    "invalid-argument-type",
-    "unresolved-reference", 
-    "unresolved-attribute",
-    "missing-argument",
-    "unknown-argument",
-    "call-non-callable",
-    "unresolved-import",
-    "deprecated",
-]
-
-# Ignore experimental/analysis files that might have incomplete types
-[tool.ty.per-file-ignores]
-"analysis/*" = ["unresolved-attribute", "invalid-argument-type"]
-"*nanoeval*" = ["unresolved-attribute", "unknown-argument"]
-"full_model_comparison.py" = ["unresolved-reference"]
-"estimate_claude_costs.py" = ["unresolved-reference"]
