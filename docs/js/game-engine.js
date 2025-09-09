@@ -238,6 +238,15 @@ class BusinessGame {
      * @returns {Object} Day simulation results
      */
     simulateDay() {
+        console.log('🔧 simulateDay() called');
+        console.log('🔧 Game state:', {
+            price: this.price,
+            openHour: this.openHour,
+            closeHour: this.closeHour,
+            priceSet: this.priceSet,
+            hoursSet: this.hoursSet
+        });
+        
         const [ready, missing] = this.checkReadyForNextDay();
         
         if (!ready) {
@@ -247,13 +256,36 @@ class BusinessGame {
             };
         }
 
+        // Validate critical values
+        if (this.price === null || this.price === undefined) {
+            return {
+                success: false,
+                error: `Price is ${this.price} - cannot simulate day`
+            };
+        }
+        
+        if (this.openHour === null || this.openHour === undefined || this.closeHour === null || this.closeHour === undefined) {
+            return {
+                success: false,
+                error: `Hours are invalid: open=${this.openHour}, close=${this.closeHour}`
+            };
+        }
+
         const hoursOpen = this.closeHour - this.openHour;
         const operatingCost = hoursOpen * this.hourlyOperatingCost;
         
+        console.log('🔧 Calculated values:', {
+            hoursOpen,
+            operatingCost,
+            hourlyOperatingCost: this.hourlyOperatingCost
+        });
+        
         // Get hourly customer demand
+        console.log('🔧 Calling calculateDailyCustomers...');
         const hourlyCustomers = this.demandModel.calculateDailyCustomers(
             this.price, this.openHour, this.closeHour, true
         );
+        console.log('🔧 Hourly customers:', hourlyCustomers);
         
         // Simulate serving customers hour by hour
         let totalCustomersServed = 0;
@@ -261,7 +293,17 @@ class BusinessGame {
         const hourlySales = {};
         const recipe = { cups: 1, lemons: 1, sugar: 1, water: 1 };
         
+        // Validate hourlyCustomers before looping
+        if (!hourlyCustomers || typeof hourlyCustomers !== 'object') {
+            return {
+                success: false,
+                error: `Invalid hourly customers data: ${hourlyCustomers}`
+            };
+        }
+        
+        console.log('🔧 Starting hourly simulation loop...');
         for (const [hour, customers] of Object.entries(hourlyCustomers)) {
+            console.log(`🔧 Processing hour ${hour} with ${customers} customers`);
             let served = 0;
             
             for (let i = 0; i < customers; i++) {

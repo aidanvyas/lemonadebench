@@ -48,6 +48,11 @@ class DemandModel {
      */
     setRandomSeed(seed) {
         // Simple seedable random number generator
+        if (typeof SeededRandom === 'undefined') {
+            console.warn('SeededRandom class not found, using Math.random()');
+            this._rng = null;
+            return;
+        }
         this._rng = new SeededRandom(seed);
     }
 
@@ -79,6 +84,17 @@ class DemandModel {
      * @returns {number} Number of customers (rounded to nearest integer)
      */
     calculateCustomers(price, hour, randomVariation = true) {
+        // Validate inputs
+        if (typeof price !== 'number' || isNaN(price)) {
+            console.error('🔧 Invalid price in calculateCustomers:', price);
+            return 0;
+        }
+        
+        if (typeof hour !== 'number' || isNaN(hour) || hour < 0 || hour > 23) {
+            console.error('🔧 Invalid hour in calculateCustomers:', hour);
+            return 0;
+        }
+        
         // Get base demand from price
         const baseDemand = this.calculateBaseDemand(price);
 
@@ -93,7 +109,21 @@ class DemandModel {
             demandWithTime *= factor;
         }
 
-        return Math.round(demandWithTime);
+        const result = Math.round(demandWithTime);
+        
+        // Debug extremely high results
+        if (result > 1000) {
+            console.warn('🔧 Very high customer demand:', {
+                price,
+                hour,
+                baseDemand,
+                hourMultiplier,
+                demandWithTime,
+                result
+            });
+        }
+
+        return result;
     }
 
     /**
