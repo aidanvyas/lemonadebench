@@ -109,11 +109,20 @@ class GameUI {
             { type: 'water', icon: '💧', name: 'Water' }
         ];
 
+        // Safe price formatting
+        function safePriceFormat(price) {
+            if (price === null || price === undefined || isNaN(price)) {
+                console.error(`❌ safePriceFormat: Invalid price ${price}`);
+                return '0.00';
+            }
+            return Number(price).toFixed(2);
+        }
+
         pricesDiv.innerHTML = items.map(item => `
             <div class="price-item">
                 <div class="item-icon">${item.icon}</div>
                 <div class="item-name">${item.name}</div>
-                <div class="item-price">$${prices[item.type].toFixed(2)}</div>
+                <div class="item-price">$${safePriceFormat(prices[item.type])}</div>
             </div>
         `).join('');
     }
@@ -153,10 +162,12 @@ class GameUI {
 
             // Update individual cost displays
             const costDisplay = input.parentElement.querySelector('.cost-display');
-            costDisplay.textContent = `$${cost.toFixed(2)}`;
+            const safeCost = (cost === null || cost === undefined || isNaN(cost)) ? 0 : cost;
+            costDisplay.textContent = `$${safeCost.toFixed(2)}`;
         });
 
-        document.getElementById('total-order-cost').textContent = total.toFixed(2);
+        const safeTotal = (total === null || total === undefined || isNaN(total)) ? 0 : total;
+        document.getElementById('total-order-cost').textContent = safeTotal.toFixed(2);
     }
 
     /**
@@ -242,7 +253,8 @@ class GameUI {
         const hoursOpen = closeHour - openHour;
         const cost = hoursOpen * this.game.hourlyOperatingCost;
 
-        document.getElementById('operating-cost-preview').textContent = cost.toFixed(2);
+        const safeCost = (cost === null || cost === undefined || isNaN(cost)) ? 0 : cost;
+        document.getElementById('operating-cost-preview').textContent = safeCost.toFixed(2);
     }
 
     /**
@@ -394,30 +406,41 @@ class GameUI {
         console.log('🔧 Building results HTML...');
         
         try {
+            // Safe number formatting function
+            function safeToFixed(value, decimals = 2) {
+                if (value === null || value === undefined || isNaN(value)) {
+                    console.error(`❌ safeToFixed: Invalid value ${value}`);
+                    return '0.00';
+                }
+                return Number(value).toFixed(decimals);
+            }
+            
+            console.log('🔧 Building HTML with safe formatting...');
+            
             resultsDiv.innerHTML = `
                 <div class="result-card">
                     <div class="result-label">Customers Served</div>
-                    <div class="result-value">${dayResult.customersServed}</div>
+                    <div class="result-value">${dayResult.customersServed || 0}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Customers Lost</div>
-                    <div class="result-value">${dayResult.customersLost}</div>
+                    <div class="result-value">${dayResult.customersLost || 0}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Revenue</div>
-                    <div class="result-value">$${dayResult.revenue.toFixed(2)}</div>
+                    <div class="result-value">$${safeToFixed(dayResult.revenue)}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Operating Cost</div>
-                    <div class="result-value">$${dayResult.operatingCost.toFixed(2)}</div>
+                    <div class="result-value">$${safeToFixed(dayResult.operatingCost)}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Profit</div>
-                    <div class="result-value ${profitClass}">$${dayResult.profit.toFixed(2)}</div>
+                    <div class="result-value ${profitClass}">$${safeToFixed(dayResult.profit)}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Ending Cash</div>
-                    <div class="result-value">$${dayResult.endingCash.toFixed(2)}</div>
+                    <div class="result-value">$${safeToFixed(dayResult.endingCash)}</div>
                 </div>
             `;
             
@@ -527,12 +550,21 @@ class GameUI {
      * Update all display elements
      */
     updateDisplay() {
+        // Safe number formatting function
+        function safeToFixed(value, decimals = 2) {
+            if (value === null || value === undefined || isNaN(value)) {
+                console.error(`❌ updateDisplay safeToFixed: Invalid value ${value}`);
+                return '0.00';
+            }
+            return Number(value).toFixed(decimals);
+        }
+
         // Update game stats
-        document.getElementById('current-day').textContent = this.game.currentDay;
-        document.getElementById('current-cash').textContent = `$${this.game.cash.toFixed(2)}`;
+        document.getElementById('current-day').textContent = this.game.currentDay || 0;
+        document.getElementById('current-cash').textContent = `$${safeToFixed(this.game.cash)}`;
         
-        const totalProfit = this.game.cash - this.game.startingCash;
-        document.getElementById('total-profit').textContent = `$${totalProfit.toFixed(2)}`;
+        const totalProfit = (this.game.cash || 0) - (this.game.startingCash || 0);
+        document.getElementById('total-profit').textContent = `$${safeToFixed(totalProfit)}`;
 
         // Update inventory display
         const summary = this.game.inventory.getSummary();
