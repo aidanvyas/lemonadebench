@@ -14,6 +14,7 @@ uv run python analysis/analyze_results.py --file results/json/[filename]_full.js
 # Development
 uv run python -m pytest                # Run tests
 uv run ruff check && uv run ruff format    # Lint and format
+uvx ty check                           # Type checking (comprehensive)
 ```
 
 ## Core Files
