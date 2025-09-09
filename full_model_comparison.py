@@ -14,7 +14,7 @@ try:
         for model in ["gpt-5", "gpt-5-mini", "gpt-5-nano"]:
             if model in gpt5_data["results"]:
                 models_data[model] = gpt5_data["results"][model]
-except:
+except FileNotFoundError:
     pass
 
 # GPT-4.1 family and O-series
@@ -26,7 +26,7 @@ try:
         for model in ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o4-mini", "o3"]:
             if model in gpt4_data["results"]:
                 models_data[model] = gpt4_data["results"][model]
-except:
+except FileNotFoundError:
     pass
 
 # Claude Haiku 3.5
@@ -38,7 +38,7 @@ try:
         models_data["claude-3.5-haiku"] = haiku_data["results"][
             "claude-3-haiku-20240307"
         ]
-except:
+except FileNotFoundError:
     pass
 
 # Gemini models
@@ -63,7 +63,7 @@ for model_name, filepath in gemini_files:
             data = json.load(f)
             if model_name in data["results"]:
                 models_data[model_name] = data["results"][model_name]
-    except:
+    except FileNotFoundError:
         pass
 
 print("=" * 100)

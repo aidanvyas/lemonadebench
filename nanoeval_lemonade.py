@@ -139,7 +139,7 @@ Recipe: 1 cup + 1 lemon + 1 sugar + 1 water = 1 lemonade
 Demand follows: Q = 50 - 10p (optimal price around $2.50)
 You must call open_for_business() after setting price and hours."""
 
-    def _execute_tool(self, tool_name: str, args: dict, game: Any) -> str:
+    def _execute_tool(self, tool_name: str, args: dict, _game: Any) -> str:
         """Execute a tool against the game instance."""
         # This would integrate with actual game logic
         # Simplified for demonstration
