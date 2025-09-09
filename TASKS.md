@@ -4,20 +4,20 @@
 > Last Updated: 2025-09-09
 
 ## 🔥 Current Sprint (This Week)
-_Focus: API Integration & Model Support_
+_Focus: Type Safety & Code Quality_
 
-- [ ] **Claude Support** - Add Anthropic player implementation
-  - Branch: `task/add-claude-support`
-  - Files: `src/lemonade_stand/anthropic_player.py`
+- [x] **Integrate ty Type Checker** - Add comprehensive type checking
+  - Branch: `task/integrate-ty-type-checker`
+  - Fixed 10+ critical type issues (34 → 24 errors)
+  - Added ty configuration to pyproject.toml
+
+- [ ] **Fix Remaining Type Issues** - Complete ty compliance
+  - Focus: src/ directory type safety
+  - Target: <5 remaining type errors
+
+- [ ] **Claude Support** - Add Anthropic player implementation  
+  - Files: `src/lemonade_stand/anthropic_player.py` (exists, needs testing)
   - Test with: `uv run python experiments/run_benchmark.py --models claude-3.5-haiku --days 5`
-
-- [ ] **Fix o1/o3 Token Counting** - Reasoning tokens not being tracked
-  - Branch: `fix/o1-token-counting`
-  - Issue: Reasoning tokens show as 0 in results
-  
-- [ ] **Add Gemini Flash 2.0** - Update pricing and model config
-  - Branch: `task/gemini-flash-2`
-  - Files: `src/lemonade_stand/gemini_player.py`
 
 ## 📦 Next Up (Backlog)
 ### High Priority

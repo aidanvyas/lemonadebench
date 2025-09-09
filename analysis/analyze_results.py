@@ -741,13 +741,13 @@ def analyze_results(filename: str | None = None) -> None:
     with open(filename) as f:
         raw = json.load(f)
     try:
-        recording = BenchmarkRecording.parse_obj(raw)
+        recording = BenchmarkRecording.model_validate(raw)
     except ValidationError as e:
         print(f"Invalid recording file: {e}")
         sys.exit(1)
 
-    games_data = [g.dict() for g in recording.games]
-    analyze_comprehensive_format(games_data, filename)
+    games_data = [g.model_dump() for g in recording.games]
+    analyze_comprehensive_format(games_data, filename or "unknown")
 
 
 def main():

@@ -82,3 +82,27 @@ dev = [
     "pytest>=8.4.1",
     "ruff>=0.12.1",
 ]
+
+# Type checking configuration for ty
+[tool.ty]
+target-version = "py311"
+strict = true
+
+# Enable specific checks for comprehensive type analysis
+select = [
+    "invalid-argument-type",
+    "unresolved-reference", 
+    "unresolved-attribute",
+    "missing-argument",
+    "unknown-argument",
+    "call-non-callable",
+    "unresolved-import",
+    "deprecated",
+]
+
+# Ignore experimental/analysis files that might have incomplete types
+[tool.ty.per-file-ignores]
+"analysis/*" = ["unresolved-attribute", "invalid-argument-type"]
+"*nanoeval*" = ["unresolved-attribute", "unknown-argument"]
+"full_model_comparison.py" = ["unresolved-reference"]
+"estimate_claude_costs.py" = ["unresolved-reference"]

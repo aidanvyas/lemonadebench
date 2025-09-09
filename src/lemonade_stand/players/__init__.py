@@ -10,12 +10,12 @@ This module contains implementations for various LLM providers:
 All players inherit from BasePlayer and implement the same interface.
 """
 
-from .anthropic import AnthropicPlayer
 from .base import BasePlayer
-from .deepseek import DeepSeekPlayer
-from .gemini import GeminiPlayer
-from .openai import OpenAIPlayer
-from .xai import XAIPlayer
+from ..anthropic_player import AnthropicPlayer
+from ..deepseek_player import DeepSeekPlayer
+from ..gemini_player import GeminiPlayer
+from ..openai_player import OpenAIPlayer
+from ..xai_player import XAIPlayer
 
 __all__ = [
     "BasePlayer",

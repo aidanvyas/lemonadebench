@@ -32,6 +32,9 @@ class BasePlayer(ABC):
         # Error tracking
         self.errors: list[dict[str, Any]] = []
 
+        # Reasoning summaries (for o1/o3 models that support reasoning)
+        self.reasoning_summaries: list[dict[str, Any]] = []
+
         # Model pricing (to be overridden by subclasses)
         self.model_pricing: dict[str, dict[str, float]] = {}
 

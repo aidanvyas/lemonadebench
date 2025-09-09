@@ -289,7 +289,7 @@ class BenchmarkRecorder:
         """
         recording = self.finalize()
         try:
-            BenchmarkRecording.parse_obj(recording)
+            BenchmarkRecording.model_validate(recording)
         except ValidationError as e:
             raise ValueError(f"Invalid benchmark recording: {e}") from e
 
