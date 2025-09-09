@@ -1,0 +1,27 @@
+# GitHub Pages configuration
+title: "LemonadeBench - Human Challenge"
+description: "Can you beat the AI? Run a profitable lemonade stand for 30 days!"
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "https://aidanvyas.github.io/lemonade_stand" # the base hostname & protocol
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - CHANGELOG.md
+  - LICENSE
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+
+# Include files that start with underscores
+include:
+  - _config.yml
+
+# GitHub Pages gem
+plugins:
+  - jekyll-feed

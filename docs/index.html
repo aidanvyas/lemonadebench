@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LemonadeBench - Human Challenge</title>
+    <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>🍋 LemonadeBench: Human Challenge</h1>
+            <p>Can you beat the AI? Run a profitable lemonade stand for 30 days!</p>
+        </header>
+
+        <div id="game-stats">
+            <div class="stat-card">
+                <div class="stat-label">Day</div>
+                <div id="current-day" class="stat-value">0</div>
+                <div class="stat-detail">of 30</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Cash</div>
+                <div id="current-cash" class="stat-value">$1000.00</div>
+                <div class="stat-detail">starting capital</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Profit</div>
+                <div id="total-profit" class="stat-value">$0.00</div>
+                <div class="stat-detail">total earned</div>
+            </div>
+        </div>
+
+        <div id="game-phase" class="phase-morning">
+            <!-- Game content will be dynamically loaded here -->
+        </div>
+
+        <div id="inventory-panel">
+            <h3>Current Inventory</h3>
+            <div id="inventory-grid">
+                <div class="inventory-item">
+                    <span class="item-icon">🥤</span>
+                    <span class="item-name">Cups</span>
+                    <span id="cups-count" class="item-count">0</span>
+                </div>
+                <div class="inventory-item">
+                    <span class="item-icon">🍋</span>
+                    <span class="item-name">Lemons</span>
+                    <span id="lemons-count" class="item-count">0</span>
+                </div>
+                <div class="inventory-item">
+                    <span class="item-icon">🍯</span>
+                    <span class="item-name">Sugar</span>
+                    <span id="sugar-count" class="item-count">0</span>
+                </div>
+                <div class="inventory-item">
+                    <span class="item-icon">💧</span>
+                    <span class="item-name">Water</span>
+                    <span id="water-count" class="item-count">0</span>
+                </div>
+            </div>
+            <div class="inventory-summary">
+                <strong>Can Make: <span id="max-lemonade">0</span> Lemonades</strong>
+            </div>
+        </div>
+
+        <div id="action-panel">
+            <button id="start-day-btn" class="primary-btn">Start New Day</button>
+            <button id="next-phase-btn" class="secondary-btn" style="display: none;">Continue</button>
+        </div>
+
+        <div id="history-panel" style="display: none;">
+            <h3>Performance History</h3>
+            <div id="daily-results"></div>
+        </div>
+
+        <div id="game-over" style="display: none;">
+            <h2>Game Complete!</h2>
+            <div id="final-results"></div>
+            <button id="restart-btn" class="primary-btn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Game phase templates -->
+    <template id="morning-phase-template">
+        <h2>🌅 Morning - Check Prices & Order Supplies</h2>
+        <div class="phase-content">
+            <div class="price-check">
+                <h3>Today's Supply Prices</h3>
+                <div id="supply-prices" class="price-grid">
+                    <!-- Prices will be populated dynamically -->
+                </div>
+            </div>
+            
+            <div class="supply-order">
+                <h3>Order Supplies</h3>
+                <div class="order-form">
+                    <div class="order-item">
+                        <label>🥤 Cups</label>
+                        <input type="number" id="order-cups" min="0" value="0">
+                        <span class="cost-display">$0.00</span>
+                    </div>
+                    <div class="order-item">
+                        <label>🍋 Lemons</label>
+                        <input type="number" id="order-lemons" min="0" value="0">
+                        <span class="cost-display">$0.00</span>
+                    </div>
+                    <div class="order-item">
+                        <label>🍯 Sugar</label>
+                        <input type="number" id="order-sugar" min="0" value="0">
+                        <span class="cost-display">$0.00</span>
+                    </div>
+                    <div class="order-item">
+                        <label>💧 Water</label>
+                        <input type="number" id="order-water" min="0" value="0">
+                        <span class="cost-display">$0.00</span>
+                    </div>
+                    <div class="order-total">
+                        <strong>Total Cost: $<span id="total-order-cost">0.00</span></strong>
+                    </div>
+                    <button id="place-order-btn" class="primary-btn">Place Order</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="planning-phase-template">
+        <h2>📋 Planning - Set Price & Hours</h2>
+        <div class="phase-content">
+            <div class="planning-grid">
+                <div class="planning-section">
+                    <h3>Set Lemonade Price</h3>
+                    <div class="price-input">
+                        <label for="lemonade-price">Price per cup:</label>
+                        <input type="number" id="lemonade-price" min="0" step="0.01" placeholder="2.50">
+                        <span class="currency">USD</span>
+                    </div>
+                    <div class="demand-preview">
+                        <small>Expected demand: <span id="demand-preview">-- cups</span></small>
+                    </div>
+                </div>
+
+                <div class="planning-section">
+                    <h3>Set Operating Hours</h3>
+                    <div class="hours-input">
+                        <label for="open-hour">Open at:</label>
+                        <select id="open-hour">
+                            <option value="6">6:00 AM</option>
+                            <option value="7">7:00 AM</option>
+                            <option value="8">8:00 AM</option>
+                            <option value="9" selected>9:00 AM</option>
+                            <option value="10">10:00 AM</option>
+                        </select>
+                    </div>
+                    <div class="hours-input">
+                        <label for="close-hour">Close at:</label>
+                        <select id="close-hour">
+                            <option value="15">3:00 PM</option>
+                            <option value="16">4:00 PM</option>
+                            <option value="17" selected>5:00 PM</option>
+                            <option value="18">6:00 PM</option>
+                            <option value="19">7:00 PM</option>
+                            <option value="20">8:00 PM</option>
+                        </select>
+                    </div>
+                    <div class="cost-preview">
+                        <small>Operating cost: $<span id="operating-cost-preview">40.00</span></small>
+                    </div>
+                </div>
+            </div>
+            <button id="open-for-business-btn" class="primary-btn">Open for Business!</button>
+        </div>
+    </template>
+
+    <template id="results-phase-template">
+        <h2>📊 Day Results</h2>
+        <div class="phase-content">
+            <div id="day-results" class="results-grid">
+                <!-- Results will be populated dynamically -->
+            </div>
+            <div class="results-actions">
+                <button id="view-details-btn" class="secondary-btn">View Hourly Details</button>
+                <button id="continue-day-btn" class="primary-btn">Continue to Next Day</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Scripts -->
+    <script src="js/inventory.js"></script>
+    <script src="js/demand.js"></script>
+    <script src="js/game-engine.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>
