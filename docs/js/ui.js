@@ -307,15 +307,19 @@ class GameUI {
             }
 
             this.currentPhase = 'results';
+            console.log('🔧 Debug: About to call showResultsPhase()');
             this.showResultsPhase(dayResult);
+            console.log('🔧 Debug: showResultsPhase() returned successfully');
             this.updateDisplay();
+            console.log('🔧 Debug: updateDisplay() completed');
             
             console.log('🔧 Debug: openForBusiness() completed successfully');
             
         } catch (error) {
             console.error('❌ Error in openForBusiness():', error);
             console.error('Stack trace:', error.stack);
-            alert(`An error occurred: ${error.message}. Please check the console for details.`);
+            const errorMsg = error.message || error.toString() || 'Unknown error';
+            alert(`An error occurred: ${errorMsg}. Please check the console for details.`);
         }
     }
 
@@ -356,7 +360,8 @@ class GameUI {
             console.log('🔧 showResultsPhase completed successfully');
         } catch (error) {
             console.error('❌ Error in showResultsPhase:', error);
-            alert(`Error displaying results: ${error.message}`);
+            const errorMsg = error.message || error.toString() || 'Unknown error';
+            alert(`Error displaying results: ${errorMsg}`);
         }
     }
 
@@ -420,7 +425,8 @@ class GameUI {
             
         } catch (error) {
             console.error('❌ Error setting results HTML:', error);
-            alert(`Error displaying results: ${error.message}`);
+            const errorMsg = error.message || error.toString() || 'Unknown error';
+            alert(`Error displaying results: ${errorMsg}`);
         }
     }
 
