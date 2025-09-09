@@ -316,6 +316,7 @@ class GameUI {
             const dayResult = this.game.simulateDay();
             console.log('🔧 Debug: Day result:', dayResult);
             
+            // Check if simulation failed
             if (!dayResult.success) {
                 const errorMsg = dayResult.error || 'Failed to simulate day';
                 alert(errorMsg);

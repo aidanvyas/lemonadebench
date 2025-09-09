@@ -358,6 +358,9 @@ class BusinessGame {
             ...this.todaySupplyCosts
         });
         
+        // Add success flag for consistency with error returns
+        dayResult.success = true;
+        
         return dayResult;
     }
 
