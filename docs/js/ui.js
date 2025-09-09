@@ -188,7 +188,8 @@ class GameUI {
             this.currentPhase = 'planning';
             this.showPlanningPhase();
         } else {
-            alert(result.error);
+            const errorMsg = result.error || 'Failed to place order';
+            alert(errorMsg);
         }
     }
 
@@ -299,12 +300,14 @@ class GameUI {
             console.log('🔧 Debug: Results:', { priceResult, hoursResult });
 
             if (!priceResult.success) {
-                alert(priceResult.error);
+                const errorMsg = priceResult.error || 'Failed to set price';
+                alert(errorMsg);
                 return;
             }
 
             if (!hoursResult.success) {
-                alert(hoursResult.error);
+                const errorMsg = hoursResult.error || 'Failed to set operating hours';
+                alert(errorMsg);
                 return;
             }
 
@@ -314,7 +317,8 @@ class GameUI {
             console.log('🔧 Debug: Day result:', dayResult);
             
             if (!dayResult.success) {
-                alert(dayResult.error);
+                const errorMsg = dayResult.error || 'Failed to simulate day';
+                alert(errorMsg);
                 return;
             }
 

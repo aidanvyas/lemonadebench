@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LemonadeBench Test Runner</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background: #1177bb;
+        }
+        
+        button:active {
+            background: #0d5a8f;
+        }
+        
+        #test-output {
+            background: #252526;
+            border: 1px solid #3e3e3e;
+            padding: 20px;
+            border-radius: 4px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .test-pass {
+            color: #4ec9b0;
+        }
+        
+        .test-fail {
+            color: #f48771;
+        }
+        
+        .test-info {
+            color: #dcdcaa;
+        }
+        
+        .test-section {
+            color: #569cd6;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        .summary {
+            background: #1e1e1e;
+            border: 2px solid #4ec9b0;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        
+        .summary.failed {
+            border-color: #f48771;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .stat {
+            background: #2d2d30;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            color: #808080;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            color: #d4d4d4;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .stat-value.pass {
+            color: #4ec9b0;
+        }
+        
+        .stat-value.fail {
+            color: #f48771;
+        }
+        
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 LemonadeBench Test Runner</h1>
+    
+    <div class="controls">
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="runUnitTests()">📦 Run Unit Tests</button>
+        <button onclick="runIntegrationTests()">🔧 Run Integration Tests</button>
+        <button onclick="clearOutput()">🧹 Clear Output</button>
+        <button onclick="window.location.href='/'">🎮 Back to Game</button>
+    </div>
+    
+    <div id="test-summary" style="display: none;"></div>
+    
+    <div id="test-output">
+        <pre>Ready to run tests. Click "Run All Tests" to begin.</pre>
+    </div>
+
+    <!-- Load game files -->
+    <script src="js/inventory.js"></script>
+    <script src="js/demand.js"></script>
+    <script src="js/game-engine.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/test-suite.js"></script>
+    
+    <script>
+        let testSuite = null;
+        const output = document.getElementById('test-output');
+        const summary = document.getElementById('test-summary');
+        
+        // Override console to capture test output
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn
+        };
+        
+        function captureConsole() {
+            console.log = function(...args) {
+                const message = args.join(' ');
+                appendOutput(message, getMessageClass(message));
+                originalConsole.log.apply(console, args);
+            };
+            
+            console.error = function(...args) {
+                const message = args.join(' ');
+                appendOutput(message, 'test-fail');
+                originalConsole.error.apply(console, args);
+            };
+            
+            console.warn = function(...args) {
+                const message = args.join(' ');
+                appendOutput(message, 'test-info');
+                originalConsole.warn.apply(console, args);
+            };
+        }
+        
+        function restoreConsole() {
+            console.log = originalConsole.log;
+            console.error = originalConsole.error;
+            console.warn = originalConsole.warn;
+        }
+        
+        function getMessageClass(message) {
+            if (message.includes('✅')) return 'test-pass';
+            if (message.includes('❌')) return 'test-fail';
+            if (message.includes('📦') || message.includes('📊') || 
+                message.includes('🚨') || message.includes('🎮') || 
+                message.includes('⚠️') || message.includes('🔧')) return 'test-section';
+            if (message.includes('Testing')) return 'test-section';
+            return 'test-info';
+        }
+        
+        function appendOutput(message, className = '') {
+            const line = document.createElement('div');
+            line.className = className;
+            line.textContent = message;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function clearOutput() {
+            output.innerHTML = '<pre>Output cleared. Ready for new test run.</pre>';
+            summary.style.display = 'none';
+        }
+        
+        async function runAllTests() {
+            clearOutput();
+            captureConsole();
+            
+            try {
+                testSuite = new GameTestSuite();
+                await testSuite.runAllTests();
+                showSummary();
+            } catch (error) {
+                appendOutput(`Test suite error: ${error.message}`, 'test-fail');
+                console.error(error);
+            } finally {
+                restoreConsole();
+            }
+        }
+        
+        async function runUnitTests() {
+            clearOutput();
+            captureConsole();
+            
+            try {
+                testSuite = new GameTestSuite();
+                await testSuite.testGameEngineUnit();
+                await testSuite.testInventorySystem();
+                await testSuite.testDemandModel();
+                testSuite.printSummary();
+                showSummary();
+            } catch (error) {
+                appendOutput(`Test error: ${error.message}`, 'test-fail');
+                console.error(error);
+            } finally {
+                restoreConsole();
+            }
+        }
+        
+        async function runIntegrationTests() {
+            clearOutput();
+            captureConsole();
+            
+            try {
+                testSuite = new GameTestSuite();
+                await testSuite.testFullGameFlow();
+                await testSuite.testErrorHandling();
+                await testSuite.testEdgeCases();
+                testSuite.printSummary();
+                showSummary();
+            } catch (error) {
+                appendOutput(`Test error: ${error.message}`, 'test-fail');
+                console.error(error);
+            } finally {
+                restoreConsole();
+            }
+        }
+        
+        function showSummary() {
+            if (!testSuite) return;
+            
+            const hasFailed = testSuite.failedTests > 0;
+            const successRate = ((testSuite.passedTests / testSuite.totalTests) * 100).toFixed(1);
+            
+            summary.innerHTML = `
+                <div class="summary ${hasFailed ? 'failed' : ''}">
+                    <h2>${hasFailed ? '⚠️' : '🎉'} Test Results</h2>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">Total Tests</div>
+                            <div class="stat-value">${testSuite.totalTests}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Passed</div>
+                            <div class="stat-value pass">${testSuite.passedTests}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Failed</div>
+                            <div class="stat-value fail">${testSuite.failedTests}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Success Rate</div>
+                            <div class="stat-value ${hasFailed ? 'fail' : 'pass'}">${successRate}%</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 15px; text-align: center;">
+                        ${hasFailed ? 
+                            '⚠️ Some tests failed. Review the output above for details.' : 
+                            '✅ All tests passed! The game is working correctly.'}
+                    </p>
+                </div>
+            `;
+            summary.style.display = 'block';
+        }
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        runAllTests();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        clearOutput();
+                        break;
+                }
+            }
+        });
+        
+        console.log('Test runner ready. Press Ctrl+R to run all tests, Ctrl+L to clear output.');
+    </script>
+</body>
+</html>
