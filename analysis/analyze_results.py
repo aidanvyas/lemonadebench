@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 from pydantic import ValidationError
 
 from src.lemonade_stand.recording_schema import BenchmarkRecording
-import matplotlib.pyplot as plt
 
 # Game constants
 REFERENCE_PRICE = 2.69  # User-specified reference price for pricing loss calculations
@@ -53,7 +53,7 @@ HOUR_MULTIPLIERS = {
 
 
 def calculate_business_metrics_final(
-    model: str, stats: dict[str, Any], full_data: list[dict[str, Any]]
+    model: str, _stats: dict[str, Any], full_data: list[dict[str, Any]]
 ) -> dict[str, float]:
     """Calculate final business efficiency metrics with user-specified sign conventions."""
     # Find the game data for this model
@@ -157,7 +157,9 @@ def calculate_business_metrics_final(
             end_hour = day_result.get("close_hour", 0)
 
             # Get actual inventory available (can_make at start of day)
-            can_make = day_data.get("game_state_before", {}).get("inventory", {}).get("can_make", 0)
+            day_data.get("game_state_before", {}).get("inventory", {}).get(
+                "can_make", 0
+            )
 
             if actual_price > 0 and start_hour < end_hour:
                 # ACTUAL SCENARIO (what really happened)
@@ -226,8 +228,7 @@ def calculate_business_metrics_final(
             start_hour = day_result.get("open_hour", 0)
             end_hour = day_result.get("close_hour", 0)
 
-            # Get actual inventory available
-            can_make = day_data.get("game_state_before", {}).get("inventory", {}).get("can_make", 0)
+            # Note: Inventory available could be checked here if needed
 
             if actual_price > 0 and start_hour < end_hour:
                 # ACTUAL SCENARIO (what really happened)
@@ -706,12 +707,15 @@ def generate_efficiency_latex(data: list[dict[str, Any]], filename: str):
 
     print(f"\nLaTeX table saved to: {latex_file}")
 
+
 def analyze_results(filename: str | None = None) -> None:
     """Main analysis function."""
     if filename is None:
         parser = argparse.ArgumentParser(description="Analyze v0.5 benchmark results")
         parser.add_argument("--file", help="Specific results file to analyze")
-        parser.add_argument("--latest", action="store_true", help="Analyze the latest results file")
+        parser.add_argument(
+            "--latest", action="store_true", help="Analyze the latest results file"
+        )
         args = parser.parse_args()
 
         results_dir = Path("results/json")

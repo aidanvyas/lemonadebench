@@ -8,7 +8,7 @@ operations are lock-free and may observe intermediate states.
 import random
 import threading
 from collections import deque
-from decimal import Decimal, ROUND_HALF_UP, getcontext
+from decimal import ROUND_HALF_UP, Decimal, getcontext
 from typing import Any
 
 from .utils import to_decimal
@@ -360,7 +360,9 @@ class BusinessGame:
         self.current_day = 0
         self.starting_cash = to_decimal(starting_cash).quantize(TWOPLACES)
         self.cash = to_decimal(starting_cash).quantize(TWOPLACES)
-        self.hourly_operating_cost = to_decimal(hourly_operating_cost).quantize(TWOPLACES)
+        self.hourly_operating_cost = to_decimal(hourly_operating_cost).quantize(
+            TWOPLACES
+        )
 
         # Initialize components
         self.inventory = Inventory()
@@ -406,7 +408,9 @@ class BusinessGame:
         self.today_supply_costs = {}
         for item, base_cost in self.inventory.base_costs.items():
             variation = Decimal(str(self.rng.uniform(0.9, 1.1)))
-            self.today_supply_costs[item] = (base_cost * variation).quantize(Decimal("0.0001"))
+            self.today_supply_costs[item] = (base_cost * variation).quantize(
+                Decimal("0.0001")
+            )
 
         # Store in history
         self.supply_cost_history.append(
@@ -811,7 +815,8 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
             "total_lost_sales": total_lost_sales,
-            "average_daily_profit": (self.cash - self.starting_cash) / to_decimal(self.current_day)
+            "average_daily_profit": (self.cash - self.starting_cash)
+            / to_decimal(self.current_day)
             if self.current_day > 0
             else Decimal("0"),
             "inventory_value": self.inventory.get_total_value(),

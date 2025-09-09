@@ -9,9 +9,14 @@ cd lemonadebench
 uv sync  # Install dependencies with uv
 ```
 
-### 2. Set OpenAI API Key
+### 2. Set API Keys
 ```bash
-echo "OPENAI_API_KEY=your_api_key_here" > .env
+echo "OPENAI_API_KEY=your_openai_key" > .env           # OpenAI (gpt-4.1/5, o3/o4)
+echo "GEMINI_API_KEY=your_gemini_key" >> .env          # Google Gemini
+# Optional provider keys (scaffolds in place; implementer-provided SDKs)
+echo "ANTHROPIC_API_KEY=your_anthropic_key" >> .env    # Anthropic Claude
+echo "XAI_API_KEY=your_xai_key" >> .env                # xAI Grok
+echo "DEEPSEEK_API_KEY=your_deepseek_key" >> .env      # DeepSeek
 ```
 
 ### 3. Run Benchmark
@@ -42,6 +47,28 @@ Install dependencies with `uv sync` or install `openai` directly:
 
 ```bash
 uv pip install openai
+```
+
+## Multi-Provider Support
+
+The benchmark supports multiple AI providers through a unified factory pattern:
+
+### Supported Providers
+- **OpenAI**: GPT-4.1 family (nano/mini/full), GPT-5 family, O1/O3/O4 models
+- **Google Gemini**: Gemini 1.0/1.5/2.0/2.5 models  
+- **Anthropic**: Claude models (3.5-sonnet, etc.)
+- **xAI**: Grok models (scaffold ready)
+- **DeepSeek**: DeepSeek chat/reasoner models (scaffold ready)
+
+### Usage
+```bash
+# Single provider
+uv run python experiments/run_benchmark.py --models gpt-4.1-nano
+
+# Multiple providers in one benchmark
+uv run python experiments/run_benchmark.py --models gpt-4.1-nano gemini-2.0-flash-exp claude-3.5-sonnet
+
+# The PlayerFactory automatically routes to the correct provider based on model prefix
 ```
 
 ## Game Mechanics
@@ -79,7 +106,13 @@ lemonade_stand/
 ├── CLAUDE.md                  # Development guide and common commands
 ├── src/lemonade_stand/        # Core implementation
 │   ├── business_game.py       # Game mechanics + inventory + demand
+│   ├── base_player.py         # Abstract player with shared tools
 │   ├── openai_player.py       # OpenAI-based AI player
+│   ├── gemini_player.py       # Gemini-based AI player
+│   ├── anthropic_player.py    # Claude player (scaffold)
+│   ├── xai_player.py          # Grok player (scaffold)
+│   ├── deepseek_player.py     # DeepSeek player (scaffold)
+│   ├── player_factory.py      # Provider routing by model prefix
 │   └── game_recorder.py       # Comprehensive interaction recording
 ├── experiments/               # Benchmark runners
 │   └── run_benchmark.py       # Orchestrates games + recording + analysis
@@ -108,6 +141,7 @@ uv run python analysis/analyze_results.py --file results/json/[filename]_full.js
 ## Roadmap
 
 - **v0.5** (current): Basic inventory management and price discovery
+  - Providers: OpenAI, Gemini (complete); Anthropic, xAI, DeepSeek (scaffolded)
 - **v1.0** (in development): Comprehensive economic decision making over a decade
 - **v2.0** (planned): Multi-agent markets to test strategic decision making and AI alignment
 

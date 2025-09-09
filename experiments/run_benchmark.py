@@ -10,10 +10,10 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
-
-from tqdm import tqdm
 from pathlib import Path
 from typing import Any
+
+from tqdm import tqdm
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -25,8 +25,8 @@ from src.lemonade_stand import (
     BenchmarkRecorder,
     BusinessGame,
     GameRecorder,
-    OpenAIPlayer,
 )
+from src.lemonade_stand.player_factory import PlayerFactory
 
 load_dotenv()
 
@@ -64,7 +64,7 @@ def run_single_game(
 
     # Initialize game and player
     game = BusinessGame(days=days, starting_cash=starting_cash, seed=seed)
-    player = OpenAIPlayer(model_name=model_name)
+    player = PlayerFactory.create_player(model_name=model_name)
 
     # Initialize GameRecorder
     recorder = GameRecorder(
@@ -407,7 +407,7 @@ def main():
                 position=1,
                 leave=False,
             )
-            
+
             for future in as_completed(futures):
                 result = future.result()
                 record_path = Path(result.get("recording_path"))
@@ -485,6 +485,7 @@ def main():
             },
             f,
             indent=2,
+            default=str,  # Convert Decimal and other non-serializable types to string
         )
 
     # Final summary

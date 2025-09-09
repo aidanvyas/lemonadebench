@@ -8,12 +8,14 @@ from typing import Any
 
 from openai import OpenAI
 
+from .base_player import BasePlayer
 from .business_game import BusinessGame
 from .game_recorder import GameRecorder
 
 logger = logging.getLogger(__name__)
 
-class OpenAIPlayer:
+
+class OpenAIPlayer(BasePlayer):
     """AI player that uses OpenAI's API to play the lemonade stand business game."""
 
     def __init__(
@@ -34,7 +36,8 @@ class OpenAIPlayer:
             api_max_retries: Number of times to retry failed API calls
             api_backoff: Initial backoff delay (seconds) for retries
         """
-        self.model_name = model_name
+        super().__init__(model_name, api_key)
+
         self.include_reasoning_summary = include_reasoning_summary
         self.api_max_retries = api_max_retries
         self.api_backoff = api_backoff
@@ -42,16 +45,7 @@ class OpenAIPlayer:
         # For stateless approach - minimal tracking
         self.reasoning_summaries: list[dict[str, Any]] = []
 
-        # Token tracking
-        self.total_token_usage = {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "reasoning_tokens": 0,
-            "total_tokens": 0,
-            "cached_input_tokens": 0,
-        }
-
-        # Cost tracking
+        # Cost tracking - override parent's pricing
         self.model_pricing = {
             "gpt-4.1-nano": {"input": 0.10, "cached_input": 0.025, "output": 0.40},
             "gpt-4.1-mini": {"input": 0.40, "cached_input": 0.10, "output": 1.60},
@@ -64,7 +58,9 @@ class OpenAIPlayer:
         }
 
         # Check if this is a reasoning model
-        self.is_reasoning_model = model_name.startswith(("o1", "o3", "o4", "gpt-5", "gpt-5-mini", "gpt-5-nano"))
+        self.is_reasoning_model = model_name.startswith(
+            ("o1", "o3", "o4", "gpt-5", "gpt-5-mini", "gpt-5-nano")
+        )
 
         # Initialize OpenAI client (synchronous)
         api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -81,201 +77,8 @@ class OpenAIPlayer:
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning(f"Failed to close OpenAI client: {exc}")
 
-    # Support use as a context manager
-    def __enter__(self) -> "OpenAIPlayer":
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - trivial
-        self.close()
-
-        # Track errors
+        # Track errors - moved to after client initialization
         self.errors: list[dict[str, Any]] = []
-
-    def get_tools(self) -> list[dict[str, Any]]:
-        """Define available tools for the AI."""
-        return [
-            self._tool_check_morning_prices(),
-            self._tool_check_inventory(),
-            self._tool_order_supplies(),
-            self._tool_set_operating_hours(),
-            self._tool_set_price(),
-            self._tool_get_historical_supply_costs(),
-            self._tool_open_for_business(),
-        ]
-
-    def _tool_check_morning_prices(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "check_morning_prices",
-            "description": "Check today's supply costs for all items",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_check_inventory(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "check_inventory",
-            "description": "View current inventory levels and expiration dates",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_order_supplies(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "order_supplies",
-            "description": "Purchase supplies (delivered instantly)",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "cups": {
-                        "type": "integer",
-                        "description": "Number of cups to order",
-                        "minimum": 0,
-                    },
-                    "lemons": {
-                        "type": "integer",
-                        "description": "Number of lemons to order",
-                        "minimum": 0,
-                    },
-                    "sugar": {
-                        "type": "integer",
-                        "description": "Amount of sugar to order",
-                        "minimum": 0,
-                    },
-                    "water": {
-                        "type": "integer",
-                        "description": "Amount of water to order",
-                        "minimum": 0,
-                    },
-                },
-                "required": ["cups", "lemons", "sugar", "water"],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_set_operating_hours(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "set_operating_hours",
-            "description": "Set today's operating hours",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "open_hour": {
-                        "type": "integer",
-                        "description": "Opening hour (0-23)",
-                        "minimum": 0,
-                        "maximum": 23,
-                    },
-                    "close_hour": {
-                        "type": "integer",
-                        "description": "Closing hour (1-24, must be > open_hour)",
-                        "minimum": 1,
-                        "maximum": 24,
-                    },
-                },
-                "required": ["open_hour", "close_hour"],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_set_price(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "set_price",
-            "description": "Set the price for a lemonade",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "price": {
-                        "type": "number",
-                        "description": "Price per lemonade",
-                        "minimum": 0,
-                    }
-                },
-                "required": ["price"],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_get_historical_supply_costs(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "get_historical_supply_costs",
-            "description": "Analyze supply price trends",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_open_for_business(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "open_for_business",
-            "description": "Open the stand for business (must set price and hours first)",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def execute_tool(
-        self, tool_name: str, args: dict[str, Any], game: BusinessGame
-    ) -> str:
-        """Execute a tool with given arguments.
-
-        Args:
-            tool_name: Name of the tool to execute
-            args: Arguments for the tool
-            game: The game instance
-
-        Returns:
-            JSON string with the result
-        """
-        try:
-            result: Any
-            if tool_name == "check_morning_prices":
-                result = game.check_morning_prices()
-            elif tool_name == "check_inventory":
-                result = game.check_inventory()
-            elif tool_name == "order_supplies":
-                result = game.order_supplies(**args)
-            elif tool_name == "set_operating_hours":
-                result = game.set_operating_hours(**args)
-            elif tool_name == "set_price":
-                result = game.set_price(**args)
-            elif tool_name == "get_historical_supply_costs":
-                result = game.get_historical_supply_costs()
-            elif tool_name == "open_for_business":
-                result = game.open_for_business()
-            else:
-                result = {"error": f"Unknown tool: {tool_name}"}
-
-            return json.dumps(result, default=str)
-        except Exception as e:
-            return json.dumps({"error": str(e)}, default=str)
 
     def play_turn(
         self, game: BusinessGame, recorder: GameRecorder | None = None
@@ -608,12 +411,5 @@ class OpenAIPlayer:
 
     def reset(self) -> None:
         """Reset the player for a new game."""
+        super().reset()
         self.reasoning_summaries = []
-        self.errors = []
-        self.total_token_usage = {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "reasoning_tokens": 0,
-            "total_tokens": 0,
-            "cached_input_tokens": 0,
-        }
