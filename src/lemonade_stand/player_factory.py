@@ -19,18 +19,6 @@ class PlayerFactory:
         "o1": "openai",
         "o3": "openai",
         "o4": "openai",
-        # Gemini models
-        "gemini": "gemini",
-        "gemini-1.0": "gemini",
-        "gemini-1.5": "gemini",
-        "gemini-2.0": "gemini",
-        "gemini-2.5": "gemini",
-        # Anthropic (Claude) models
-        "claude": "anthropic",
-        # xAI (Grok) models
-        "grok": "xai",
-        # DeepSeek models
-        "deepseek": "deepseek",
     }
 
     @classmethod
@@ -58,27 +46,11 @@ class PlayerFactory:
             from .openai_player import OpenAIPlayer  # lazy import to avoid test deps
 
             return OpenAIPlayer(model_name=model_name, api_key=api_key, **kwargs)
-        elif provider == "gemini":
-            from .gemini_player import GeminiPlayer  # lazy import
 
-            return GeminiPlayer(model_name=model_name, api_key=api_key, **kwargs)
-        elif provider == "anthropic":
-            from .anthropic_player import AnthropicPlayer  # lazy import
-
-            return AnthropicPlayer(model_name=model_name, api_key=api_key, **kwargs)
-        elif provider == "xai":
-            from .xai_player import XAIPlayer  # lazy import
-
-            return XAIPlayer(model_name=model_name, api_key=api_key, **kwargs)
-        elif provider == "deepseek":
-            from .deepseek_player import DeepSeekPlayer  # lazy import
-
-            return DeepSeekPlayer(model_name=model_name, api_key=api_key, **kwargs)
-        else:
-            raise ValueError(
-                f"Unknown model provider for '{model_name}'. "
-                f"Supported prefixes: {list(cls.MODEL_PROVIDERS.keys())}"
-            )
+        raise ValueError(
+            f"Unknown model provider for '{model_name}'. "
+            f"Supported prefixes: {list(cls.MODEL_PROVIDERS.keys())}"
+        )
 
     @classmethod
     def _get_provider(cls, model_name: str) -> str:
