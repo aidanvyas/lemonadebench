@@ -55,9 +55,6 @@ class Inventory:
             quantity: Number of items to add
             current_day: Current day number for calculating expiry
         """
-        if quantity <= 0:
-            return
-
         # Calculate expiry day (infinite for water)
         if self.shelf_life[item_type] == float("inf"):
             expiry_day = float("inf")
