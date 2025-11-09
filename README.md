@@ -59,7 +59,7 @@ uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4
 lemonade_stand/
 ├── pyproject.toml             # Project config & dependencies
 ├── uv.lock                    # Locked dependency versions
-├── .python-version            # Python version for pyenv
+├── .python-version            # Python 3.14 (used by uv)
 ├── CLAUDE.md                  # Development guide and common commands
 ├── src/lemonade_stand/        # Core implementation
 │   ├── business_game.py       # Game mechanics + inventory + demand
