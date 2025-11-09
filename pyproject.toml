@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Aidan Vyas", email = "68206970+aidanvyas@users.noreply.github.com" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "numpy>=1.24.0",
     "pydantic>=2.0.0",
@@ -36,7 +36,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -59,7 +59,7 @@ ignore = [
 "tests/*" = ["ARG001"]  # unused function argument
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
