@@ -30,18 +30,8 @@ uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4
 
 ## Running Tests
 
-Before running the unit tests, make sure the `openai` package is installed. The
-tests import the `OpenAIPlayer` class, which depends on this library. If it is
-missing you'll see an error like:
-
-```
-ModuleNotFoundError: No module named 'openai'
-```
-
-Install dependencies with `uv sync` or install `openai` directly:
-
 ```bash
-uv pip install openai
+uv run python -m pytest
 ```
 
 ## Game Mechanics
