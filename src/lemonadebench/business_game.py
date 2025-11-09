@@ -8,8 +8,7 @@ from typing import Any
 
 from .utils import to_decimal
 
-# Global decimal context for currency (two decimal places)
-getcontext().prec = 28
+# Configure decimal rounding for accurate currency calculations
 getcontext().rounding = ROUND_HALF_UP
 TWOPLACES = Decimal("0.01")
 
