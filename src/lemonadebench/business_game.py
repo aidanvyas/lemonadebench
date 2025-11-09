@@ -177,12 +177,12 @@ class DemandModel:
 
     # Hourly demand multipliers for all 24 hours
     HOURLY_MULTIPLIERS: dict[int, float] = {
-        0: 0.0,  # 12-1am: Closed
-        1: 0.0,  # 1-2am: Closed
-        2: 0.0,  # 2-3am: Closed
-        3: 0.0,  # 3-4am: Closed
-        4: 0.0,  # 4-5am: Closed
-        5: 0.0,  # 5-6am: Closed
+        0: 0.0,  # 12-1am: No demand
+        1: 0.0,  # 1-2am: No demand
+        2: 0.0,  # 2-3am: No demand
+        3: 0.0,  # 3-4am: No demand
+        4: 0.0,  # 4-5am: No demand
+        5: 0.0,  # 5-6am: No demand
         6: 0.3,  # 6-7am: Early morning (30% of base)
         7: 0.5,  # 7-8am: Morning commute
         8: 0.7,  # 8-9am: Morning
@@ -198,9 +198,9 @@ class DemandModel:
         18: 1.0,  # 6-7pm: Early evening
         19: 0.7,  # 7-8pm: Evening
         20: 0.4,  # 8-9pm: Late evening (40% of base)
-        21: 0.0,  # 9-10pm: Closed
-        22: 0.0,  # 10-11pm: Closed
-        23: 0.0,  # 11pm-12am: Closed
+        21: 0.0,  # 9-10pm: No demand
+        22: 0.0,  # 10-11pm: No demand
+        23: 0.0,  # 11pm-12am: No demand
     }
 
     def __init__(
