@@ -1,9 +1,4 @@
-"""Main game engine for the lemonade stand business simulation.
-
-Inventory operations are protected by a :class:`threading.Lock` so that
-multiple threads can safely modify the same inventory instance. Read
-operations are lock-free and may observe intermediate states.
-"""
+"""Main game engine for the lemonade stand business simulation."""
 
 import random
 import threading
@@ -26,7 +21,12 @@ LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
 
 class Inventory:
-    """Manages perishable inventory with FIFO expiration tracking."""
+    """Manages perishable inventory with FIFO expiration tracking.
+
+    Inventory operations are protected by a threading.Lock for safe concurrent
+    modifications. This enables future parallel tool execution (e.g., checking
+    prices while ordering supplies simultaneously).
+    """
 
     def __init__(self) -> None:
         """Initialize empty inventory with shelf life definitions."""
