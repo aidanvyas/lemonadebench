@@ -50,6 +50,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# LaTeX
+*.aux
+*.out
+
 # Project specific
 data/
 logs/
