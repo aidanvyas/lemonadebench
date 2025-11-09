@@ -55,9 +55,6 @@ class Inventory:
             quantity: Number of items to add
             current_day: Current day number for calculating expiry
         """
-        if item_type not in self.items:
-            raise ValueError(f"Unknown item type: {item_type}")
-
         if quantity <= 0:
             return
 
