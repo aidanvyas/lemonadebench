@@ -10,11 +10,11 @@ from .utils import to_decimal
 
 # Configure decimal rounding for accurate currency calculations
 getcontext().rounding = ROUND_HALF_UP
-TWOPLACES = Decimal("0.01")
+TWOPLACES = to_decimal("0.01")
 
 # Game configuration constants
-DEFAULT_STARTING_CASH = Decimal("1000.00")
-DEFAULT_HOURLY_OPERATING_COST = Decimal("5.00")
+DEFAULT_STARTING_CASH = to_decimal("1000.00")
+DEFAULT_HOURLY_OPERATING_COST = to_decimal("5.00")
 DEFAULT_TOTAL_DAYS = 30
 LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
@@ -47,10 +47,10 @@ class Inventory:
 
         # Base costs for reference (actual costs vary daily)
         self.base_costs: dict[str, Decimal] = {
-            "cups": Decimal("0.05"),
-            "lemons": Decimal("0.20"),
-            "sugar": Decimal("0.10"),
-            "water": Decimal("0.02"),
+            "cups": to_decimal("0.05"),
+            "lemons": to_decimal("0.20"),
+            "sugar": to_decimal("0.10"),
+            "water": to_decimal("0.02"),
         }
 
         # Lock protecting inventory modifications
@@ -178,7 +178,7 @@ class Inventory:
         Returns:
             Total value in dollars
         """
-        total = Decimal("0")
+        total = to_decimal("0")
         for item_type in self.items:
             quantity = self.get_available(item_type)
             total += to_decimal(quantity) * self.base_costs[item_type]
@@ -404,8 +404,8 @@ class BusinessGame:
         # Generate today's supply costs (±10% variation)
         self.today_supply_costs = {}
         for item, base_cost in self.inventory.base_costs.items():
-            variation = Decimal(str(self.rng.uniform(0.9, 1.1)))
-            self.today_supply_costs[item] = (base_cost * variation).quantize(Decimal("0.0001"))
+            variation = to_decimal(self.rng.uniform(0.9, 1.1))
+            self.today_supply_costs[item] = (base_cost * variation).quantize(to_decimal("0.0001"))
 
         # Store in history
         self.supply_cost_history.append(
@@ -636,7 +636,7 @@ class BusinessGame:
 
         # Calculate financials
         revenue = to_decimal(total_customers_served) * self.price
-        operating_hours = Decimal(self.close_hour - self.open_hour)
+        operating_hours = to_decimal(self.close_hour - self.open_hour)
         operating_cost = operating_hours * self.hourly_operating_cost
         profit = revenue - operating_cost
 
@@ -794,9 +794,9 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
         Returns:
             Summary of game performance
         """
-        total_revenue = sum((day["revenue"] for day in self.history), Decimal("0"))
+        total_revenue = sum((day["revenue"] for day in self.history), to_decimal("0"))
         total_operating_cost = sum(
-            (day["operating_cost"] for day in self.history), Decimal("0")
+            (day["operating_cost"] for day in self.history), to_decimal("0")
         )
         total_customers = sum(day["customers_served"] for day in self.history)
         total_lost_sales = sum(day["customers_lost"] for day in self.history)
@@ -812,6 +812,6 @@ Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would y
             "total_lost_sales": total_lost_sales,
             "average_daily_profit": (self.cash - self.starting_cash) / to_decimal(self.current_day)
             if self.current_day > 0
-            else Decimal("0"),
+            else to_decimal("0"),
             "inventory_value": self.inventory.get_total_value(),
         }
