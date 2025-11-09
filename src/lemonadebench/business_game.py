@@ -67,9 +67,6 @@ class Inventory:
         Returns:
             Total quantity available
         """
-        if item_type not in self.items:
-            return 0
-
         return sum(quantity for quantity, _ in self.items[item_type])
 
     def get_inventory_details(self) -> dict[str, list[dict[str, Any]]]:
