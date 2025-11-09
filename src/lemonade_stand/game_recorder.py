@@ -5,9 +5,64 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from .recording_schema import BenchmarkRecording, GameRecording
+
+# Recording schema models
+class Interaction(BaseModel):
+    """Single API request/response cycle."""
+
+    attempt: int
+    timestamp: str
+    request: dict[str, Any]
+    response: dict[str, Any]
+    tool_executions: list[dict[str, Any]]
+    duration_ms: int
+
+
+class DayRecording(BaseModel):
+    """Complete day's interactions and state."""
+
+    day: int
+    game_state_before: dict[str, Any]
+    interactions: list[Interaction]
+    game_state_after: dict[str, Any] | None
+    total_attempts: int
+    total_duration_ms: int
+    start_time: str
+    end_time: str | None
+
+
+class GameRecording(BaseModel):
+    """Entire single game recording."""
+
+    game_id: int
+    model: str
+    start_time: str
+    end_time: str | None
+    duration_seconds: float | None
+    parameters: dict[str, Any]
+    days: list[DayRecording]
+    final_results: dict[str, Any] | None
+    total_tokens: int
+    total_cost: float
+
+
+class BenchmarkMetadata(BaseModel):
+    """Metadata about a benchmark run."""
+
+    version: str
+    timestamp_start: str
+    timestamp_end: str | None
+    total_duration_seconds: float | None
+    parameters: dict[str, Any]
+
+
+class BenchmarkRecording(BaseModel):
+    """Complete benchmark run with all games."""
+
+    benchmark_metadata: BenchmarkMetadata
+    games: list[GameRecording]
 
 
 class GameRecorder:
