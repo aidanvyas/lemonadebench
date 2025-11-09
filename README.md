@@ -28,12 +28,6 @@ uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4
 
 **Note**: Benchmarks automatically generate analysis (LaTeX tables + plots). Use `--no-analysis` to skip.
 
-## Running Tests
-
-```bash
-uv run python -m pytest
-```
-
 ## Game Mechanics
 
 ### Business Operations
@@ -94,6 +88,11 @@ uv run python analysis/analyze_results.py --latest
 uv run python analysis/analyze_results.py --file results/json/[filename]_full.json
 ```
 
+## Running Tests
+
+```bash
+uv run python -m pytest
+```
 
 ## Roadmap
 
