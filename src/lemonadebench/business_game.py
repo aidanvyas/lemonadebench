@@ -55,13 +55,7 @@ class Inventory:
             quantity: Number of items to add
             current_day: Current day number for calculating expiry
         """
-        # Calculate expiry day (infinite for water)
-        if self.shelf_life[item_type] == float("inf"):
-            expiry_day = float("inf")
-        else:
-            expiry_day = current_day + self.shelf_life[item_type]
-
-        # Add to inventory queue
+        expiry_day = current_day + self.shelf_life[item_type]
         self.items[item_type].append((quantity, expiry_day))
 
     def get_available(self, item_type: str) -> int:
