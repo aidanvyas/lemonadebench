@@ -4,12 +4,22 @@ import json
 import logging
 import os
 import time
-from typing import Any
+from typing import Any, Type
 
 from openai import OpenAI
+from pydantic import BaseModel
 
 from .business_game import BusinessGame
 from .game_recorder import GameRecorder
+from .tool_schemas import (
+    CheckInventoryParams,
+    CheckMorningPricesParams,
+    GetHistoricalSupplyCostsParams,
+    OpenForBusinessParams,
+    OrderSuppliesParams,
+    SetOperatingHoursParams,
+    SetPriceParams,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -92,150 +102,70 @@ class OpenAIPlayer:
         self.errors: list[dict[str, Any]] = []
 
     def get_tools(self) -> list[dict[str, Any]]:
-        """Define available tools for the AI."""
+        """Define available tools for the AI using Pydantic schemas."""
         return [
-            self._tool_check_morning_prices(),
-            self._tool_check_inventory(),
-            self._tool_order_supplies(),
-            self._tool_set_operating_hours(),
-            self._tool_set_price(),
-            self._tool_get_historical_supply_costs(),
-            self._tool_open_for_business(),
+            self._build_tool(
+                "check_morning_prices",
+                "Check today's supply costs for all items",
+                CheckMorningPricesParams,
+            ),
+            self._build_tool(
+                "check_inventory",
+                "View current inventory levels and expiration dates",
+                CheckInventoryParams,
+            ),
+            self._build_tool(
+                "order_supplies",
+                "Purchase supplies (delivered instantly)",
+                OrderSuppliesParams,
+            ),
+            self._build_tool(
+                "set_operating_hours",
+                "Set today's operating hours",
+                SetOperatingHoursParams,
+            ),
+            self._build_tool(
+                "set_price",
+                "Set the price for a lemonade",
+                SetPriceParams,
+            ),
+            self._build_tool(
+                "get_historical_supply_costs",
+                "Analyze supply price trends",
+                GetHistoricalSupplyCostsParams,
+            ),
+            self._build_tool(
+                "open_for_business",
+                "Open the stand for business (must set price and hours first)",
+                OpenForBusinessParams,
+            ),
         ]
 
-    def _tool_check_morning_prices(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "check_morning_prices",
-            "description": "Check today's supply costs for all items",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
+    def _build_tool(
+        self,
+        name: str,
+        description: str,
+        params_model: Type[BaseModel],
+    ) -> dict[str, Any]:
+        """Build an OpenAI tool definition from a Pydantic model.
 
-    def _tool_check_inventory(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "check_inventory",
-            "description": "View current inventory levels and expiration dates",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
+        Args:
+            name: Tool name
+            description: Tool description
+            params_model: Pydantic model class defining tool parameters
 
-    def _tool_order_supplies(self) -> dict[str, Any]:
+        Returns:
+            OpenAI-compatible tool definition with auto-generated schema
+        """
+        schema = params_model.model_json_schema()
         return {
             "type": "function",
-            "name": "order_supplies",
-            "description": "Purchase supplies (delivered instantly)",
+            "name": name,
+            "description": description,
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "cups": {
-                        "type": "integer",
-                        "description": "Number of cups to order",
-                        "minimum": 0,
-                    },
-                    "lemons": {
-                        "type": "integer",
-                        "description": "Number of lemons to order",
-                        "minimum": 0,
-                    },
-                    "sugar": {
-                        "type": "integer",
-                        "description": "Amount of sugar to order",
-                        "minimum": 0,
-                    },
-                    "water": {
-                        "type": "integer",
-                        "description": "Amount of water to order",
-                        "minimum": 0,
-                    },
-                },
-                "required": ["cups", "lemons", "sugar", "water"],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_set_operating_hours(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "set_operating_hours",
-            "description": "Set today's operating hours",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "open_hour": {
-                        "type": "integer",
-                        "description": "Opening hour (0-23)",
-                        "minimum": 0,
-                        "maximum": 23,
-                    },
-                    "close_hour": {
-                        "type": "integer",
-                        "description": "Closing hour (1-24, must be > open_hour)",
-                        "minimum": 1,
-                        "maximum": 24,
-                    },
-                },
-                "required": ["open_hour", "close_hour"],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_set_price(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "set_price",
-            "description": "Set the price for a lemonade",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "price": {
-                        "type": "number",
-                        "description": "Price per lemonade",
-                        "minimum": 0,
-                    }
-                },
-                "required": ["price"],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_get_historical_supply_costs(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "get_historical_supply_costs",
-            "description": "Analyze supply price trends",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-            "strict": True,
-        }
-
-    def _tool_open_for_business(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "name": "open_for_business",
-            "description": "Open the stand for business (must set price and hours first)",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
+                "properties": schema.get("properties", {}),
+                "required": schema.get("required", []),
                 "additionalProperties": False,
             },
             "strict": True,
