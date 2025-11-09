@@ -1,5 +1,5 @@
 [project]
-name = "lemonade-stand"
+name = "lemonadebench"
 version = "0.1.0"
 description = "Economic reasoning benchmark for AI models through lemonade stand simulation"
 readme = "README.md"
@@ -28,7 +28,7 @@ dev = [
 ]
 
 [project.scripts]
-lemonade-stand = "lemonade_stand:main"
+lemonadebench = "lemonadebench:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -72,7 +72,7 @@ testpaths = ["tests"]
 addopts = "-v --strict-markers"
 
 [tool.coverage.run]
-source = ["src/lemonade_stand"]
+source = ["src/lemonadebench"]
 omit = ["*/tests/*", "*/__init__.py"]
 
 [dependency-groups]

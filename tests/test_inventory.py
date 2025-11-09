@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from src.lemonade_stand.business_game import Inventory
+from src.lemonadebench.business_game import Inventory
 
 
 class TestInventory:

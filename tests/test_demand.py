@@ -1,6 +1,6 @@
 """Tests for the demand modeling system."""
 
-from src.lemonade_stand.business_game import DemandModel
+from src.lemonadebench.business_game import DemandModel
 
 
 class TestDemandModel:

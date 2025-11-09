@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from src.lemonade_stand.recording_schema import BenchmarkRecording
+from src.lemonadebench.game_recorder import BenchmarkRecording
 import matplotlib.pyplot as plt
 
 # Game constants

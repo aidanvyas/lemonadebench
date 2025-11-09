@@ -17,9 +17,9 @@ uv run ruff check && uv run ruff format    # Lint and format
 ```
 
 ## Core Files
-- `src/lemonade_stand/business_game.py` - Main game engine with inventory management
-- `src/lemonade_stand/openai_player.py` - AI player using OpenAI Responses API  
-- `src/lemonade_stand/game_recorder.py` - Records all interactions, API calls, and game states
+- `src/lemonadebench/business_game.py` - Main game engine with inventory management
+- `src/lemonadebench/openai_player.py` - AI player using OpenAI Responses API
+- `src/lemonadebench/game_recorder.py` - Records all interactions, API calls, and game states
 - `experiments/run_benchmark.py` - Benchmark runner that orchestrates games and analysis
 - `analysis/analyze_results.py` - Generates metrics, LaTeX tables, and plots from recordings
 

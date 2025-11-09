@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from src.lemonade_stand.business_game import BusinessGame
+from src.lemonadebench.business_game import BusinessGame
 
 
 class TestBusinessGame:

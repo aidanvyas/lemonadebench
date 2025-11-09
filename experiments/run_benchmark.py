@@ -21,7 +21,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Load environment variables
 from dotenv import load_dotenv
 
-from src.lemonade_stand import (
+from src.lemonadebench import (
     BenchmarkRecorder,
     BusinessGame,
     GameRecorder,
