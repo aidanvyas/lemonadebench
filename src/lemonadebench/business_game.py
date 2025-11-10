@@ -507,9 +507,6 @@ class BusinessGame:
             Day's results
         """
         # Calculate customers for each hour
-        assert self.price is not None
-        assert self.open_hour is not None
-        assert self.close_hour is not None
         hourly_customers = self.demand_model.calculate_daily_customers(
             float(self.price),
             self.open_hour,
