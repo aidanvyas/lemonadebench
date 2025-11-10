@@ -405,10 +405,6 @@ class BusinessGame:
         Returns:
             Order confirmation or error
         """
-        # Validate quantities
-        if any(q < 0 for q in [cups, lemons, sugar, water]):
-            return {"success": False, "error": "Cannot order negative quantities"}
-
         # Calculate total cost
         total_cost = (
             to_decimal(cups) * self.today_supply_costs["cups"]
