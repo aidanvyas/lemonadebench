@@ -463,22 +463,19 @@ class BusinessGame:
             "hours_open": close_hour - open_hour,
         }
 
-    def set_price(self, price: float) -> dict[str, Any]:
+    def set_price(self, price: float) -> Decimal:
         """Set today's lemonade price.
 
         Args:
             price: Price per lemonade (must be >= 0)
 
         Returns:
-            Confirmation or error
+            Confirmed price
         """
-        if price < 0:
-            return {"success": False, "error": "Price cannot be negative."}
-
         self.price = to_decimal(price).quantize(TWOPLACES)
         self.price_set = True
 
-        return {"success": True, "price": self.price}
+        return self.price
 
     def open_for_business(self) -> dict[str, Any]:
         """Attempt to open the stand for business today.
