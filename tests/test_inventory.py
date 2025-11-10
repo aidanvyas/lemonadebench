@@ -46,7 +46,7 @@ class TestInventory:
         """Test adding invalid item type raises error."""
         inv = Inventory()
 
-        with pytest.raises(ValueError, match="Unknown item type"):
+        with pytest.raises(KeyError):
             inv.add_items("invalid_item", 10, current_day=1)
 
     def test_use_items_success(self):

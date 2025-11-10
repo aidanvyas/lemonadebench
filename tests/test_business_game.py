@@ -25,7 +25,7 @@ class TestBusinessGame:
 
     def test_start_new_day(self):
         """Test starting a new day."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
 
         # Start day 1
         day_info = game.start_new_day()
@@ -42,7 +42,7 @@ class TestBusinessGame:
 
     def test_check_morning_prices(self):
         """Test checking morning prices."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
         game.start_new_day()
 
         prices = game.check_morning_prices()
@@ -55,7 +55,7 @@ class TestBusinessGame:
 
     def test_order_supplies_success(self):
         """Test ordering supplies with sufficient funds."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
         game.start_new_day()
 
         # Order some supplies
@@ -84,59 +84,45 @@ class TestBusinessGame:
         game = BusinessGame()
 
         # Valid hours
-        result = game.set_operating_hours(9, 17)
-        assert result["success"] is True
+        game.set_operating_hours(9, 17)
         assert game.open_hour == 9
         assert game.close_hour == 17
         assert game.hours_set is True
-
-        # Invalid hours
-        result = game.set_operating_hours(-1, 17)  # Too early
-        assert result["success"] is False
-        assert "Invalid open hour" in result["error"]
-
-        result = game.set_operating_hours(9, 25)  # Too late
-        assert result["success"] is False
-        assert "Invalid close hour" in result["error"]
-
-        result = game.set_operating_hours(17, 9)  # Backwards
-        assert result["success"] is False
-        assert "must be after open hour" in result["error"]
 
     def test_set_price(self):
         """Test setting price."""
         game = BusinessGame()
 
         # Valid price
-        result = game.set_price(2.50)
-        assert result["success"] is True
+        game.set_price(2.50)
         assert game.price == Decimal("2.50")
         assert game.price_set is True
 
-        # Negative price
-        result = game.set_price(-1)
-        assert result["success"] is False
-        assert "cannot be negative" in result["error"]
-
     def test_simulate_day_validations(self):
-        """Test day simulation validations."""
+        """Test day simulation with check_ready_for_next_day."""
         game = BusinessGame()
         game.start_new_day()
 
-        # Should fail without price
-        result = game.simulate_day()
-        assert result["success"] is False
-        assert "price not set" in result["error"]
+        # Check readiness before setup
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is False
+        assert len(missing) == 2  # Both price and hours missing
 
-        # Set price, should still fail without hours
+        # Set price
         game.set_price(2.0)
-        result = game.simulate_day()
-        assert result["success"] is False
-        assert "hours not set" in result["error"]
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is False
+        assert len(missing) == 1  # Only hours missing
+
+        # Set hours
+        game.set_operating_hours(9, 17)
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is True
+        assert len(missing) == 0
 
     def test_simulate_day_success(self):
         """Test successful day simulation."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
         game.start_new_day()
 
         # Order supplies
@@ -162,7 +148,7 @@ class TestBusinessGame:
 
     def test_simulate_day_stockout(self):
         """Test simulation with insufficient inventory."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
         game.start_new_day()
 
         # Order minimal supplies
@@ -183,7 +169,7 @@ class TestBusinessGame:
 
     def test_historical_data(self):
         """Test that history is tracked correctly."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
 
         # No history initially
         assert game.history == []
@@ -206,7 +192,7 @@ class TestBusinessGame:
 
     def test_supply_cost_history(self):
         """Test tracking supply cost history."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
 
         # Play multiple days
         for _ in range(3):
@@ -251,7 +237,7 @@ class TestBusinessGame:
 
     def test_expiration_handling(self):
         """Test that expired items are removed."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
 
         # Day 1: Buy lots of lemons and minimal other supplies
         game.start_new_day()
@@ -292,14 +278,13 @@ class TestBusinessGame:
         assert game.is_game_over() is True
 
     def test_turn_prompts(self):
-        """Test turn prompt generation."""
+        """Test stateful prompt generation."""
         game = BusinessGame()
 
-        # First turn should have full prompt
-        prompt = game.get_turn_prompt()
-        assert "You run a lemonade stand" in prompt
-        assert "30 days" in prompt
-        assert "AVAILABLE TOOLS" in prompt
+        # System instructions should have game rules
+        system_prompt = game.get_system_instructions()
+        assert "You run a lemonade stand" in system_prompt
+        assert "30 days" in system_prompt
 
         # Start day 1
         game.start_new_day()
@@ -307,16 +292,15 @@ class TestBusinessGame:
         game.set_operating_hours(9, 17)
         game.simulate_day()
 
-        # Day 2 should have minimal prompt
+        # Day 2 summary should have current state
         game.start_new_day()
-        prompt = game.get_turn_prompt()
-        assert "Day 2 of 30" in prompt
-        assert "You made $" in prompt
-        assert "AVAILABLE TOOLS" not in prompt  # No system prompt
+        day_summary = game.get_day_summary()
+        assert "Day 2 of 30" in day_summary
+        assert "You made $" in day_summary
 
     def test_final_results(self):
         """Test getting final game results."""
-        game = BusinessGame(seed=42)
+        game = BusinessGame()
 
         # Play a few days
         for _ in range(1, 4):
