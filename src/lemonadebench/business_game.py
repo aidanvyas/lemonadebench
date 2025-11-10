@@ -323,7 +323,6 @@ class BusinessGame:
         # Set random seed if provided
         if seed is not None:
             self.rng = random.Random(seed)
-            self.demand_model.set_random_seed(seed)
         else:
             self.rng = random.Random()
 
