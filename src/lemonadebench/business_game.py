@@ -507,16 +507,12 @@ class BusinessGame:
             Day's results
         """
         # Check required actions
-        if not self.price_set:
+        ready, missing = self.check_ready_for_next_day()
+        if not ready:
             return {
                 "success": False,
-                "error": "Cannot simulate day: price not set. Call set_price() first.",
-            }
-
-        if not self.hours_set:
-            return {
-                "success": False,
-                "error": "Cannot simulate day: hours not set. Call set_operating_hours() first.",
+                "error": "Cannot simulate day - required actions not completed",
+                "missing_actions": missing,
             }
 
         # Calculate customers for each hour
