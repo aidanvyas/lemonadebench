@@ -603,31 +603,25 @@ class BusinessGame:
     def get_turn_prompt(self) -> str:
         """Generate the prompt for the current turn.
 
+        For stateless approach, always include the full system prompt so each
+        turn is completely self-contained and independent.
+
         Returns:
             Prompt string for the AI
         """
-        # For stateless approach, always return the same format with historical table
         profit_msg = (
             f" You made ${self.yesterday_profit:.2f} yesterday."
             if self.yesterday_profit is not None
             else ""
         )
-        base_prompt = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
+        day_prompt = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
-{self._get_historical_table()}
-Remember to:
-1. Check inventory and morning prices
-2. Order supplies if needed
-3. Set price and operating hours
-4. Call open_for_business() to start the day
 
 What would you like to do?"""
-        if self.current_day == 0:
-            return f"{self._get_system_prompt()}\n{base_prompt}"
-        return base_prompt
+        return f"{self._get_system_prompt()}\n\n{day_prompt}"
 
     def _get_system_prompt(self) -> str:
-        """Get the full system prompt for day 1.
+        """Get the full system prompt for the current turn.
 
         Returns:
             System prompt string
