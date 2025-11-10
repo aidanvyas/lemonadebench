@@ -214,15 +214,6 @@ class DemandModel:
         """
         self.base_demand_intercept = base_demand_intercept
         self.price_sensitivity = price_sensitivity
-        self._rng: random.Random | None = None
-
-    def set_random_seed(self, seed: int) -> None:
-        """Set random seed for reproducible simulations.
-
-        Args:
-            seed: Random seed value
-        """
-        self._rng = random.Random(seed)
 
     def calculate_base_demand(self, price: float) -> float:
         """Calculate base hourly demand at given price.
@@ -271,10 +262,7 @@ class DemandModel:
 
         # Apply random variation if enabled
         if random_variation:
-            if self._rng:
-                variation = self._rng.uniform(0.9, 1.1)
-            else:
-                variation = random.uniform(0.9, 1.1)
+            variation = random.uniform(0.9, 1.1)
             final_demand = demand_with_time * variation
         else:
             final_demand = demand_with_time
