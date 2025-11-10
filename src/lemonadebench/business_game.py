@@ -300,7 +300,6 @@ class BusinessGame:
         days: int = DEFAULT_TOTAL_DAYS,
         starting_cash: Decimal | float = DEFAULT_STARTING_CASH,
         hourly_operating_cost: Decimal | float = DEFAULT_HOURLY_OPERATING_COST,
-        seed: int | None = None,
     ):
         """Initialize the business game.
 
@@ -308,7 +307,6 @@ class BusinessGame:
             days: Total number of days to play
             starting_cash: Initial cash balance
             hourly_operating_cost: Cost per hour of operation
-            seed: Random seed for reproducibility
         """
         self.total_days = days
         self.current_day = 0
@@ -319,12 +317,7 @@ class BusinessGame:
         # Initialize components
         self.inventory = Inventory()
         self.demand_model = DemandModel()
-
-        # Set random seed if provided
-        if seed is not None:
-            self.rng = random.Random(seed)
-        else:
-            self.rng = random.Random()
+        self.rng = random.Random()
 
         # Daily state tracking
         self.today_supply_costs: dict[str, Decimal] = {}

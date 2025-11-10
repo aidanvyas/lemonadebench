@@ -10,7 +10,7 @@ class TestBusinessGame:
 
     def test_init(self):
         """Test game initialization."""
-        game = BusinessGame(days=100, starting_cash=Decimal("100"), seed=42)
+        game = BusinessGame(days=100, starting_cash=Decimal("100"))
 
         assert game.total_days == 100
         assert game.current_day == 0
@@ -70,7 +70,7 @@ class TestBusinessGame:
 
     def test_order_supplies_insufficient_funds(self):
         """Test ordering supplies without enough money."""
-        game = BusinessGame(starting_cash=10, seed=42)
+        game = BusinessGame(starting_cash=10)
         game.start_new_day()
 
         # Try to order too much
@@ -281,7 +281,7 @@ class TestBusinessGame:
 
     def test_bankruptcy(self):
         """Test game over when bankrupt."""
-        game = BusinessGame(starting_cash=10, seed=42)
+        game = BusinessGame(starting_cash=10)
         game.start_new_day()
 
         # Set high operating cost day
