@@ -241,14 +241,13 @@ class DemandModel:
         return self.HOURLY_MULTIPLIERS[hour]
 
     def calculate_customers(
-        self, price: float, hour: int, random_variation: bool = True
+        self, price: float, hour: int
     ) -> int:
         """Calculate actual number of customers for a given hour.
 
         Args:
             price: Price per lemonade
             hour: Hour of day (0-23)
-            random_variation: Whether to apply ±10% random variation
 
         Returns:
             Number of customers (rounded to nearest integer)
@@ -260,12 +259,9 @@ class DemandModel:
         hour_multiplier = self.get_hour_multiplier(hour)
         demand_with_time = base_demand * hour_multiplier
 
-        # Apply random variation if enabled
-        if random_variation:
-            variation = random.uniform(0.9, 1.1)
-            final_demand = demand_with_time * variation
-        else:
-            final_demand = demand_with_time
+        # Apply ±10% random variation
+        variation = random.uniform(0.9, 1.1)
+        final_demand = demand_with_time * variation
 
         # Round to nearest integer
         return max(0, round(final_demand))
@@ -275,7 +271,6 @@ class DemandModel:
         price: float,
         open_hour: int,
         close_hour: int,
-        random_variation: bool = True,
     ) -> dict[int, int]:
         """Calculate customers for each hour of operation.
 
@@ -283,7 +278,6 @@ class DemandModel:
             price: Price per lemonade
             open_hour: Opening hour (inclusive)
             close_hour: Closing hour (exclusive)
-            random_variation: Whether to apply random variation
 
         Returns:
             Dictionary mapping hour -> number of customers
@@ -292,7 +286,7 @@ class DemandModel:
 
         for hour in range(open_hour, close_hour):
             if hour in self.HOURLY_MULTIPLIERS:
-                customers = self.calculate_customers(price, hour, random_variation)
+                customers = self.calculate_customers(price, hour)
                 customers_by_hour[hour] = customers
 
         return customers_by_hour
