@@ -128,6 +128,7 @@ class GameRecorder:
         response: Any,
         tool_executions: list[dict[str, Any]],
         duration_ms: int,
+        conversation_id: str | None = None,
     ) -> None:
         """Record a complete interaction (request/response/tools).
 
@@ -137,6 +138,7 @@ class GameRecorder:
             response: API response object
             tool_executions: List of tool calls and results
             duration_ms: Time taken for API call
+            conversation_id: Optional conversation ID for stateful API usage
         """
         if self.current_day_data is None:
             raise ValueError("Must call start_day() before recording interactions")
@@ -154,6 +156,10 @@ class GameRecorder:
             "tool_executions": tool_executions,
             "duration_ms": duration_ms,
         }
+
+        # Add conversation_id if provided (for stateful approach)
+        if conversation_id:
+            interaction["conversation_id"] = conversation_id
 
         self.current_day_data["interactions"].append(interaction)
         self.current_day_data["total_duration_ms"] += duration_ms

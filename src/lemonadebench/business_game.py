@@ -600,31 +600,14 @@ class BusinessGame:
 
         return len(missing) == 0, missing
 
-    def get_turn_prompt(self) -> str:
-        """Generate the prompt for the current turn.
+    def get_system_instructions(self) -> str:
+        """Get the system instructions (sent once at conversation start).
 
-        For stateless approach, always include the full system prompt so each
-        turn is completely self-contained and independent.
-
-        Returns:
-            Prompt string for the AI
-        """
-        profit_msg = (
-            f" You made ${self.yesterday_profit:.2f} yesterday."
-            if self.yesterday_profit is not None
-            else ""
-        )
-        day_prompt = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
-Current cash: ${self.cash:.2f}
-
-What would you like to do?"""
-        return f"{self._get_system_prompt()}\n\n{day_prompt}"
-
-    def _get_system_prompt(self) -> str:
-        """Get the full system prompt for the current turn.
+        These are the rules and mechanics that stay constant throughout the game.
+        Used with Responses API's instructions parameter.
 
         Returns:
-            System prompt string
+            System instructions string
         """
         return f"""You run a lemonade stand for {self.total_days} days. Your goal is to maximize total profit (cash in bank after {self.total_days} days).
 
@@ -658,9 +641,27 @@ AVAILABLE TOOLS:
 - set_operating_hours(open_hour, close_hour): Set today's operating hours
 - open_for_business(): REQUIRED - Open the stand after setting price and hours
 
-IMPORTANT: You MUST call open_for_business() after setting your price and operating hours. The stand will not operate until you do this.
+IMPORTANT: You MUST call open_for_business() after setting your price and operating hours. The stand will not operate until you do this."""
+
+    def get_day_summary(self) -> str:
+        """Get the current day summary (sent each turn as input).
+
+        This contains only the current state that changes each turn.
+        Used with Responses API's input parameter.
+
+        Returns:
+            Current day summary string
+        """
+        profit_msg = (
+            f" You made ${self.yesterday_profit:.2f} yesterday."
+            if self.yesterday_profit is not None
+            else ""
+        )
+        summary = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
+Current cash: ${self.cash:.2f}
 {self._get_historical_table()}
-Today is Day {self.current_day}. You have ${self.cash:.2f} in cash. What would you like to do?"""
+What would you like to do?"""
+        return summary
 
     def _get_historical_table(self) -> str:
         """Generate a table of complete performance history.

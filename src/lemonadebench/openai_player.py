@@ -49,7 +49,10 @@ class OpenAIPlayer:
         self.api_max_retries = api_max_retries
         self.api_backoff = api_backoff
 
-        # For stateless approach - minimal tracking
+        # Conversation state management (Responses API)
+        self.conversation_id: str | None = None
+
+        # For tracking reasoning summaries
         self.reasoning_summaries: list[dict[str, Any]] = []
 
         # Token tracking
@@ -210,7 +213,7 @@ class OpenAIPlayer:
     def play_turn(
         self, game: BusinessGame, recorder: GameRecorder | None = None
     ) -> dict[str, Any]:
-        """Play one turn of the game using OpenAI Responses API (stateless).
+        """Play one turn of the game using OpenAI Responses API with conversation state.
 
         Args:
             game: The BusinessGame instance
@@ -219,11 +222,15 @@ class OpenAIPlayer:
         Returns:
             Dictionary with success status and attempt information
         """
-        prompt = game.get_turn_prompt()
         max_attempts = 10
         attempts = 0
         all_tool_calls_this_turn: list[str] = []
-        conversation = [{"role": "user", "content": prompt}]
+
+        # On first day, create a new conversation
+        if self.conversation_id is None:
+            logger.info(f"Creating new conversation for day {game.current_day}")
+            conversation_obj = self.client.conversations.create()
+            self.conversation_id = conversation_obj.id
 
         while attempts < max_attempts:
             attempts += 1
@@ -235,8 +242,8 @@ class OpenAIPlayer:
                             f"  Progress: {list(set(all_tool_calls_this_turn))}"
                         )
 
-                # Build request
-                kwargs = self._build_request_kwargs(conversation, game)
+                # Build request with conversation
+                kwargs = self._build_request_kwargs_stateful(game, attempts == 1)
 
                 # Time the API call
                 start_time = time.time()
@@ -253,7 +260,7 @@ class OpenAIPlayer:
                     tool_results,
                     assistant_message,
                     success,
-                ) = self._process_output(
+                ) = self._process_output_stateful(
                     response, game, attempts, all_tool_calls_this_turn
                 )
 
@@ -278,15 +285,15 @@ class OpenAIPlayer:
                         response=response,
                         tool_executions=tool_executions,
                         duration_ms=duration_ms,
+                        conversation_id=self.conversation_id,
                     )
 
                 if success is not None:
                     return success
 
+                # Add tool results to conversation for next attempt
                 if tool_results:
-                    self._append_tool_results_to_conversation(
-                        tool_results, conversation
-                    )
+                    self._add_tool_results_to_conversation(tool_results)
 
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
@@ -324,12 +331,35 @@ class OpenAIPlayer:
     def _build_request_kwargs(
         self, conversation: list[dict[str, Any]], game: BusinessGame
     ) -> dict[str, Any]:
+        """Legacy: Build request for stateless approach (for backward compatibility)."""
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "input": conversation,
             "tools": self.get_tools(),
-            "instructions": game._get_system_prompt(),
+            "instructions": game.get_system_instructions(),
         }
+        if self.is_reasoning_model:
+            kwargs["reasoning"] = {"effort": "medium"}
+            kwargs["max_output_tokens"] = 25000
+            if self.include_reasoning_summary:
+                kwargs["reasoning"]["summary"] = "auto"
+        return kwargs
+
+    def _build_request_kwargs_stateful(
+        self, game: BusinessGame, is_first_attempt: bool
+    ) -> dict[str, Any]:
+        """Build request for stateful approach using Responses API conversations."""
+        kwargs: dict[str, Any] = {
+            "model": self.model_name,
+            "conversation": self.conversation_id,
+            "input": game.get_day_summary(),
+            "tools": self.get_tools(),
+        }
+
+        # Only include instructions on the first attempt to avoid repetition
+        if is_first_attempt:
+            kwargs["instructions"] = game.get_system_instructions()
+
         if self.is_reasoning_model:
             kwargs["reasoning"] = {"effort": "medium"}
             kwargs["max_output_tokens"] = 25000
@@ -487,9 +517,88 @@ class OpenAIPlayer:
 
         return tool_calls_made, tool_results, assistant_message, None
 
+    def _process_output_stateful(
+        self,
+        response: Any,
+        game: BusinessGame,
+        attempts: int,
+        all_tool_calls_this_turn: list[str],
+    ) -> tuple[
+        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None
+    ]:
+        """Process response from Responses API with conversation state."""
+        tool_calls_made: list[str] = []
+        tool_results: list[dict[str, Any]] = []
+        assistant_message: dict[str, Any] | None = None
+
+        if attempts <= 4:
+            logger.info(f"Response has {len(response.output)} output items")
+
+        for item in response.output:
+            if item.type == "function_call":
+                args = json.loads(item.arguments) if item.arguments else {}
+                result = self.execute_tool(item.name, args, game)
+                tool_calls_made.append(item.name)
+                all_tool_calls_this_turn.append(item.name)
+                tool_results.append(
+                    {"name": item.name, "result": result, "id": item.id}
+                )
+                if item.name == "open_for_business":
+                    result_dict = json.loads(result)
+                    if result_dict.get("success", False):
+                        logger.info("open_for_business succeeded - day complete")
+                        return (
+                            tool_calls_made,
+                            tool_results,
+                            assistant_message,
+                            {
+                                "success": True,
+                                "attempts": attempts,
+                                "tool_calls": all_tool_calls_this_turn,
+                                "opened_for_business": True,
+                            },
+                        )
+                if attempts <= 2:
+                    logger.info(f"Executed {item.name}, result: {result[:100]}...")
+            elif item.type == "text":
+                if not assistant_message:
+                    assistant_message = {"role": "assistant", "content": item.text}
+                elif isinstance(assistant_message["content"], str):
+                    assistant_message["content"] += "\n" + item.text
+                else:
+                    assistant_message["content"].append(
+                        {"type": "text", "text": item.text}
+                    )
+
+        return tool_calls_made, tool_results, assistant_message, None
+
+    def _add_tool_results_to_conversation(
+        self, tool_results: list[dict[str, Any]]
+    ) -> None:
+        """Add tool results to the conversation using Responses API."""
+        results_message = "Here are the results of the tool calls:\n\n"
+        for tool_result in tool_results:
+            results_message += (
+                f"{tool_result['name']} result:\n{tool_result['result']}\n\n"
+            )
+        results_message += "Please continue with the next steps."
+
+        # Add the tool results message to the conversation
+        self.client.conversations.items.create(
+            self.conversation_id,
+            items=[
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": results_message,
+                }
+            ],
+        )
+
     def _append_tool_results_to_conversation(
         self, tool_results: list[dict[str, Any]], conversation: list[dict[str, Any]]
     ) -> None:
+        """Legacy: Append tool results to local conversation list (for backward compatibility)."""
         results_message = "Here are the results of the tool calls:\n\n"
         for tool_result in tool_results:
             results_message += (
