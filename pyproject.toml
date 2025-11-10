@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Aidan Vyas", email = "68206970+aidanvyas@users.noreply.github.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "numpy>=1.24.0",
     "pydantic>=2.0.0",
