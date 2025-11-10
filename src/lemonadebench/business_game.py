@@ -506,15 +506,6 @@ class BusinessGame:
         Returns:
             Day's results
         """
-        # Check required actions
-        ready, missing = self.check_ready_for_next_day()
-        if not ready:
-            return {
-                "success": False,
-                "error": "Cannot simulate day - required actions not completed",
-                "missing_actions": missing,
-            }
-
         # Calculate customers for each hour
         assert self.price is not None
         assert self.open_hour is not None
