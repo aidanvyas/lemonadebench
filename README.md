@@ -4,7 +4,7 @@
 
 ### 1. Clone and Install
 ```bash
-git clone https://github.com/aidanvyas/lemonadebench.git
+gh repo clone aidanvyas/lemonadebench
 cd lemonadebench
 uv sync  # Install dependencies with uv
 ```
