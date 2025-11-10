@@ -574,8 +574,7 @@ class BusinessGame:
         # Store in history
         self.history.append(day_result)
 
-        # Return with success indicator
-        return {"success": True, **day_result}
+        return day_result
 
     def get_historical_supply_costs(self) -> list[dict[str, Decimal]]:
         """Get historical supply cost data.
