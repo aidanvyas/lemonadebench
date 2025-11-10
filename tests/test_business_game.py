@@ -45,10 +45,8 @@ class TestBusinessGame:
         game = BusinessGame(seed=42)
         game.start_new_day()
 
-        result = game.check_morning_prices()
+        prices = game.check_morning_prices()
 
-        assert result["success"] is True
-        prices = result["prices"]
         assert "cups" in prices
         assert "lemons" in prices
         assert "sugar" in prices

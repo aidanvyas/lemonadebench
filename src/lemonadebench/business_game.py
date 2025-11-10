@@ -368,13 +368,13 @@ class BusinessGame:
 
         return {"day": self.current_day, "expired_items": expired, "cash": self.cash}
 
-    def check_morning_prices(self) -> dict[str, Any]:
+    def check_morning_prices(self) -> dict[str, Decimal]:
         """Check today's supply costs.
 
         Returns:
-            Dictionary with supply costs
+            Dictionary of supply costs
         """
-        return {"success": True, "prices": self.today_supply_costs.copy()}
+        return self.today_supply_costs.copy()
 
     def check_inventory(self) -> dict[str, Any]:
         """Check current inventory levels and expiration dates.
