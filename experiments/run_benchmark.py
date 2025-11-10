@@ -63,7 +63,7 @@ def run_single_game(
     start_time = time.time()
 
     # Initialize game and player
-    game = BusinessGame(days=days, starting_cash=starting_cash, seed=seed)
+    game = BusinessGame(days=days, starting_cash=starting_cash)
     player = OpenAIPlayer(model_name=model_name)
 
     # Initialize GameRecorder
