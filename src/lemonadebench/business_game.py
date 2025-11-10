@@ -446,19 +446,6 @@ class BusinessGame:
         Returns:
             Confirmation or error
         """
-        # Validate hours
-        if open_hour < 0 or open_hour > 23:
-            return {
-                "success": False,
-                "error": f"Invalid open hour: {open_hour}. Must be between 0-23.",
-            }
-
-        if close_hour < 1 or close_hour > 24:
-            return {
-                "success": False,
-                "error": f"Invalid close hour: {close_hour}. Must be between 1-24.",
-            }
-
         if close_hour <= open_hour:
             return {
                 "success": False,
