@@ -109,7 +109,7 @@ def run_single_game(
             day_bar.update(1)
 
             # Record game state at start of day
-            supply_costs = game.check_morning_prices()["prices"]
+            supply_costs = game.check_morning_prices()
             recorder.start_day(
                 day_number=game.current_day,
                 game_state={
