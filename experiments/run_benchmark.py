@@ -10,6 +10,7 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
+from decimal import Decimal
 
 from tqdm import tqdm
 from pathlib import Path
@@ -37,6 +38,16 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle Decimal objects."""
+
+    def default(self, obj: Any) -> Any:
+        """Convert Decimal to float for JSON serialization."""
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
 
 
 def run_single_game(
@@ -499,6 +510,7 @@ def main():
             },
             f,
             indent=2,
+            cls=DecimalEncoder,
         )
 
     # Final summary

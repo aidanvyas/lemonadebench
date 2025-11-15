@@ -660,7 +660,7 @@ IMPORTANT: You MUST call open_for_business() after setting your price and operat
         summary = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
 {self._get_historical_table()}
-What would you like to do?"""
+Use the available tools to check inventory, set prices, order supplies, and open for business. Continue making decisions until you call open_for_business()."""
         return summary
 
     def _get_historical_table(self) -> str:
