@@ -294,9 +294,9 @@ class OpenAIPlayer:
                 if success is not None:
                     return success
 
-                # Add tool results to conversation for next attempt
-                if tool_results:
-                    self._add_tool_results_to_conversation(tool_results)
+                # With stateless multi-turn using previous_response_id, tool results
+                # are handled automatically by the API when chaining responses.
+                # No need to explicitly add them to a conversation.
 
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
@@ -578,29 +578,6 @@ class OpenAIPlayer:
                     )
 
         return tool_calls_made, tool_results, assistant_message, None
-
-    def _add_tool_results_to_conversation(
-        self, tool_results: list[dict[str, Any]]
-    ) -> None:
-        """Add tool results to the conversation using Responses API."""
-        results_message = "Here are the results of the tool calls:\n\n"
-        for tool_result in tool_results:
-            results_message += (
-                f"{tool_result['name']} result:\n{tool_result['result']}\n\n"
-            )
-        results_message += "Please continue with the next steps."
-
-        # Add the tool results message to the conversation
-        self.client.conversations.items.create(
-            self.conversation_id,
-            items=[
-                {
-                    "type": "message",
-                    "role": "user",
-                    "content": results_message,
-                }
-            ],
-        )
 
     def _append_tool_results_to_conversation(
         self, tool_results: list[dict[str, Any]], conversation: list[dict[str, Any]]
