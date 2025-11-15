@@ -354,7 +354,7 @@ class OpenAIPlayer:
         """Build request for stateful approach using Responses API with previous_response_id."""
         kwargs: dict[str, Any] = {
             "model": self.model_name,
-            "input": game.get_day_summary(),
+            "input": game.get_day_summary(is_first_attempt=is_first_attempt),
             "tools": self.get_tools(),
             "service_tier": "flex",  # SAFEGUARD: Always use Flex tier for cost savings
         }

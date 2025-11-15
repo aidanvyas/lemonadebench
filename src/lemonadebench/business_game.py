@@ -643,11 +643,14 @@ AVAILABLE TOOLS:
 
 IMPORTANT: You MUST call open_for_business() after setting your price and operating hours. The stand will not operate until you do this."""
 
-    def get_day_summary(self) -> str:
+    def get_day_summary(self, is_first_attempt: bool = True) -> str:
         """Get the current day summary (sent each turn as input).
 
         This contains only the current state that changes each turn.
         Used with Responses API's input parameter.
+
+        Args:
+            is_first_attempt: If True, include tool reminder. If False, only show state.
 
         Returns:
             Current day summary string
@@ -659,8 +662,12 @@ IMPORTANT: You MUST call open_for_business() after setting your price and operat
         )
         summary = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
-{self._get_historical_table()}
-Use the available tools to check inventory, set prices, order supplies, and open for business. Continue making decisions until you call open_for_business()."""
+{self._get_historical_table()}"""
+
+        # Only include tool reminder on first attempt of the day
+        if is_first_attempt:
+            summary += "\nUse the available tools to check inventory, set prices, order supplies, and open for business. Continue making decisions until you call open_for_business()."
+
         return summary
 
     def _get_historical_table(self) -> str:
