@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from typing import Any, Type
 
 from openai import OpenAI
@@ -229,11 +230,10 @@ class OpenAIPlayer:
         attempts = 0
         all_tool_calls_this_turn: list[str] = []
 
-        # On first day, create a new conversation
+        # On first day, create a new conversation ID
         if self.conversation_id is None:
             logger.info(f"Creating new conversation for day {game.current_day}")
-            conversation_obj = self.client.conversations.create()
-            self.conversation_id = conversation_obj.id
+            self.conversation_id = str(uuid.uuid4())
 
         while attempts < max_attempts:
             attempts += 1
