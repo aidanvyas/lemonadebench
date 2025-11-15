@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-import uuid
 from typing import Any, Type
 
 from openai import OpenAI
@@ -60,11 +59,14 @@ class OpenAIPlayer:
         self.api_max_retries = api_max_retries
         self.api_backoff = api_backoff
 
-        # Conversation state management (Responses API)
-        self.conversation_id: str | None = None
+        # Conversation state management (Responses API) - using previous_response_id for stateless multi-turn
+        self.previous_response_id: str | None = None
 
         # For tracking reasoning summaries
         self.reasoning_summaries: list[dict[str, Any]] = []
+
+        # Track errors
+        self.errors: list[dict[str, Any]] = []
 
         # Token tracking
         self.total_token_usage = {
@@ -104,9 +106,6 @@ class OpenAIPlayer:
 
     def __exit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - trivial
         self.close()
-
-        # Track errors
-        self.errors: list[dict[str, Any]] = []
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Define available tools for the AI using Pydantic schemas."""
@@ -230,10 +229,8 @@ class OpenAIPlayer:
         attempts = 0
         all_tool_calls_this_turn: list[str] = []
 
-        # On first day, create a new conversation ID
-        if self.conversation_id is None:
-            logger.info(f"Creating new conversation for day {game.current_day}")
-            self.conversation_id = str(uuid.uuid4())
+        # Note: We use previous_response_id for stateless multi-turn conversations.
+        # Each response automatically becomes the previous_response_id for the next response.
 
         while attempts < max_attempts:
             attempts += 1
@@ -256,6 +253,9 @@ class OpenAIPlayer:
                 # Extract data from response
                 self._extract_reasoning_summary(response, game, attempts)
                 self._update_token_usage(response)
+
+                # Store response ID for next turn (stateless multi-turn)
+                self.previous_response_id = response.id
 
                 # Process the response output
                 (
@@ -288,7 +288,7 @@ class OpenAIPlayer:
                         response=response,
                         tool_executions=tool_executions,
                         duration_ms=duration_ms,
-                        conversation_id=self.conversation_id,
+                        conversation_id=self.previous_response_id,
                     )
 
                 if success is not None:
@@ -351,17 +351,20 @@ class OpenAIPlayer:
     def _build_request_kwargs_stateful(
         self, game: BusinessGame, is_first_attempt: bool
     ) -> dict[str, Any]:
-        """Build request for stateful approach using Responses API conversations."""
+        """Build request for stateful approach using Responses API with previous_response_id."""
         kwargs: dict[str, Any] = {
             "model": self.model_name,
-            "conversation": self.conversation_id,
             "input": game.get_day_summary(),
             "tools": self.get_tools(),
             "service_tier": "flex",  # SAFEGUARD: Always use Flex tier for cost savings
         }
 
-        # Only include instructions on the first attempt to avoid repetition
-        if is_first_attempt:
+        # Use previous_response_id for stateless multi-turn conversations
+        if self.previous_response_id is not None:
+            kwargs["previous_response_id"] = self.previous_response_id
+
+        # Only include instructions on the first day (first attempt)
+        if is_first_attempt and self.previous_response_id is None:
             kwargs["instructions"] = game.get_system_instructions()
 
         if self.is_reasoning_model:
