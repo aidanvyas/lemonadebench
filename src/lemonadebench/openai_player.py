@@ -28,7 +28,7 @@ class OpenAIPlayer:
 
     def __init__(
         self,
-        model_name: str = "gpt-4.1-nano",
+        model_name: str = "gpt-5-nano",
         api_key: str | None = None,
         include_reasoning_summary: bool = True,
         *,
@@ -38,12 +38,22 @@ class OpenAIPlayer:
         """Initialize the AI player.
 
         Args:
-            model_name: OpenAI model to use
+            model_name: OpenAI model to use (RESTRICTED TO gpt-5-nano)
             api_key: OpenAI API key (uses env var if not provided)
             include_reasoning_summary: Whether to request reasoning summaries for o* models
             api_max_retries: Number of times to retry failed API calls
             api_backoff: Initial backoff delay (seconds) for retries
+
+        Raises:
+            ValueError: If model_name is not gpt-5-nano
         """
+        # SAFEGUARD: Only allow gpt-5-nano model
+        if model_name != "gpt-5-nano":
+            raise ValueError(
+                f"Only gpt-5-nano is supported. Got: {model_name}. "
+                "This restriction ensures consistent pricing with Flex tier."
+            )
+
         self.model_name = model_name
         self.include_reasoning_summary = include_reasoning_summary
         self.api_max_retries = api_max_retries
@@ -64,20 +74,13 @@ class OpenAIPlayer:
             "cached_input_tokens": 0,
         }
 
-        # Cost tracking
+        # Cost tracking - gpt-5-nano with Flex tier pricing (per 1M tokens)
         self.model_pricing = {
-            "gpt-4.1-nano": {"input": 0.10, "cached_input": 0.025, "output": 0.40},
-            "gpt-4.1-mini": {"input": 0.40, "cached_input": 0.10, "output": 1.60},
-            "gpt-4.1": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
-            "gpt-5": {"input": 1.25, "cached_input": 0.125, "output": 10.00},
-            "gpt-5-mini": {"input": 0.25, "cached_input": 0.025, "output": 2.00},
-            "gpt-5-nano": {"input": 0.05, "cached_input": 0.005, "output": 0.40},
-            "o3": {"input": 2.00, "cached_input": 0.50, "output": 8.00},
-            "o4-mini": {"input": 1.10, "cached_input": 0.275, "output": 4.40},
+            "gpt-5-nano": {"input": 0.025, "cached_input": 0.0025, "output": 0.20},
         }
 
-        # Check if this is a reasoning model
-        self.is_reasoning_model = model_name.startswith(("o1", "o3", "o4", "gpt-5", "gpt-5-mini", "gpt-5-nano"))
+        # Check if this is a reasoning model (gpt-5-nano is not a reasoning model)
+        self.is_reasoning_model = False
 
         # Initialize OpenAI client (synchronous)
         api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -354,6 +357,7 @@ class OpenAIPlayer:
             "conversation": self.conversation_id,
             "input": game.get_day_summary(),
             "tools": self.get_tools(),
+            "service_tier": "flex",  # SAFEGUARD: Always use Flex tier for cost savings
         }
 
         # Only include instructions on the first attempt to avoid repetition

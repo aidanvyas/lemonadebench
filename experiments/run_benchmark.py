@@ -331,7 +331,10 @@ def main():
     )
     parser.add_argument("--days", type=int, default=30, help="Number of days per game")
     parser.add_argument(
-        "--models", nargs="+", default=["gpt-4.1-nano"], help="Models to test"
+        "--models",
+        nargs="+",
+        default=["gpt-5-nano"],
+        help="Models to test (RESTRICTED: only gpt-5-nano supported)",
     )
     parser.add_argument(
         "--starting-cash", type=float, default=1000, help="Starting cash for each game"
@@ -350,11 +353,22 @@ def main():
     )
     args = parser.parse_args()
 
+    # SAFEGUARD: Only allow gpt-5-nano model
+    for model in args.models:
+        if model != "gpt-5-nano":
+            logger.error(
+                f"ERROR: Only gpt-5-nano is supported. Got: {model}\n"
+                "This restriction ensures consistent pricing with Flex tier.\n"
+                "Use: --models gpt-5-nano"
+            )
+            sys.exit(1)
+
     logger.info("=" * 70)
     logger.info("LEMONADEBENCH v0.5 - Business Simulation with Inventory Management")
     logger.info("=" * 70)
-    logger.info(f"Models: {', '.join(args.models)}")
-    logger.info(f"Games per model: {args.games}")
+    logger.info(f"Model: {args.models[0]}")
+    logger.info(f"Service Tier: Flex (for cost savings)")
+    logger.info(f"Games: {args.games}")
     logger.info(f"Days per game: {args.days}")
     logger.info(f"Starting cash: ${args.starting_cash}")
     logger.info(f"Workers: {args.workers}")
