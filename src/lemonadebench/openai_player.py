@@ -523,7 +523,7 @@ class OpenAIPlayer:
                 tool_calls_made.append(item.name)
                 all_tool_calls_this_turn.append(item.name)
                 tool_results.append(
-                    {"name": item.name, "result": result, "id": item.id}
+                    {"name": item.name, "result": result, "id": item.call_id}
                 )
                 if item.name == "open_for_business":
                     result_dict = json.loads(result)
@@ -578,7 +578,7 @@ class OpenAIPlayer:
                 tool_calls_made.append(item.name)
                 all_tool_calls_this_turn.append(item.name)
                 tool_results.append(
-                    {"name": item.name, "result": result, "id": item.id}
+                    {"name": item.name, "result": result, "id": item.call_id}
                 )
                 if item.name == "open_for_business":
                     result_dict = json.loads(result)
