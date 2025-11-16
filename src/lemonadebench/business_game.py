@@ -175,6 +175,9 @@ class Inventory:
 class DemandModel:
     """Calculates customer demand based on price, time of day, and random variation."""
 
+    # Default random variation percentage (±10%)
+    DEFAULT_VARIATION_PCT = 0.10
+
     # Hourly demand multipliers for all 24 hours
     HOURLY_MULTIPLIERS: dict[int, float] = {
         0: 0.0,  # 12-1am: No demand
@@ -204,16 +207,21 @@ class DemandModel:
     }
 
     def __init__(
-        self, base_demand_intercept: float = 50, price_sensitivity: float = 10
+        self,
+        base_demand_intercept: float = 50,
+        price_sensitivity: float = 10,
+        variation_pct: float = DEFAULT_VARIATION_PCT,
     ):
         """Initialize demand model.
 
         Args:
             base_demand_intercept: Maximum customers per hour at price=0
             price_sensitivity: How much demand decreases per dollar of price
+            variation_pct: Random variation percentage (default 0.10 for ±10%)
         """
         self.base_demand_intercept = base_demand_intercept
         self.price_sensitivity = price_sensitivity
+        self.variation_pct = variation_pct
 
     def calculate_base_demand(self, price: float) -> float:
         """Calculate base hourly demand at given price.
@@ -259,8 +267,10 @@ class DemandModel:
         hour_multiplier = self.get_hour_multiplier(hour)
         demand_with_time = base_demand * hour_multiplier
 
-        # Apply ±10% random variation
-        variation = random.uniform(0.9, 1.1)
+        # Apply random variation (e.g., ±10% by default)
+        variation_min = 1.0 - self.variation_pct
+        variation_max = 1.0 + self.variation_pct
+        variation = random.uniform(variation_min, variation_max)
         final_demand = demand_with_time * variation
 
         # Round to nearest integer
@@ -317,7 +327,6 @@ class BusinessGame:
         # Initialize components
         self.inventory = Inventory()
         self.demand_model = DemandModel()
-        self.rng = random.Random()
 
         # Daily state tracking
         self.today_supply_costs: dict[str, Decimal] = {}
@@ -351,7 +360,7 @@ class BusinessGame:
         # Generate today's supply costs (±10% variation)
         self.today_supply_costs = {}
         for item, base_cost in self.inventory.base_costs.items():
-            variation = to_decimal(self.rng.uniform(0.9, 1.1))
+            variation = to_decimal(random.uniform(0.9, 1.1))
             self.today_supply_costs[item] = (base_cost * variation).quantize(to_decimal("0.0001"))
 
         # Store in history
