@@ -61,6 +61,7 @@ class OpenAIPlayer:
 
         # Conversation state management (Responses API) - using previous_response_id for stateless multi-turn
         self.previous_response_id: str | None = None
+        self.pending_tool_outputs: list[dict[str, Any]] = []
 
         # For tracking reasoning summaries
         self.reasoning_summaries: list[dict[str, Any]] = []
@@ -267,6 +268,16 @@ class OpenAIPlayer:
                     response, game, attempts, all_tool_calls_this_turn
                 )
 
+                # Convert tool results to function_call_output format for next request
+                self.pending_tool_outputs = [
+                    {
+                        "type": "function_call_output",
+                        "call_id": tool_result["id"],
+                        "output": tool_result["result"]
+                    }
+                    for tool_result in tool_results
+                ]
+
                 # Record the interaction if recorder is provided
                 if recorder:
                     # Build list of tool executions
@@ -292,11 +303,12 @@ class OpenAIPlayer:
                     )
 
                 if success is not None:
+                    # Clear pending tool outputs when day completes successfully
+                    self.pending_tool_outputs = []
                     return success
 
-                # With stateless multi-turn using previous_response_id, tool results
-                # are handled automatically by the API when chaining responses.
-                # No need to explicitly add them to a conversation.
+                # Tool outputs are stored in self.pending_tool_outputs and will be
+                # sent in the next request via the input array.
 
                 if not tool_calls_made:
                     logger.info(f"Attempt {attempts}: No tool calls made")
@@ -352,9 +364,22 @@ class OpenAIPlayer:
         self, game: BusinessGame, is_first_attempt: bool
     ) -> dict[str, Any]:
         """Build request for stateful approach using Responses API with previous_response_id."""
+        # Build input array with tool outputs (if any) + user message
+        input_array: list[dict[str, Any]] = []
+
+        # First, add any pending tool outputs from previous response
+        if self.pending_tool_outputs:
+            input_array.extend(self.pending_tool_outputs)
+
+        # Then add the user message (day summary)
+        input_array.append({
+            "role": "user",
+            "content": game.get_day_summary(is_first_attempt=is_first_attempt)
+        })
+
         kwargs: dict[str, Any] = {
             "model": self.model_name,
-            "input": game.get_day_summary(is_first_attempt=is_first_attempt),
+            "input": input_array,
             "tools": self.get_tools(),
             "service_tier": "flex",  # SAFEGUARD: Always use Flex tier for cost savings
         }
