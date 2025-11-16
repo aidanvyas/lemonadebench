@@ -72,5 +72,3 @@ results/tex/
 # Keep GPT-5 family benchmark results
 !results/json/gpt-5-gpt-5-mini-gpt-5-nano_1games_30days_v05_20250810_010501.json
 !results/json/gpt-5-gpt-5-mini-gpt-5-nano_1games_30days_v05_20250810_010501_full.json
-
-# Don't ignore ROADMAP.md - it's our feature planning!

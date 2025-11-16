@@ -59,8 +59,7 @@ uv run python experiments/run_benchmark.py --days 30 --models gpt-4.1-nano gpt-4
 lemonadebench/
 ├── pyproject.toml             # Project config & dependencies
 ├── uv.lock                    # Locked dependency versions
-├── .python-version            # Python 3.14 (used by uv)
-├── CLAUDE.md                  # Development guide and common commands
+├── .python-version            # Python 3.12 (used by uv)
 ├── src/lemonadebench/         # Core implementation
 │   ├── business_game.py       # Game mechanics + inventory + demand
 │   ├── openai_player.py       # OpenAI-based AI player
@@ -99,8 +98,6 @@ uv run python -m pytest
 - **v0.5** (current): Basic inventory management and price discovery
 - **v1.0** (in development): Comprehensive economic decision making over a decade
 - **v2.0** (planned): Multi-agent markets to test strategic decision making and AI alignment
-
-See [ROADMAP.md](ROADMAP.md) for detailed plans.
 
 ## Citation
 
