@@ -3,7 +3,7 @@
 import random
 from collections import deque
 from decimal import ROUND_HALF_UP, Decimal, getcontext
-from typing import Any
+from typing import Any, ClassVar
 
 from .utils import to_decimal
 
@@ -186,7 +186,7 @@ class DemandModel:
     DEFAULT_VARIATION_PCT = 0.10
 
     # Hourly demand multipliers for all 24 hours
-    HOURLY_MULTIPLIERS: dict[int, float] = {
+    HOURLY_MULTIPLIERS: ClassVar[dict[int, float]] = {
         0: 0.0,  # 12-1am: No demand
         1: 0.0,  # 1-2am: No demand
         2: 0.0,  # 2-3am: No demand
@@ -218,7 +218,7 @@ class DemandModel:
         base_demand_intercept: float = 50,
         price_sensitivity: float = 10,
         variation_pct: float = DEFAULT_VARIATION_PCT,
-    ):
+    ) -> None:
         """Initialize demand model.
 
         Args:
@@ -322,7 +322,7 @@ class BusinessGame:
         days: int = DEFAULT_TOTAL_DAYS,
         starting_cash: Decimal | float = DEFAULT_STARTING_CASH,
         hourly_operating_cost: Decimal | float = DEFAULT_HOURLY_OPERATING_COST,
-    ):
+    ) -> None:
         """Initialize the business game.
 
         Args:
@@ -335,7 +335,9 @@ class BusinessGame:
         self.current_day = 0
         self.starting_cash = to_decimal(starting_cash).quantize(TWOPLACES)
         self.cash = to_decimal(starting_cash).quantize(TWOPLACES)
-        self.hourly_operating_cost = to_decimal(hourly_operating_cost).quantize(TWOPLACES)
+        self.hourly_operating_cost = to_decimal(hourly_operating_cost).quantize(
+            TWOPLACES,
+        )
 
         # Initialize components
         self.inventory = Inventory()
@@ -375,7 +377,9 @@ class BusinessGame:
         self.today_supply_costs = {}
         for item, base_cost in self.inventory.base_costs.items():
             variation = to_decimal(random.uniform(0.9, 1.1))
-            self.today_supply_costs[item] = (base_cost * variation).quantize(to_decimal("0.0001"))
+            self.today_supply_costs[item] = (base_cost * variation).quantize(
+                to_decimal("0.0001"),
+            )
 
         # Store in history
         self.supply_cost_history.append(
@@ -443,7 +447,10 @@ class BusinessGame:
         if total_cost > self.cash:
             return {
                 "success": False,
-                "error": f"Insufficient funds. Cost: ${total_cost:.2f}, Available: ${self.cash:.2f}",
+                "error": (
+                    f"Insufficient funds. Cost: ${total_cost:.2f}, "
+                    f"Available: ${self.cash:.2f}"
+                ),
             }
 
         # Process order
@@ -476,7 +483,10 @@ class BusinessGame:
         if close_hour <= open_hour:
             return {
                 "success": False,
-                "error": f"Close hour ({close_hour}) must be after open hour ({open_hour}).",
+                "error": (
+                    f"Close hour ({close_hour}) must be after "
+                    f"open hour ({open_hour})."
+                ),
             }
 
         self.open_hour = open_hour
@@ -526,7 +536,11 @@ class BusinessGame:
 
         return {
             "success": True,
-            "message": f"Ready to open! Hours: {self.open_hour}-{self.close_hour}, Price: ${self.price:.2f}. The stand is now open for business and the day will play out automatically.",
+            "message": (
+                f"Ready to open! Hours: {self.open_hour}-{self.close_hour}, "
+                f"Price: ${self.price:.2f}. The stand is now open for business "
+                f"and the day will play out automatically."
+            ),
         }
 
     def simulate_day(self) -> dict[str, Any]:
@@ -642,7 +656,8 @@ class BusinessGame:
             System instructions string
 
         """
-        return f"""You run a lemonade stand for {self.total_days} days. Your goal is to maximize total profit (cash in bank after {self.total_days} days).
+        return f"""You run a lemonade stand for {self.total_days} days. \
+Your goal is to maximize total profit (cash in bank after {self.total_days} days).
 
 BUSINESS MECHANICS:
 - Starting capital: $1000
@@ -674,9 +689,10 @@ AVAILABLE TOOLS:
 - set_operating_hours(open_hour, close_hour): Set today's operating hours
 - open_for_business(): REQUIRED - Open the stand after setting price and hours
 
-IMPORTANT: You MUST call open_for_business() after setting your price and operating hours. The stand will not operate until you do this."""
+IMPORTANT: You MUST call open_for_business() after setting your price and \
+operating hours. The stand will not operate until you do this."""
 
-    def get_day_summary(self, is_first_attempt: bool = True) -> str:
+    def get_day_summary(self, *, is_first_attempt: bool = True) -> str:
         """Get the current day summary (sent each turn as input).
 
         This contains only the current state that changes each turn.
@@ -700,7 +716,11 @@ Current cash: ${self.cash:.2f}
 
         # Only include tool reminder on first attempt of the day
         if is_first_attempt:
-            summary += "\nUse the available tools to check inventory, set prices, order supplies, and open for business. Continue making decisions until you call open_for_business()."
+            summary += (
+                "\nUse the available tools to check inventory, set prices, "
+                "order supplies, and open for business. Continue making "
+                "decisions until you call open_for_business()."
+            )
 
         return summary
 
@@ -722,7 +742,11 @@ Current cash: ${self.cash:.2f}
         for day in self.history:
             ran_out = "Yes" if day["customers_lost"] > 0 else "No"
             hours = f"{day['open_hour']}-{day['close_hour']}"
-            table += f"{day['day']:3} | ${day['price']:5.2f} | ${day['profit']:9.2f} | {day['customers_served']:9} | {hours:^10} | {ran_out:^7}\n"
+            table += (
+                f"{day['day']:3} | ${day['price']:5.2f} | "
+                f"${day['profit']:9.2f} | {day['customers_served']:9} | "
+                f"{hours:^10} | {ran_out:^7}\n"
+            )
 
         return table
 
@@ -750,6 +774,14 @@ Current cash: ${self.cash:.2f}
         total_customers = sum(day["customers_served"] for day in self.history)
         total_lost_sales = sum(day["customers_lost"] for day in self.history)
 
+        # Calculate average daily profit
+        if self.current_day > 0:
+            avg_daily_profit = (self.cash - self.starting_cash) / to_decimal(
+                self.current_day,
+            )
+        else:
+            avg_daily_profit = to_decimal("0")
+
         return {
             "days_played": self.current_day,
             "final_cash": self.cash,
@@ -759,8 +791,6 @@ Current cash: ${self.cash:.2f}
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,
             "total_lost_sales": total_lost_sales,
-            "average_daily_profit": (self.cash - self.starting_cash) / to_decimal(self.current_day)
-            if self.current_day > 0
-            else to_decimal("0"),
+            "average_daily_profit": avg_daily_profit,
             "inventory_value": self.inventory.get_total_value(),
         }
