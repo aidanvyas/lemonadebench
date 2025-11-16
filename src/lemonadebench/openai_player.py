@@ -30,7 +30,7 @@ class OpenAIPlayer:
         self,
         model_name: str = "gpt-5-nano",
         api_key: str | None = None,
-        include_reasoning_summary: bool = True,
+        include_reasoning_summary: bool = False,  # Disabled - requires verification
         *,
         api_max_retries: int = 3,
         api_backoff: float = 1.0,
@@ -40,7 +40,7 @@ class OpenAIPlayer:
         Args:
             model_name: OpenAI model to use (RESTRICTED TO gpt-5-nano)
             api_key: OpenAI API key (uses env var if not provided)
-            include_reasoning_summary: Whether to request reasoning summaries for o* models
+            include_reasoning_summary: Whether to request reasoning summaries (requires org verification)
             api_max_retries: Number of times to retry failed API calls
             api_backoff: Initial backoff delay (seconds) for retries
 
