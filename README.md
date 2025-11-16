@@ -16,7 +16,7 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 
 ### 3. Run Benchmark
 ```bash
-# Simple test (5 days, nano)
+# Simple test (5 days, gpt-5-nano)
 uv run python experiments/run_benchmark.py --days 5
 
 # Research run (10 days, nano vs o4-mini)
