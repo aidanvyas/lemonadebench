@@ -2,7 +2,7 @@
 
 import random
 from collections import deque
-from decimal import Decimal, ROUND_HALF_UP, getcontext
+from decimal import ROUND_HALF_UP, Decimal, getcontext
 from typing import Any
 
 from .utils import to_decimal
@@ -54,6 +54,7 @@ class Inventory:
             item_type: Type of item ('cups', 'lemons', 'sugar', 'water')
             quantity: Number of items to add
             current_day: Current day number for calculating expiry
+
         """
         expiry_day = current_day + self.shelf_life[item_type]
         self.items[item_type].append((quantity, expiry_day))
@@ -66,6 +67,7 @@ class Inventory:
 
         Returns:
             Total quantity available
+
         """
         return sum(quantity for quantity, _ in self.items[item_type])
 
@@ -74,6 +76,7 @@ class Inventory:
 
         Returns:
             Dictionary with item types as keys and list of batches as values
+
         """
         details: dict[str, list[dict[str, Any]]] = {}
         for item_type, batches in self.items.items():
@@ -94,6 +97,7 @@ class Inventory:
 
         Returns:
             True if all items were available and used, False otherwise
+
         """
         # First check if we have enough of everything
         for item_type, needed in recipe.items():
@@ -129,6 +133,7 @@ class Inventory:
 
         Returns:
             Dictionary of item_type -> quantity expired
+
         """
         expired = {}
 
@@ -150,6 +155,7 @@ class Inventory:
 
         Returns:
             Total value in dollars
+
         """
         total = to_decimal("0")
         for item_type in self.items:
@@ -162,6 +168,7 @@ class Inventory:
 
         Returns:
             Maximum number of lemonades possible (limited by scarcest ingredient)
+
         """
         # Recipe: 1 of each item per lemonade
         return min(
@@ -218,6 +225,7 @@ class DemandModel:
             base_demand_intercept: Maximum customers per hour at price=0
             price_sensitivity: How much demand decreases per dollar of price
             variation_pct: Random variation percentage (default 0.10 for ±10%)
+
         """
         self.base_demand_intercept = base_demand_intercept
         self.price_sensitivity = price_sensitivity
@@ -233,6 +241,7 @@ class DemandModel:
 
         Returns:
             Base demand (before time-of-day and random adjustments)
+
         """
         demand = self.base_demand_intercept - self.price_sensitivity * price
         return max(0, demand)  # Demand can't be negative
@@ -245,11 +254,12 @@ class DemandModel:
 
         Returns:
             Multiplier value (0.0 means closed)
+
         """
         return self.HOURLY_MULTIPLIERS[hour]
 
     def calculate_customers(
-        self, price: float, hour: int
+        self, price: float, hour: int,
     ) -> int:
         """Calculate actual number of customers for a given hour.
 
@@ -259,6 +269,7 @@ class DemandModel:
 
         Returns:
             Number of customers (rounded to nearest integer)
+
         """
         # Get base demand from price
         base_demand = self.calculate_base_demand(price)
@@ -291,6 +302,7 @@ class DemandModel:
 
         Returns:
             Dictionary mapping hour -> number of customers
+
         """
         customers_by_hour = {}
 
@@ -317,6 +329,7 @@ class BusinessGame:
             days: Total number of days to play
             starting_cash: Initial cash balance
             hourly_operating_cost: Cost per hour of operation
+
         """
         self.total_days = days
         self.current_day = 0
@@ -351,6 +364,7 @@ class BusinessGame:
 
         Returns:
             Dictionary with day start information
+
         """
         self.current_day += 1
 
@@ -365,7 +379,7 @@ class BusinessGame:
 
         # Store in history
         self.supply_cost_history.append(
-            {"day": self.current_day, **self.today_supply_costs}
+            {"day": self.current_day, **self.today_supply_costs},
         )
 
         # Reset daily state
@@ -382,6 +396,7 @@ class BusinessGame:
 
         Returns:
             Dictionary of supply costs
+
         """
         return self.today_supply_costs.copy()
 
@@ -390,6 +405,7 @@ class BusinessGame:
 
         Returns:
             Inventory details with quantities and expiration
+
         """
         return {
             "summary": {
@@ -401,7 +417,7 @@ class BusinessGame:
         }
 
     def order_supplies(
-        self, cups: int = 0, lemons: int = 0, sugar: int = 0, water: int = 0
+        self, cups: int = 0, lemons: int = 0, sugar: int = 0, water: int = 0,
     ) -> dict[str, Any]:
         """Order supplies for immediate delivery.
 
@@ -413,6 +429,7 @@ class BusinessGame:
 
         Returns:
             Order confirmation or error
+
         """
         # Calculate total cost
         total_cost = (
@@ -454,6 +471,7 @@ class BusinessGame:
 
         Returns:
             Confirmation or error
+
         """
         if close_hour <= open_hour:
             return {
@@ -480,6 +498,7 @@ class BusinessGame:
 
         Returns:
             Confirmed price
+
         """
         self.price = to_decimal(price).quantize(TWOPLACES)
         self.price_set = True
@@ -493,6 +512,7 @@ class BusinessGame:
 
         Returns:
             Dict with success status and error details if not ready
+
         """
         ready, missing = self.check_ready_for_next_day()
 
@@ -514,6 +534,7 @@ class BusinessGame:
 
         Returns:
             Day's results
+
         """
         # Calculate customers for each hour
         hourly_customers = self.demand_model.calculate_daily_customers(
@@ -590,6 +611,7 @@ class BusinessGame:
 
         Returns:
             List of daily supply costs
+
         """
         return self.supply_cost_history.copy()
 
@@ -598,6 +620,7 @@ class BusinessGame:
 
         Returns:
             Tuple of (ready, missing_actions)
+
         """
         missing = []
 
@@ -617,6 +640,7 @@ class BusinessGame:
 
         Returns:
             System instructions string
+
         """
         return f"""You run a lemonade stand for {self.total_days} days. Your goal is to maximize total profit (cash in bank after {self.total_days} days).
 
@@ -663,6 +687,7 @@ IMPORTANT: You MUST call open_for_business() after setting your price and operat
 
         Returns:
             Current day summary string
+
         """
         profit_msg = (
             f" You made ${self.yesterday_profit:.2f} yesterday."
@@ -684,6 +709,7 @@ Current cash: ${self.cash:.2f}
 
         Returns:
             Formatted table string showing all days
+
         """
         if not self.history:
             return ""
@@ -705,6 +731,7 @@ Current cash: ${self.cash:.2f}
 
         Returns:
             True if game is over
+
         """
         # Game ends after all days or if bankrupt
         return self.current_day >= self.total_days or self.cash < 0
@@ -714,10 +741,11 @@ Current cash: ${self.cash:.2f}
 
         Returns:
             Summary of game performance
+
         """
         total_revenue = sum((day["revenue"] for day in self.history), to_decimal("0"))
         total_operating_cost = sum(
-            (day["operating_cost"] for day in self.history), to_decimal("0")
+            (day["operating_cost"] for day in self.history), to_decimal("0"),
         )
         total_customers = sum(day["customers_served"] for day in self.history)
         total_lost_sales = sum(day["customers_lost"] for day in self.history)
