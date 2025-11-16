@@ -13,6 +13,15 @@ from pydantic import ValidationError
 from src.lemonadebench.game_recorder import BenchmarkRecording
 import matplotlib.pyplot as plt
 
+def num(value: Any, default: float = 0.0) -> float:
+    """Best-effort numeric conversion for strings/Decimals."""
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value))
+    except Exception:
+        return default
+
 # Game constants
 REFERENCE_PRICE = 2.69  # User-specified reference price for pricing loss calculations
 BASE_DEMAND = 50
@@ -103,8 +112,9 @@ def calculate_business_metrics_final(
                         for item in ["cups", "lemons", "sugar", "water"]:
                             qty = ordered.get(item, 0)
                             if qty > 0:
-                                cost_per_unit = morning_costs.get(
-                                    item, BASE_COSTS[item]
+                                cost_per_unit = num(
+                                    morning_costs.get(item, BASE_COSTS[item]),
+                                    BASE_COSTS[item],
                                 )
                                 actual_costs_by_item[item] += qty * cost_per_unit
                                 quantities_by_item[item] += qty
@@ -128,7 +138,7 @@ def calculate_business_metrics_final(
                 total_expired_loss += BASE_COSTS[item] * quantity
 
     # EXCESS LOSSES (negative = loss)
-    ending_value = final_result.get("inventory_value", 0)
+    ending_value = num(final_result.get("inventory_value", 0), 0)
     total_excess_loss = ending_value
 
     # STOCKOUT LOSSES: Lost profit from turning customers away
@@ -138,11 +148,13 @@ def calculate_business_metrics_final(
     for day_data in game_data.get("days", []):
         day_result = day_data.get("game_state_after", {}).get("day_result", {})
         if day_result:
-            customers_lost = day_result.get("customers_lost", 0)
+            customers_lost = int(num(day_result.get("customers_lost", 0), 0))
             if customers_lost > 0:
                 # Use the actual price for this day
-                actual_price = day_data.get("game_state_after", {}).get("price", 0)
-                if actual_price > 0:
+                actual_price = num(
+                    day_data.get("game_state_after", {}).get("price", 0), 0
+                )
+                if actual_price > 0.0:
                     # Profit margin at actual price
                     profit_margin = actual_price - INGREDIENT_COST
                     total_stockout_loss += customers_lost * profit_margin
@@ -152,12 +164,19 @@ def calculate_business_metrics_final(
     for day_data in game_data.get("days", []):
         day_result = day_data.get("game_state_after", {}).get("day_result", {})
         if day_result:
-            actual_price = day_data.get("game_state_after", {}).get("price", 0)
-            start_hour = day_result.get("open_hour", 0)
-            end_hour = day_result.get("close_hour", 0)
+            actual_price = num(
+                day_data.get("game_state_after", {}).get("price", 0), REFERENCE_PRICE
+            )
+            start_hour = int(num(day_result.get("open_hour", 0), 0))
+            end_hour = int(num(day_result.get("close_hour", 0), 0))
 
             # Get actual inventory available (can_make at start of day)
-            can_make = day_data.get("game_state_before", {}).get("inventory", {}).get("can_make", 0)
+            can_make = num(
+                day_data.get("game_state_before", {})
+                .get("inventory", {})
+                .get("can_make", 0),
+                0,
+            )
 
             if actual_price > 0 and start_hour < end_hour:
                 # ACTUAL SCENARIO (what really happened)
@@ -170,7 +189,9 @@ def calculate_business_metrics_final(
                         actual_total_demand += max(0, hour_demand)
 
                 # Use actual customers served
-                actual_customers_served = day_result.get("customers_served", 0)
+                actual_customers_served = int(
+                    num(day_result.get("customers_served", 0), 0)
+                )
                 actual_sales = actual_customers_served
                 actual_revenue = actual_sales * actual_price
                 actual_ingredient_costs = actual_sales * INGREDIENT_COST
@@ -222,12 +243,19 @@ def calculate_business_metrics_final(
     for day_data in game_data.get("days", []):
         day_result = day_data.get("game_state_after", {}).get("day_result", {})
         if day_result:
-            actual_price = day_data.get("game_state_after", {}).get("price", 0)
-            start_hour = day_result.get("open_hour", 0)
-            end_hour = day_result.get("close_hour", 0)
+            actual_price = num(
+                day_data.get("game_state_after", {}).get("price", 0), REFERENCE_PRICE
+            )
+            start_hour = int(num(day_result.get("open_hour", 0), 0))
+            end_hour = int(num(day_result.get("close_hour", 0), 0))
 
             # Get actual inventory available
-            can_make = day_data.get("game_state_before", {}).get("inventory", {}).get("can_make", 0)
+            can_make = num(
+                day_data.get("game_state_before", {})
+                .get("inventory", {})
+                .get("can_make", 0),
+                0,
+            )
 
             if actual_price > 0 and start_hour < end_hour:
                 # ACTUAL SCENARIO (what really happened)
@@ -240,7 +268,9 @@ def calculate_business_metrics_final(
                         actual_total_demand += max(0, hour_demand)
 
                 # Use actual customers served as the achieved constraint
-                actual_customers_served = day_result.get("customers_served", 0)
+                actual_customers_served = int(
+                    num(day_result.get("customers_served", 0), 0)
+                )
                 actual_sales = actual_customers_served  # What they actually achieved
                 actual_revenue = actual_sales * actual_price
                 actual_ingredient_costs = actual_sales * INGREDIENT_COST
@@ -333,10 +363,10 @@ def generate_comprehensive_plots(data: dict[str, Any], output_dir: str) -> None:
         cash_history = []
         for day_data in game_data.get("days", []):
             if "game_state_after" in day_data:
-                cash_history.append(day_data["game_state_after"]["cash"])
+                cash_history.append(num(day_data["game_state_after"].get("cash", 0), 0))
 
         if cash_history:
-            starting_cash = game_data["parameters"]["starting_cash"]
+            starting_cash = num(game_data["parameters"].get("starting_cash", 0), 0)
             profit_history = [cash - starting_cash for cash in cash_history]
             model_trajectories[model].append(profit_history)
             max_days = max(max_days, len(profit_history))
@@ -439,7 +469,7 @@ def generate_computational_requirements_table(
             # Get duration and cost
             model_games = [game for game in data if game.get("model") == model]
             avg_time = (
-                sum(g.get("duration_seconds", 0) for g in model_games)
+                sum(num(g.get("duration_seconds", 0), 0) for g in model_games)
                 / len(model_games)
                 if model_games
                 else 0
@@ -560,15 +590,15 @@ def analyze_comprehensive_format(data: list[dict[str, Any]], filename: str):
         # Add game data
         final_results = game_data.get("final_results", {})
         game_info = {
-            "total_profit": final_results.get("total_profit", 0),
-            "total_revenue": final_results.get("total_revenue", 0),
-            "days_played": final_results.get("days_played", 0),
+            "total_profit": num(final_results.get("total_profit", 0), 0),
+            "total_revenue": num(final_results.get("total_revenue", 0), 0),
+            "days_played": int(num(final_results.get("days_played", 0), 0)),
         }
         stats["games"].append(game_info)
 
         # Token and cost tracking
-        stats["total_tokens"] += game_data.get("total_tokens", 0)
-        stats["total_cost"] += game_data.get("total_cost", 0)
+        stats["total_tokens"] += int(num(game_data.get("total_tokens", 0), 0))
+        stats["total_cost"] += num(game_data.get("total_cost", 0), 0)
 
         # Count tool usage
         total_tools = 0
@@ -592,7 +622,7 @@ def analyze_comprehensive_format(data: list[dict[str, Any]], filename: str):
         stats = model_stats[model]
         print(f"\n--- {model} ---")
         if stats["games"]:
-            profits = [g["total_profit"] for g in stats["games"]]
+            profits = [num(g["total_profit"], 0) for g in stats["games"]]
             print(f"Games completed: {len(stats['games'])}")
             print(f"Average profit: ${statistics.mean(profits):.2f}")
             if len(profits) > 1:

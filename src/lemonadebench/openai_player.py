@@ -308,8 +308,9 @@ class OpenAIPlayer:
                     )
 
                 if success is not None:
-                    # Clear pending tool outputs when day completes successfully
-                    self.pending_tool_outputs = []
+                    # Keep the conversation thread intact across days so the model gets the
+                    # tool outputs from the final turn (e.g., open_for_business) on the next call.
+                    # We rely on pending_tool_outputs to immediately satisfy those call_ids.
                     return success
 
                 # Tool outputs are stored in self.pending_tool_outputs and will be
