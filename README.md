@@ -23,7 +23,7 @@ uv run python experiments/run_benchmark.py --days 5
 uv run python experiments/run_benchmark.py --days 10 --models gpt-5-nano gpt-5-mini
 
 # Full benchmark (30 days, multiple models)
-uv run python experiments/run_benchmark.py --days 30 --models gpt-5-nano gpt-5-mini gpt-5
+uv run python experiments/run_benchmark.py --days 30 --models gpt-5-nano gpt-5-mini gpt-5 gpt-5.1
 ```
 
 **Note**: Benchmarks automatically generate analysis (LaTeX tables + plots). Use `--no-analysis` to skip.
