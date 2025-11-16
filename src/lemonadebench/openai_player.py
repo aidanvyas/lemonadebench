@@ -80,11 +80,16 @@ class OpenAIPlayer:
 
         # Cost tracking - gpt-5-nano with Flex tier pricing (per 1M tokens)
         self.model_pricing = {
-            "gpt-5-nano": {"input": 0.025, "cached_input": 0.0025, "output": 0.20},
+            "gpt-5-nano": {
+                "input": 0.025,
+                "cached_input": 0.0025,
+                "output": 0.20,
+                "reasoning": 0.20,  # Reasoning tokens same as output
+            },
         }
 
-        # Check if this is a reasoning model (gpt-5-nano is not a reasoning model)
-        self.is_reasoning_model = False
+        # Check if this is a reasoning model (gpt-5-nano IS a reasoning model)
+        self.is_reasoning_model = model_name.startswith("gpt-5") or model_name.startswith("o")
 
         # Initialize OpenAI client (synchronous)
         api_key = api_key or os.getenv("OPENAI_API_KEY")
