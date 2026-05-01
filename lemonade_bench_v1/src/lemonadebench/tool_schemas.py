@@ -52,3 +52,12 @@ class OpenForBusinessParams(BaseModel):
 
 class PurchaseAutomationParams(BaseModel):
     """Parameters for the purchase_automation tool (no parameters)."""
+
+
+class PurchaseAdvertisingParams(BaseModel):
+    """Parameters for the purchase_advertising tool."""
+
+    spend: int = Field(
+        gt=0,
+        description="Dollars to spend on advertising today (positive integer)",
+    )
