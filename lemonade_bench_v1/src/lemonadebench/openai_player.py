@@ -17,6 +17,7 @@ from .tool_schemas import (
     GetHistoricalSupplyCostsParams,
     OpenForBusinessParams,
     OrderSuppliesParams,
+    PurchaseAutomationParams,
     SetOperatingHoursParams,
     SetPriceParams,
 )
@@ -41,7 +42,8 @@ class OpenAIPlayer:
         Args:
             model_name: OpenAI model to use (RESTRICTED TO gpt-5-nano)
             api_key: OpenAI API key (uses env var if not provided)
-            include_reasoning_summary: Whether to request reasoning summaries (requires org verification)
+            include_reasoning_summary: Whether to request reasoning summaries
+                (requires org verification)
             api_max_retries: Number of times to retry failed API calls
             api_backoff: Initial backoff delay (seconds) for retries
 
@@ -61,7 +63,7 @@ class OpenAIPlayer:
         self.api_max_retries = api_max_retries
         self.api_backoff = api_backoff
 
-        # Conversation state management (Responses API) - using previous_response_id for stateless multi-turn
+        # Conversation state management via Responses API previous_response_id.
         self.previous_response_id: str | None = None
         self.pending_tool_outputs: list[dict[str, Any]] = []
 
@@ -151,6 +153,14 @@ class OpenAIPlayer:
                 GetHistoricalSupplyCostsParams,
             ),
             self._build_tool(
+                "purchase_automation",
+                (
+                    "One-time purchase that eliminates the labor portion of "
+                    "the hourly operating cost for the rest of the game"
+                ),
+                PurchaseAutomationParams,
+            ),
+            self._build_tool(
                 "open_for_business",
                 "Open the stand for business (must set price and hours first)",
                 OpenForBusinessParams,
@@ -189,7 +199,10 @@ class OpenAIPlayer:
         }
 
     def execute_tool(
-        self, tool_name: str, args: dict[str, Any], game: BusinessGame,
+        self,
+        tool_name: str,
+        args: dict[str, Any],
+        game: BusinessGame,
     ) -> str:
         """Execute a tool with given arguments.
 
@@ -216,6 +229,8 @@ class OpenAIPlayer:
                 result = game.set_price(**args)
             elif tool_name == "get_historical_supply_costs":
                 result = game.get_historical_supply_costs()
+            elif tool_name == "purchase_automation":
+                result = game.purchase_automation()
             elif tool_name == "open_for_business":
                 result = game.open_for_business()
             else:
@@ -226,7 +241,9 @@ class OpenAIPlayer:
             return json.dumps({"error": str(e)}, default=str)
 
     def play_turn(
-        self, game: BusinessGame, recorder: GameRecorder | None = None,
+        self,
+        game: BusinessGame,
+        recorder: GameRecorder | None = None,
     ) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API with conversation state.
 
@@ -242,8 +259,8 @@ class OpenAIPlayer:
         attempts = 0
         all_tool_calls_this_turn: list[str] = []
 
-        # Note: We use previous_response_id for stateless multi-turn conversations.
-        # Each response automatically becomes the previous_response_id for the next response.
+        # We use previous_response_id for multi-turn conversations: each
+        # response becomes the previous_response_id for the next call.
 
         while attempts < max_attempts:
             attempts += 1
@@ -277,7 +294,10 @@ class OpenAIPlayer:
                     assistant_message,
                     success,
                 ) = self._process_output_stateful(
-                    response, game, attempts, all_tool_calls_this_turn,
+                    response,
+                    game,
+                    attempts,
+                    all_tool_calls_this_turn,
                 )
 
                 # Convert tool results to function_call_output format for next request
@@ -299,7 +319,8 @@ class OpenAIPlayer:
                             {
                                 "tool": tool_result["name"],
                                 "arguments": self._get_tool_args_from_response(
-                                    response, tool_result["name"],
+                                    response,
+                                    tool_result["name"],
                                 ),
                                 "result": json.loads(tool_result["result"]),
                             },
@@ -315,9 +336,10 @@ class OpenAIPlayer:
                     )
 
                 if success is not None:
-                    # Keep the conversation thread intact across days so the model gets the
-                    # tool outputs from the final turn (e.g., open_for_business) on the next call.
-                    # We rely on pending_tool_outputs to immediately satisfy those call_ids.
+                    # Keep the conversation thread intact across days so the
+                    # model gets the tool outputs from the final turn (e.g.
+                    # open_for_business) on the next call. pending_tool_outputs
+                    # will satisfy those call_ids on the next request.
                     return success
 
                 # Tool outputs are stored in self.pending_tool_outputs and will be
@@ -338,7 +360,9 @@ class OpenAIPlayer:
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
 
     def _get_tool_args_from_response(
-        self, response: Any, tool_name: str,
+        self,
+        response: Any,
+        tool_name: str,
     ) -> dict[str, Any]:
         """Extract tool arguments from response for a specific tool call."""
         for item in response.output:
@@ -347,17 +371,24 @@ class OpenAIPlayer:
         return {}
 
     def _max_attempts_response(
-        self, attempts: int, all_tool_calls: list[str],
+        self,
+        attempts: int,
+        all_tool_calls: list[str],
     ) -> dict[str, Any]:
         return {
             "success": False,
-            "error": "Max attempts reached. Did not call open_for_business() to start the day.",
+            "error": (
+                "Max attempts reached. "
+                "Did not call open_for_business() to start the day."
+            ),
             "attempts": attempts,
             "tool_calls": all_tool_calls,
         }
 
     def _build_request_kwargs(
-        self, conversation: list[dict[str, Any]], game: BusinessGame,
+        self,
+        conversation: list[dict[str, Any]],
+        game: BusinessGame,
     ) -> dict[str, Any]:
         """Legacy: Build request for stateless approach (for backward compatibility)."""
         kwargs: dict[str, Any] = {
@@ -374,9 +405,11 @@ class OpenAIPlayer:
         return kwargs
 
     def _build_request_kwargs_stateful(
-        self, game: BusinessGame, is_first_attempt: bool,
+        self,
+        game: BusinessGame,
+        is_first_attempt: bool,
     ) -> dict[str, Any]:
-        """Build request for stateful approach using Responses API with previous_response_id."""
+        """Build the next request for the Responses API (uses previous_response_id)."""
         # Build input array with tool outputs (if any) + user message
         input_array: list[dict[str, Any]] = []
 
@@ -426,13 +459,19 @@ class OpenAIPlayer:
                     logger.error(f"OpenAI call failed after {attempt - 1} retries: {e}")
                     raise
                 delay = self.api_backoff * (2 ** (attempt - 1))
-                logger.warning(
-                    f"OpenAI call error: {e}. Retry {attempt}/{self.api_max_retries} in {delay:.1f}s",
+                msg = (
+                    f"OpenAI call error: {e}. "
+                    f"Retry {attempt}/{self.api_max_retries} "
+                    f"in {delay:.1f}s"
                 )
+                logger.warning(msg)
                 time.sleep(delay)
 
     def _extract_reasoning_summary(
-        self, response: Any, game: BusinessGame, attempts: int,
+        self,
+        response: Any,
+        game: BusinessGame,
+        attempts: int,
     ) -> None:
         if not (self.is_reasoning_model and hasattr(response, "output")):
             return
@@ -478,10 +517,14 @@ class OpenAIPlayer:
         # The Responses API uses different field names than Chat Completions API
         # Try both field names to support both APIs
         input_tokens = getattr(usage, "input_tokens", 0) or getattr(
-            usage, "prompt_tokens", 0,
+            usage,
+            "prompt_tokens",
+            0,
         )
         output_tokens = getattr(usage, "output_tokens", 0) or getattr(
-            usage, "completion_tokens", 0,
+            usage,
+            "completion_tokens",
+            0,
         )
         total_tokens = getattr(usage, "total_tokens", 0)
 
@@ -491,20 +534,26 @@ class OpenAIPlayer:
 
         # Handle token details (different field names in different APIs)
         if hasattr(usage, "input_tokens_details") or hasattr(
-            usage, "prompt_tokens_details",
+            usage,
+            "prompt_tokens_details",
         ):
             details: Any = getattr(usage, "input_tokens_details", None) or getattr(
-                usage, "prompt_tokens_details", None,
+                usage,
+                "prompt_tokens_details",
+                None,
             )
             if details:
                 cached = getattr(details, "cached_tokens", 0)
                 self.total_token_usage["cached_input_tokens"] += cached
 
         if hasattr(usage, "output_tokens_details") or hasattr(
-            usage, "completion_tokens_details",
+            usage,
+            "completion_tokens_details",
         ):
             details = getattr(usage, "output_tokens_details", None) or getattr(
-                usage, "completion_tokens_details", None,
+                usage,
+                "completion_tokens_details",
+                None,
             )
             if details:
                 reasoning = getattr(details, "reasoning_tokens", 0)
@@ -517,7 +566,10 @@ class OpenAIPlayer:
         attempts: int,
         all_tool_calls_this_turn: list[str],
     ) -> tuple[
-        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None,
+        list[str],
+        list[dict[str, Any]],
+        dict[str, Any] | None,
+        dict[str, Any] | None,
     ]:
         tool_calls_made: list[str] = []
         tool_results: list[dict[str, Any]] = []
@@ -571,7 +623,10 @@ class OpenAIPlayer:
         attempts: int,
         all_tool_calls_this_turn: list[str],
     ) -> tuple[
-        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None,
+        list[str],
+        list[dict[str, Any]],
+        dict[str, Any] | None,
+        dict[str, Any] | None,
     ]:
         """Process response from Responses API with conversation state."""
         tool_calls_made: list[str] = []
@@ -620,9 +675,11 @@ class OpenAIPlayer:
         return tool_calls_made, tool_results, assistant_message, None
 
     def _append_tool_results_to_conversation(
-        self, tool_results: list[dict[str, Any]], conversation: list[dict[str, Any]],
+        self,
+        tool_results: list[dict[str, Any]],
+        conversation: list[dict[str, Any]],
     ) -> None:
-        """Legacy: Append tool results to local conversation list (for backward compatibility)."""
+        """Legacy: append tool results to local conversation list."""
         results_message = "Here are the results of the tool calls:\n\n"
         for tool_result in tool_results:
             results_message += (
@@ -639,7 +696,8 @@ class OpenAIPlayer:
 
         """
         pricing = self.model_pricing.get(
-            self.model_name, {"input": 1.0, "cached_input": 0.5, "output": 2.0},
+            self.model_name,
+            {"input": 1.0, "cached_input": 0.5, "output": 2.0},
         )
 
         # Calculate costs (pricing is per 1M tokens)

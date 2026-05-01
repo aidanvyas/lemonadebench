@@ -13,8 +13,10 @@ TWOPLACES = to_decimal("0.01")
 
 # Game configuration constants
 DEFAULT_STARTING_CASH = to_decimal("1000.00")
-DEFAULT_HOURLY_OPERATING_COST = to_decimal("5.00")
-DEFAULT_TOTAL_DAYS = 30
+DEFAULT_LABOR_COST_PER_HOUR = to_decimal("3.00")
+DEFAULT_UTILITIES_COST_PER_HOUR = to_decimal("2.00")
+DEFAULT_AUTOMATION_COST = to_decimal("1000.00")
+DEFAULT_TOTAL_DAYS = 100
 LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
 
 
@@ -323,23 +325,33 @@ class BusinessGame:
         self,
         days: int = DEFAULT_TOTAL_DAYS,
         starting_cash: Decimal | float = DEFAULT_STARTING_CASH,
-        hourly_operating_cost: Decimal | float = DEFAULT_HOURLY_OPERATING_COST,
+        labor_cost_per_hour: Decimal | float = DEFAULT_LABOR_COST_PER_HOUR,
+        utilities_cost_per_hour: Decimal | float = DEFAULT_UTILITIES_COST_PER_HOUR,
+        automation_cost: Decimal | float = DEFAULT_AUTOMATION_COST,
     ) -> None:
         """Initialize the business game.
 
         Args:
             days: Total number of days to play
             starting_cash: Initial cash balance
-            hourly_operating_cost: Cost per hour of operation
+            labor_cost_per_hour: Wage paid per hour the stand is open
+                (eliminated by purchasing automation).
+            utilities_cost_per_hour: Per-hour overhead that applies regardless
+                of automation.
+            automation_cost: One-time cost to eliminate labor for the rest
+                of the game.
 
         """
         self.total_days = days
         self.current_day = 0
         self.starting_cash = to_decimal(starting_cash).quantize(TWOPLACES)
         self.cash = to_decimal(starting_cash).quantize(TWOPLACES)
-        self.hourly_operating_cost = to_decimal(hourly_operating_cost).quantize(
+        self.labor_cost_per_hour = to_decimal(labor_cost_per_hour).quantize(TWOPLACES)
+        self.utilities_cost_per_hour = to_decimal(utilities_cost_per_hour).quantize(
             TWOPLACES,
         )
+        self.automation_cost = to_decimal(automation_cost).quantize(TWOPLACES)
+        self.has_automation: bool = False
 
         # Initialize components
         self.inventory = Inventory()
@@ -548,6 +560,42 @@ class BusinessGame:
             ),
         }
 
+    def purchase_automation(self) -> dict[str, Any]:
+        """Purchase automation to eliminate labor costs for the rest of the game.
+
+        One-time purchase. Effective immediately (today's operating cost will
+        only include utilities). Utilities continue to accrue.
+
+        Returns:
+            Dict with success status and either confirmation or error details.
+
+        """
+        if self.has_automation:
+            return {
+                "success": False,
+                "error": "Automation has already been purchased.",
+            }
+        if self.cash < self.automation_cost:
+            return {
+                "success": False,
+                "error": (
+                    f"Insufficient cash. Need ${self.automation_cost:.2f}, "
+                    f"have ${self.cash:.2f}."
+                ),
+            }
+
+        self.cash = (self.cash - self.automation_cost).quantize(TWOPLACES)
+        self.has_automation = True
+        return {
+            "success": True,
+            "message": (
+                f"Automation purchased for ${self.automation_cost:.2f}. "
+                f"Labor cost is now $0/hr (utilities still apply at "
+                f"${self.utilities_cost_per_hour:.2f}/hr). "
+                f"Cash remaining: ${self.cash:.2f}."
+            ),
+        }
+
     def simulate_day(self) -> dict[str, Any]:
         """Simulate the day's business after all decisions are made.
 
@@ -597,7 +645,12 @@ class BusinessGame:
         # Calculate financials
         revenue = to_decimal(total_customers_served) * self.price
         operating_hours = to_decimal(self.close_hour - self.open_hour)
-        operating_cost = operating_hours * self.hourly_operating_cost
+        effective_labor = (
+            to_decimal(0) if self.has_automation else self.labor_cost_per_hour
+        )
+        operating_cost = operating_hours * (
+            effective_labor + self.utilities_cost_per_hour
+        )
         profit = revenue - operating_cost
 
         # Update cash
@@ -661,12 +714,19 @@ class BusinessGame:
             System instructions string
 
         """
+        labor = self.labor_cost_per_hour
+        utilities = self.utilities_cost_per_hour
+        total = labor + utilities
+        auto_cost = self.automation_cost
         return f"""You run a lemonade stand for {self.total_days} days. \
 Your goal is to maximize total profit (cash in bank after {self.total_days} days).
 
 BUSINESS MECHANICS:
 - Starting capital: $1000
-- Operating cost: $5 per hour the stand is open
+- Operating cost per hour the stand is open: ${total:.2f} \
+(${labor:.2f} labor + ${utilities:.2f} utilities)
+- Automation: pay ${auto_cost:.2f} once to permanently eliminate the labor \
+portion. Utilities still apply.
 - Recipe: 1 lemonade = 1 cup + 1 lemon + 1 sugar + 1 water (all required)
 - You can only sell lemonade if you have ALL ingredients in stock
 
@@ -681,7 +741,8 @@ INVENTORY MANAGEMENT:
 
 DAILY WORKFLOW:
 1. Morning: Check inventory and supply prices
-2. Decisions: Order supplies, set price and operating hours
+2. Decisions: Order supplies, set price and operating hours, optionally \
+purchase automation
 3. IMPORTANT: Call open_for_business() after setting price and hours
 4. Evening: Review profit/loss and customer data
 
@@ -692,6 +753,8 @@ AVAILABLE TOOLS:
 - order_supplies(cups, lemons, sugar, water): Purchase supplies
 - set_price(price): Set today's lemonade price
 - set_operating_hours(open_hour, close_hour): Set today's operating hours
+- purchase_automation(): One-time purchase that eliminates labor cost \
+for the rest of the game
 - open_for_business(): REQUIRED - Open the stand after setting price and hours
 
 IMPORTANT: You MUST call open_for_business() after setting your price and \
@@ -715,8 +778,10 @@ operating hours. The stand will not operate until you do this."""
             if self.yesterday_profit is not None
             else ""
         )
+        automation_status = "Yes" if self.has_automation else "No"
         summary = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
+Automation: {automation_status}
 {self._get_historical_table()}"""
 
         # Only include tool reminder on first attempt of the day
