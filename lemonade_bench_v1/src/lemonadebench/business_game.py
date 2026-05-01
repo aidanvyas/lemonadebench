@@ -26,6 +26,7 @@ DEFAULT_AD_MULT_CAP = 0.20
 DEFAULT_AD_DECAY = 0.80
 DEFAULT_AD_VAR_LO = 0.90
 DEFAULT_AD_VAR_HI = 1.10
+DEFAULT_AD_LIFETIME_DAYS = 7  # campaign contributes 0 once age >= this
 
 
 class Inventory:
@@ -341,6 +342,7 @@ class BusinessGame:
         ad_decay: float = DEFAULT_AD_DECAY,
         ad_var_lo: float = DEFAULT_AD_VAR_LO,
         ad_var_hi: float = DEFAULT_AD_VAR_HI,
+        ad_lifetime_days: int = DEFAULT_AD_LIFETIME_DAYS,
     ) -> None:
         """Initialize the business game.
 
@@ -355,8 +357,10 @@ class BusinessGame:
                 of the game.
             ad_sqrt_scale: Goodwill earned per sqrt(spend / 100).
             ad_mult_cap: Maximum demand multiplier above 1.0 (saturation cap).
-            ad_decay: Daily multiplicative decay applied to goodwill.
+            ad_decay: Daily multiplicative decay applied to a campaign's goodwill.
             ad_var_lo, ad_var_hi: Uniform range on goodwill earned per campaign.
+            ad_lifetime_days: Each campaign contributes 0 once its age reaches
+                this many days (hard cutoff on top of the multiplicative decay).
 
         """
         self.total_days = days
@@ -370,13 +374,17 @@ class BusinessGame:
         self.automation_cost = to_decimal(automation_cost).quantize(TWOPLACES)
         self.has_automation: bool = False
 
-        # Advertising state — all hidden from the model
+        # Advertising state — all hidden from the model.
+        # ad_campaigns is a list of (day_purchased, goodwill_at_purchase).
+        # Each campaign contributes goodwill * decay^age to current goodwill,
+        # and stops contributing once its age reaches ad_lifetime_days.
         self.ad_sqrt_scale = ad_sqrt_scale
         self.ad_mult_cap = ad_mult_cap
         self.ad_decay = ad_decay
         self.ad_var_lo = ad_var_lo
         self.ad_var_hi = ad_var_hi
-        self.ad_goodwill: float = 0.0
+        self.ad_lifetime_days = ad_lifetime_days
+        self.ad_campaigns: list[tuple[int, float]] = []
         self.today_ad_spend: Decimal = to_decimal(0).quantize(TWOPLACES)
 
         # Initialize components
@@ -400,6 +408,19 @@ class BusinessGame:
 
         # Recipe for making lemonade
         self.recipe = LEMONADE_RECIPE.copy()
+
+    @property
+    def ad_goodwill(self) -> float:
+        """Total active advertising goodwill (sum across live campaigns).
+
+        Each campaign at age d contributes goodwill * decay^d, and is dropped
+        once age >= ad_lifetime_days.
+        """
+        return sum(
+            goodwill * (self.ad_decay ** (self.current_day - day))
+            for day, goodwill in self.ad_campaigns
+            if (self.current_day - day) < self.ad_lifetime_days
+        )
 
     def start_new_day(self) -> dict[str, Any]:
         """Start a new day: handle expiration, generate costs, reset state.
@@ -426,8 +447,8 @@ class BusinessGame:
             {"day": self.current_day, **self.today_supply_costs},
         )
 
-        # Decay yesterday's advertising goodwill, reset today's spend bucket
-        self.ad_goodwill *= self.ad_decay
+        # Reset today's ad-spend bucket. Goodwill from prior campaigns
+        # decays by age in simulate_day, no morning decay needed here.
         self.today_ad_spend = to_decimal(0).quantize(TWOPLACES)
 
         # Reset daily state
@@ -672,18 +693,27 @@ class BusinessGame:
             Day's results
 
         """
-        # Roll today's ad spend into goodwill (sqrt scaling + variability) so
-        # ads bought this morning affect today's demand.
+        # Roll today's ad spend into a fresh campaign (sqrt scaling +
+        # variability), then compute total active goodwill across campaigns
+        # within the lifetime window. Each campaign at age d contributes
+        # goodwill * decay^d, and contributes 0 once age >= lifetime.
         ad_spend_today = self.today_ad_spend
         if ad_spend_today > 0:
-            self.ad_goodwill += (
+            new_goodwill = (
                 math.sqrt(float(ad_spend_today) / 100)
                 * self.ad_sqrt_scale
                 * random.uniform(self.ad_var_lo, self.ad_var_hi)
             )
+            self.ad_campaigns.append((self.current_day, new_goodwill))
+
+        total_goodwill = sum(
+            goodwill * (self.ad_decay ** (self.current_day - day))
+            for day, goodwill in self.ad_campaigns
+            if (self.current_day - day) < self.ad_lifetime_days
+        )
 
         # Demand multiplier saturates at (1 + ad_mult_cap).
-        ad_multiplier = 1 + self.ad_mult_cap * (1 - math.exp(-self.ad_goodwill))
+        ad_multiplier = 1 + self.ad_mult_cap * (1 - math.exp(-total_goodwill))
 
         # Calculate customers for each hour, scaled by today's ad multiplier
         hourly_customers = self.demand_model.calculate_daily_customers(

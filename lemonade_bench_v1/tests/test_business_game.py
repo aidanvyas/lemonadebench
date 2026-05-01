@@ -423,6 +423,34 @@ class TestBusinessGame:
         assert game.today_ad_spend == Decimal(0)
         assert game.ad_goodwill > 0
 
+    def test_advertising_zeroes_after_lifetime(self):
+        """A campaign contributes 0 goodwill once age == ad_lifetime_days."""
+        game = BusinessGame()  # lifetime=7
+        # Day 1: spend, run, goodwill should be > 0 right after.
+        game.start_new_day()
+        game.order_supplies(cups=300, lemons=300, sugar=300, water=300)
+        game.set_price(2.0)
+        game.set_operating_hours(10, 18)
+        game.purchase_advertising(200)
+        game.simulate_day()
+        assert game.ad_goodwill > 0
+
+        # Advance 6 more days without spending more — still within window
+        for _ in range(6):
+            game.start_new_day()
+            game.set_price(2.0)
+            game.set_operating_hours(10, 18)
+            game.simulate_day()
+        # Now age = 6, still active (just barely)
+        assert game.ad_goodwill > 0
+
+        # One more day: age = 7, campaign drops out, goodwill must be 0
+        game.start_new_day()
+        game.set_price(2.0)
+        game.set_operating_hours(10, 18)
+        game.simulate_day()
+        assert game.ad_goodwill == 0
+
     def test_simulate_day_after_automation_drops_labor(self):
         """After automation, operating cost charges only utilities ($2/hr)."""
         game = BusinessGame()
