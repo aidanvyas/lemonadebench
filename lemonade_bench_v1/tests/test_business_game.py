@@ -1,0 +1,321 @@
+"""Tests for the business game engine."""
+
+from decimal import Decimal
+
+from src.lemonadebench.business_game import BusinessGame
+
+
+class TestBusinessGame:
+    """Test cases for BusinessGame class."""
+
+    def test_init(self):
+        """Test game initialization."""
+        game = BusinessGame(days=100, starting_cash=Decimal("100"))
+
+        assert game.total_days == 100
+        assert game.current_day == 0
+        assert game.cash == Decimal("100")
+        assert game.hourly_operating_cost == Decimal("5")
+        assert game.yesterday_profit is None
+
+        # Test default starting cash and days
+        default_game = BusinessGame()
+        assert default_game.cash == Decimal("1000")
+        assert default_game.total_days == 30
+
+    def test_start_new_day(self):
+        """Test starting a new day."""
+        game = BusinessGame()
+
+        # Start day 1
+        day_info = game.start_new_day()
+
+        assert game.current_day == 1
+        assert day_info["day"] == 1
+        assert day_info["cash"] == Decimal("1000")
+        assert "expired_items" in day_info
+
+        # Check supply costs were generated
+        assert len(game.today_supply_costs) == 4
+        assert Decimal("0.04") <= game.today_supply_costs["cups"] <= Decimal("0.06")
+        assert Decimal("0.18") <= game.today_supply_costs["lemons"] <= Decimal("0.22")
+
+    def test_check_morning_prices(self):
+        """Test checking morning prices."""
+        game = BusinessGame()
+        game.start_new_day()
+
+        prices = game.check_morning_prices()
+
+        assert "cups" in prices
+        assert "lemons" in prices
+        assert "sugar" in prices
+        assert "water" in prices
+        assert all(isinstance(p, Decimal) for p in prices.values())
+
+    def test_order_supplies_success(self):
+        """Test ordering supplies with sufficient funds."""
+        game = BusinessGame()
+        game.start_new_day()
+
+        # Order some supplies
+        result = game.order_supplies(cups=100, lemons=50, sugar=50, water=100)
+
+        assert result["success"] is True
+        assert result["remaining_cash"] < Decimal("1000")  # Cash decreased
+        assert game.inventory.get_available("cups") == 100
+        assert game.inventory.get_available("lemons") == 50
+
+    def test_order_supplies_insufficient_funds(self):
+        """Test ordering supplies without enough money."""
+        game = BusinessGame(starting_cash=10)
+        game.start_new_day()
+
+        # Try to order too much
+        result = game.order_supplies(cups=1000, lemons=1000)
+
+        assert result["success"] is False
+        assert "Insufficient funds" in result["error"]
+        assert game.cash == Decimal("10")  # Cash unchanged
+        assert game.inventory.get_available("cups") == 0  # No items added
+
+    def test_set_operating_hours(self):
+        """Test setting operating hours."""
+        game = BusinessGame()
+
+        # Valid hours
+        game.set_operating_hours(9, 17)
+        assert game.open_hour == 9
+        assert game.close_hour == 17
+        assert game.hours_set is True
+
+    def test_set_price(self):
+        """Test setting price."""
+        game = BusinessGame()
+
+        # Valid price
+        game.set_price(2.50)
+        assert game.price == Decimal("2.50")
+        assert game.price_set is True
+
+    def test_simulate_day_validations(self):
+        """Test day simulation with check_ready_for_next_day."""
+        game = BusinessGame()
+        game.start_new_day()
+
+        # Check readiness before setup
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is False
+        assert len(missing) == 2  # Both price and hours missing
+
+        # Set price
+        game.set_price(2.0)
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is False
+        assert len(missing) == 1  # Only hours missing
+
+        # Set hours
+        game.set_operating_hours(9, 17)
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is True
+        assert len(missing) == 0
+
+    def test_simulate_day_success(self):
+        """Test successful day simulation."""
+        game = BusinessGame()
+        game.start_new_day()
+
+        # Order supplies
+        game.order_supplies(cups=100, lemons=100, sugar=100, water=100)
+
+        # Set up day
+        game.set_operating_hours(10, 14)  # 4 hours
+        game.set_price(2.0)
+
+        # Simulate
+        result = game.simulate_day()
+
+        assert result["day"] == 1
+        assert result["price"] == Decimal("2.0")
+        assert result["hours_open"] == 4
+        assert result["customers_served"] >= 0
+        assert result["operating_cost"] == Decimal("20")  # 4 hours * $5
+        assert "profit" in result
+        assert "hourly_sales" in result
+
+        # Check inventory was used
+        assert game.inventory.get_available("cups") < 100
+
+    def test_simulate_day_stockout(self):
+        """Test simulation with insufficient inventory."""
+        game = BusinessGame()
+        game.start_new_day()
+
+        # Order minimal supplies
+        game.order_supplies(cups=5, lemons=5, sugar=5, water=5)
+
+        # Set up for high demand
+        game.set_operating_hours(11, 14)  # Peak hours
+        game.set_price(1.0)  # Low price
+
+        result = game.simulate_day()
+
+        # Should have lost sales
+        assert result["customers_lost"] > 0
+        assert result["customers_served"] == 5  # Only what we could make
+
+        # All inventory used
+        assert game.inventory.can_make_lemonade() == 0
+
+    def test_historical_data(self):
+        """Test that history is tracked correctly."""
+        game = BusinessGame()
+
+        # No history initially
+        assert game.history == []
+
+        # Play a day
+        game.start_new_day()
+        game.order_supplies(cups=50, lemons=50, sugar=50, water=50)
+        game.set_operating_hours(9, 17)
+        game.set_price(2.5)
+        game.simulate_day()
+
+        # Check history
+        assert len(game.history) == 1
+        assert game.history[0]["day"] == 1
+        assert game.history[0]["price"] == Decimal("2.5")
+        assert game.history[0]["open_hour"] == 9
+        assert game.history[0]["close_hour"] == 17
+        assert "customers_served" in game.history[0]
+        assert "profit" in game.history[0]
+
+    def test_supply_cost_history(self):
+        """Test tracking supply cost history."""
+        game = BusinessGame()
+
+        # Play multiple days
+        for _ in range(3):
+            game.start_new_day()
+            game.set_price(2.0)
+            game.set_operating_hours(9, 17)
+            game.simulate_day()
+
+        # Check cost history
+        cost_history = game.get_historical_supply_costs()
+        assert len(cost_history) == 3
+
+        # Each day should have all items
+        for day_costs in cost_history:
+            assert "day" in day_costs
+            assert "cups" in day_costs
+            assert "lemons" in day_costs
+            assert "sugar" in day_costs
+            assert "water" in day_costs
+
+    def test_check_ready_for_next_day(self):
+        """Test checking if ready for next day."""
+        game = BusinessGame()
+        game.start_new_day()
+
+        # Initially not ready
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is False
+        assert len(missing) == 2
+
+        # Set price
+        game.set_price(2.0)
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is False
+        assert len(missing) == 1
+
+        # Set hours
+        game.set_operating_hours(9, 17)
+        ready, missing = game.check_ready_for_next_day()
+        assert ready is True
+        assert len(missing) == 0
+
+    def test_expiration_handling(self):
+        """Test that expired items are removed."""
+        game = BusinessGame()
+
+        # Day 1: Buy lots of lemons and minimal other supplies
+        game.start_new_day()
+        game.order_supplies(cups=5, lemons=50, sugar=5, water=5)
+        game.set_price(10.0)  # High price to minimize sales
+        game.set_operating_hours(9, 10)  # Minimal hours
+        game.simulate_day()
+
+        # Check we still have lemons
+        remaining_lemons = game.inventory.get_available("lemons")
+        assert remaining_lemons > 40  # Should have most lemons left
+
+        # Fast forward to day 7 (lemons still good)
+        for _ in range(2, 8):
+            game.start_new_day()
+            game.set_price(10.0)  # Keep high price
+            game.set_operating_hours(9, 10)
+            game.simulate_day()
+
+        # Day 8: Lemons should expire (bought day 1, shelf life 7)
+        day_info = game.start_new_day()
+        assert "lemons" in day_info["expired_items"]
+        assert day_info["expired_items"]["lemons"] > 40
+        assert game.inventory.get_available("lemons") == 0
+
+    def test_bankruptcy(self):
+        """Test game over when bankrupt."""
+        game = BusinessGame(starting_cash=10)
+        game.start_new_day()
+
+        # Set high operating cost day
+        game.set_price(5.0)  # High price = no customers
+        game.set_operating_hours(0, 15)  # 15 hours = $75 cost
+        game.simulate_day()
+
+        # Should be bankrupt
+        assert game.cash < 0
+        assert game.is_game_over() is True
+
+    def test_turn_prompts(self):
+        """Test stateful prompt generation."""
+        game = BusinessGame()
+
+        # System instructions should have game rules
+        system_prompt = game.get_system_instructions()
+        assert "You run a lemonade stand" in system_prompt
+        assert "30 days" in system_prompt
+
+        # Start day 1
+        game.start_new_day()
+        game.set_price(2.0)
+        game.set_operating_hours(9, 17)
+        game.simulate_day()
+
+        # Day 2 summary should have current state
+        game.start_new_day()
+        day_summary = game.get_day_summary()
+        assert "Day 2 of 30" in day_summary
+        assert "You made $" in day_summary
+
+    def test_final_results(self):
+        """Test getting final game results."""
+        game = BusinessGame()
+
+        # Play a few days
+        for _ in range(1, 4):
+            game.start_new_day()
+            game.order_supplies(cups=20, lemons=20, sugar=20, water=20)
+            game.set_price(2.0)
+            game.set_operating_hours(10, 14)
+            game.simulate_day()
+
+        # Get final results
+        results = game.get_final_results()
+
+        assert results["days_played"] == 3
+        assert results["final_cash"] == game.cash
+        assert results["total_profit"] == game.cash - Decimal("1000")
+        assert results["total_customers"] >= 0
+        assert "average_daily_profit" in results
+        assert "inventory_value" in results
