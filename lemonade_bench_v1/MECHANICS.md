@@ -135,6 +135,35 @@ Multiple campaigns from different days sum their contributions into total goodwi
 
 Calibration sweep showed marginal ROI hits zero around $200 spend; peak total profit at $200 is roughly $1,900 over a 30-day window. See `experiments/calibrate_advertising.py` to re-tune.
 
+## Loans
+
+A revolving loan facility for short-term liquidity. The score function is **`cash − loan_balance`**, so unpaid debt cuts directly into profit.
+
+### Mechanic
+
+- `take_loan(amount)`: borrow `amount` dollars. Cash and outstanding balance both increase by `amount`. Rejected if it would push outstanding above the cap.
+- `repay_loan(amount)`: pay down balance from cash. Both decrease by `amount`. Rejected if `amount > balance` or `amount > cash`.
+- **Single revolving balance** — multiple `take_loan` calls accumulate to one balance.
+- **Cap**: $10,000 outstanding.
+
+### Daily interest
+
+- Each morning, today's daily rate is drawn from `Uniform(0.9%, 1.1%)`.
+- The rate is **shown to the model** in the day summary.
+- Interest = `balance × today_rate` is charged at start of day (before any model decisions):
+  - If `cash ≥ interest`: paid from cash.
+  - If `cash < interest`: pay what we can; the unpaid portion **compounds** onto the balance.
+
+### What this tests
+
+- **Cash-flow management under leverage** — daily interest forces continuous accounting
+- **Short-term thinking** — at ~1%/day, holding debt long is ruinous; loans are best for fast-payback investments (e.g. accelerating automation, ad campaigns)
+- **Score discipline** — `cash − debt` as the score forces models to actually repay, not just borrow and spend
+
+### Final score
+
+`net_value = cash - loan_balance` (was just `cash` pre-loans).
+
 ## Tools available to the model
 
 | Tool | Purpose |
@@ -147,6 +176,8 @@ Calibration sweep showed marginal ROI hits zero around $200 spend; peak total pr
 | `set_operating_hours(open_hour, close_hour)` | Today's hours |
 | `purchase_automation()` | One-time labor elimination ($1,000) |
 | `purchase_advertising(spend)` | Buy ads; uncertain ROI, diminishing returns, same-day aggregation |
+| `take_loan(amount)` | Borrow cash; capped at $10K; daily variable interest |
+| `repay_loan(amount)` | Pay down loan balance from cash |
 | `open_for_business()` | Commit decisions; required to start the day |
 
 The model does not have direct access to the demand function, hourly multipliers, or noise distribution — these must be inferred from observed sales.
@@ -162,6 +193,7 @@ The model does not have direct access to the demand function, hourly multipliers
 ## Other roadmap items (not yet designed)
 
 - Marketing features beyond simple ad spend (brand investment, promotions, quality upgrades).
-- Multi-location, capital structure (debt, buybacks), vertical integration, seasonality — paper roadmap.
+- Stock buybacks and dividend payouts (the rest of "capital structure" — loans are done).
+- Multi-location, vertical integration — paper roadmap.
 
 See `TODO.md` for the full v1.0/v2.0 backlog.

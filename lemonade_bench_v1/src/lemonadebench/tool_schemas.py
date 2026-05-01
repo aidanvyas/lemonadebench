@@ -61,3 +61,21 @@ class PurchaseAdvertisingParams(BaseModel):
         gt=0,
         description="Dollars to spend on advertising today (positive integer)",
     )
+
+
+class TakeLoanParams(BaseModel):
+    """Parameters for the take_loan tool."""
+
+    amount: int = Field(
+        gt=0,
+        description="Dollars to borrow (positive integer)",
+    )
+
+
+class RepayLoanParams(BaseModel):
+    """Parameters for the repay_loan tool."""
+
+    amount: int = Field(
+        gt=0,
+        description="Dollars to repay from cash (positive integer)",
+    )

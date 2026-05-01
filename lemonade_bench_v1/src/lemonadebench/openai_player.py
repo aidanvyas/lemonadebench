@@ -19,8 +19,10 @@ from .tool_schemas import (
     OrderSuppliesParams,
     PurchaseAdvertisingParams,
     PurchaseAutomationParams,
+    RepayLoanParams,
     SetOperatingHoursParams,
     SetPriceParams,
+    TakeLoanParams,
 )
 
 logger = logging.getLogger(__name__)
@@ -171,6 +173,23 @@ class OpenAIPlayer:
                 PurchaseAdvertisingParams,
             ),
             self._build_tool(
+                "take_loan",
+                (
+                    "Borrow cash. Outstanding balance is capped. Interest "
+                    "is charged each morning at today's rate; if cash is "
+                    "insufficient, unpaid interest compounds onto the balance."
+                ),
+                TakeLoanParams,
+            ),
+            self._build_tool(
+                "repay_loan",
+                (
+                    "Repay loan principal from cash. Reduces outstanding "
+                    "balance one-for-one. No prepayment penalty."
+                ),
+                RepayLoanParams,
+            ),
+            self._build_tool(
                 "open_for_business",
                 "Open the stand for business (must set price and hours first)",
                 OpenForBusinessParams,
@@ -243,6 +262,10 @@ class OpenAIPlayer:
                 result = game.purchase_automation()
             elif tool_name == "purchase_advertising":
                 result = game.purchase_advertising(**args)
+            elif tool_name == "take_loan":
+                result = game.take_loan(**args)
+            elif tool_name == "repay_loan":
+                result = game.repay_loan(**args)
             elif tool_name == "open_for_business":
                 result = game.open_for_business()
             else:

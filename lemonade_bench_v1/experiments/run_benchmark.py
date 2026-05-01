@@ -131,6 +131,10 @@ def run_single_game(
                     "supply_costs": supply_costs,
                     "has_automation": game.has_automation,
                     "ad_goodwill": game.ad_goodwill,
+                    "loan_balance": game.loan_balance,
+                    "today_loan_rate": game.today_loan_rate,
+                    "yesterday_interest_charged": game.yesterday_interest_charged,
+                    "total_interest_charged": game.total_interest_charged,
                 },
             )
 
@@ -173,6 +177,8 @@ def run_single_game(
                     "close_hour": game.close_hour,
                     "has_automation": game.has_automation,
                     "ad_goodwill": game.ad_goodwill,
+                    "loan_balance": game.loan_balance,
+                    "total_interest_charged": game.total_interest_charged,
                 },
                 total_attempts=turn_result.get("attempts", 1),
             )
