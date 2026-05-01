@@ -11,10 +11,10 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from decimal import Decimal
-
-from tqdm import tqdm
 from pathlib import Path
 from typing import Any
+
+from tqdm import tqdm
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -69,6 +69,7 @@ def run_single_game(
 
     Returns:
         Game results dictionary
+
     """
     logger.info(f"Starting game {game_number} with {model_name}")
     start_time = time.time()
@@ -146,7 +147,7 @@ def run_single_game(
 
             if not turn_result["success"]:
                 logger.error(
-                    f"  Failed to complete day {game.current_day}: {turn_result.get('error')}"
+                    f"  Failed to complete day {game.current_day}: {turn_result.get('error')}",
                 )
                 break
 
@@ -187,14 +188,14 @@ def run_single_game(
 
         # Record final results
         recorder.record_final_results(
-            results=final_results, total_cost=cost_info["total_cost"]
+            results=final_results, total_cost=cost_info["total_cost"],
         )
 
         logger.info(
             f"Completed game {game_number}: "
             f"Profit=${final_results['total_profit']:.2f}, "
             f"Customers={final_results['total_customers']}, "
-            f"Duration={duration:.1f}s"
+            f"Duration={duration:.1f}s",
         )
 
         result_dict = {
@@ -262,6 +263,7 @@ def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:
 
     Returns:
         Aggregated statistics
+
     """
     successful_games = [g for g in games if g.get("success", False)]
 
@@ -335,10 +337,10 @@ def aggregate_results(games: list[dict[str, Any]]) -> dict[str, Any]:
 def main():
     """Run the v0.5 benchmark."""
     parser = argparse.ArgumentParser(
-        description="Run LemonadeBench v0.5 - Business Simulation"
+        description="Run LemonadeBench v0.5 - Business Simulation",
     )
     parser.add_argument(
-        "--games", type=int, default=1, help="Number of games to run per model"
+        "--games", type=int, default=1, help="Number of games to run per model",
     )
     parser.add_argument("--days", type=int, default=30, help="Number of days per game")
     parser.add_argument(
@@ -348,13 +350,13 @@ def main():
         help="Models to test (RESTRICTED: only gpt-5-nano supported)",
     )
     parser.add_argument(
-        "--starting-cash", type=float, default=1000, help="Starting cash for each game"
+        "--starting-cash", type=float, default=1000, help="Starting cash for each game",
     )
     parser.add_argument(
-        "--seed", type=int, default=None, help="Random seed for reproducibility"
+        "--seed", type=int, default=None, help="Random seed for reproducibility",
     )
     parser.add_argument(
-        "--no-analysis", action="store_true", help="Skip automatic analysis generation"
+        "--no-analysis", action="store_true", help="Skip automatic analysis generation",
     )
     parser.add_argument(
         "--workers",
@@ -370,7 +372,7 @@ def main():
             logger.error(
                 f"ERROR: Only gpt-5-nano is supported. Got: {model}\n"
                 "This restriction ensures consistent pricing with Flex tier.\n"
-                "Use: --models gpt-5-nano"
+                "Use: --models gpt-5-nano",
             )
             sys.exit(1)
 
@@ -378,7 +380,7 @@ def main():
     logger.info("LEMONADEBENCH v0.5 - Business Simulation with Inventory Management")
     logger.info("=" * 70)
     logger.info(f"Model: {args.models[0]}")
-    logger.info(f"Service Tier: Flex (for cost savings)")
+    logger.info("Service Tier: Flex (for cost savings)")
     logger.info(f"Games: {args.games}")
     logger.info(f"Days per game: {args.days}")
     logger.info(f"Starting cash: ${args.starting_cash}")
@@ -394,7 +396,7 @@ def main():
             "days_per_game": args.days,
             "starting_cash": args.starting_cash,
             "seed": args.seed,
-        }
+        },
     )
 
     # Run benchmark for each model
@@ -422,7 +424,7 @@ def main():
                         args.starting_cash,
                         game_seed,
                         Path("results/json"),
-                    )
+                    ),
                 )
 
             # Progress bar for game completion
@@ -432,7 +434,7 @@ def main():
                 position=1,
                 leave=False,
             )
-            
+
             for future in as_completed(futures):
                 result = future.result()
                 record_path = Path(result.get("recording_path"))
@@ -465,17 +467,17 @@ def main():
         # Summary for this model
         logger.info(f"\n{model} Summary:")
         logger.info(
-            f"  Successful games: {model_results['successful_games']}/{args.games}"
+            f"  Successful games: {model_results['successful_games']}/{args.games}",
         )
         if model_results["successful_games"] > 0:
             logger.info(
-                f"  Average profit: ${model_results['total_profit']['mean']:.2f}"
+                f"  Average profit: ${model_results['total_profit']['mean']:.2f}",
             )
             logger.info(
-                f"  Average customers: {model_results['total_customers']['mean']:.0f}"
+                f"  Average customers: {model_results['total_customers']['mean']:.0f}",
             )
             logger.info(
-                f"  Average stockout rate: {model_results['stockout_rate']['mean']:.1%}"
+                f"  Average stockout rate: {model_results['stockout_rate']['mean']:.1%}",
             )
             logger.info(f"  Total cost: ${model_results['total_cost']:.4f}")
 
@@ -525,7 +527,7 @@ def main():
     if len(args.models) > 1:
         logger.info("\nModel Comparison:")
         logger.info(
-            f"{'Model':<15} {'Avg Profit':<12} {'Customers':<10} {'Stockouts':<10} {'Cost/Game':<10}"
+            f"{'Model':<15} {'Avg Profit':<12} {'Customers':<10} {'Stockouts':<10} {'Cost/Game':<10}",
         )
         logger.info("-" * 60)
 
@@ -536,7 +538,7 @@ def main():
                     f"${results['total_profit']['mean']:<11.2f} "
                     f"{results['total_customers']['mean']:<9.0f} "
                     f"{results['stockout_rate']['mean']:<9.1%} "
-                    f"${results['cost_per_game']:<9.4f}"
+                    f"${results['cost_per_game']:<9.4f}",
                 )
 
     # Run analysis if not skipped
@@ -552,7 +554,7 @@ def main():
             logger.error(f"Failed to generate analysis: {e}")
             logger.info(
                 "You can manually run: python analysis/analyze_results.py --file "
-                + recording_filename
+                + recording_filename,
             )
 
 

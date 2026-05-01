@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import time
-from typing import Any, Type
+from typing import Any
 
 from openai import OpenAI
 from pydantic import BaseModel
@@ -22,6 +22,7 @@ from .tool_schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 class OpenAIPlayer:
     """AI player that uses OpenAI's API to play the lemonade stand business game."""
@@ -46,12 +47,13 @@ class OpenAIPlayer:
 
         Raises:
             ValueError: If model_name is not gpt-5-nano
+
         """
         # SAFEGUARD: Only allow gpt-5-nano model
         if model_name != "gpt-5-nano":
             raise ValueError(
                 f"Only gpt-5-nano is supported. Got: {model_name}. "
-                "This restriction ensures consistent pricing with Flex tier."
+                "This restriction ensures consistent pricing with Flex tier.",
             )
 
         self.model_name = model_name
@@ -89,7 +91,9 @@ class OpenAIPlayer:
         }
 
         # Check if this is a reasoning model (gpt-5-nano IS a reasoning model)
-        self.is_reasoning_model = model_name.startswith("gpt-5") or model_name.startswith("o")
+        self.is_reasoning_model = model_name.startswith(
+            "gpt-5",
+        ) or model_name.startswith("o")
 
         # Initialize OpenAI client (synchronous)
         api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -107,7 +111,7 @@ class OpenAIPlayer:
             logger.warning(f"Failed to close OpenAI client: {exc}")
 
     # Support use as a context manager
-    def __enter__(self) -> "OpenAIPlayer":
+    def __enter__(self) -> OpenAIPlayer:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:  # pragma: no cover - trivial
@@ -157,7 +161,7 @@ class OpenAIPlayer:
         self,
         name: str,
         description: str,
-        params_model: Type[BaseModel],
+        params_model: type[BaseModel],
     ) -> dict[str, Any]:
         """Build an OpenAI tool definition from a Pydantic model.
 
@@ -168,6 +172,7 @@ class OpenAIPlayer:
 
         Returns:
             OpenAI-compatible tool definition with auto-generated schema
+
         """
         schema = params_model.model_json_schema()
         return {
@@ -184,7 +189,7 @@ class OpenAIPlayer:
         }
 
     def execute_tool(
-        self, tool_name: str, args: dict[str, Any], game: BusinessGame
+        self, tool_name: str, args: dict[str, Any], game: BusinessGame,
     ) -> str:
         """Execute a tool with given arguments.
 
@@ -195,6 +200,7 @@ class OpenAIPlayer:
 
         Returns:
             JSON string with the result
+
         """
         try:
             result: Any
@@ -220,7 +226,7 @@ class OpenAIPlayer:
             return json.dumps({"error": str(e)}, default=str)
 
     def play_turn(
-        self, game: BusinessGame, recorder: GameRecorder | None = None
+        self, game: BusinessGame, recorder: GameRecorder | None = None,
     ) -> dict[str, Any]:
         """Play one turn of the game using OpenAI Responses API with conversation state.
 
@@ -230,6 +236,7 @@ class OpenAIPlayer:
 
         Returns:
             Dictionary with success status and attempt information
+
         """
         max_attempts = 10
         attempts = 0
@@ -245,7 +252,7 @@ class OpenAIPlayer:
                     logger.info(f"Day {game.current_day}, Attempt {attempts}")
                     if attempts > 1:
                         logger.info(
-                            f"  Progress: {list(set(all_tool_calls_this_turn))}"
+                            f"  Progress: {list(set(all_tool_calls_this_turn))}",
                         )
 
                 # Build request with conversation
@@ -270,7 +277,7 @@ class OpenAIPlayer:
                     assistant_message,
                     success,
                 ) = self._process_output_stateful(
-                    response, game, attempts, all_tool_calls_this_turn
+                    response, game, attempts, all_tool_calls_this_turn,
                 )
 
                 # Convert tool results to function_call_output format for next request
@@ -278,7 +285,7 @@ class OpenAIPlayer:
                     {
                         "type": "function_call_output",
                         "call_id": tool_result["id"],
-                        "output": tool_result["result"]
+                        "output": tool_result["result"],
                     }
                     for tool_result in tool_results
                 ]
@@ -292,10 +299,10 @@ class OpenAIPlayer:
                             {
                                 "tool": tool_result["name"],
                                 "arguments": self._get_tool_args_from_response(
-                                    response, tool_result["name"]
+                                    response, tool_result["name"],
                                 ),
                                 "result": json.loads(tool_result["result"]),
-                            }
+                            },
                         )
 
                     recorder.record_interaction(
@@ -331,7 +338,7 @@ class OpenAIPlayer:
         return self._max_attempts_response(attempts, all_tool_calls_this_turn)
 
     def _get_tool_args_from_response(
-        self, response: Any, tool_name: str
+        self, response: Any, tool_name: str,
     ) -> dict[str, Any]:
         """Extract tool arguments from response for a specific tool call."""
         for item in response.output:
@@ -340,7 +347,7 @@ class OpenAIPlayer:
         return {}
 
     def _max_attempts_response(
-        self, attempts: int, all_tool_calls: list[str]
+        self, attempts: int, all_tool_calls: list[str],
     ) -> dict[str, Any]:
         return {
             "success": False,
@@ -350,7 +357,7 @@ class OpenAIPlayer:
         }
 
     def _build_request_kwargs(
-        self, conversation: list[dict[str, Any]], game: BusinessGame
+        self, conversation: list[dict[str, Any]], game: BusinessGame,
     ) -> dict[str, Any]:
         """Legacy: Build request for stateless approach (for backward compatibility)."""
         kwargs: dict[str, Any] = {
@@ -367,7 +374,7 @@ class OpenAIPlayer:
         return kwargs
 
     def _build_request_kwargs_stateful(
-        self, game: BusinessGame, is_first_attempt: bool
+        self, game: BusinessGame, is_first_attempt: bool,
     ) -> dict[str, Any]:
         """Build request for stateful approach using Responses API with previous_response_id."""
         # Build input array with tool outputs (if any) + user message
@@ -378,10 +385,12 @@ class OpenAIPlayer:
             input_array.extend(self.pending_tool_outputs)
 
         # Then add the user message (day summary)
-        input_array.append({
-            "role": "user",
-            "content": game.get_day_summary(is_first_attempt=is_first_attempt)
-        })
+        input_array.append(
+            {
+                "role": "user",
+                "content": game.get_day_summary(is_first_attempt=is_first_attempt),
+            },
+        )
 
         kwargs: dict[str, Any] = {
             "model": self.model_name,
@@ -411,19 +420,19 @@ class OpenAIPlayer:
         while True:
             try:
                 return self.client.responses.create(**kwargs)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 attempt += 1
                 if attempt > self.api_max_retries:
                     logger.error(f"OpenAI call failed after {attempt - 1} retries: {e}")
                     raise
                 delay = self.api_backoff * (2 ** (attempt - 1))
                 logger.warning(
-                    f"OpenAI call error: {e}. Retry {attempt}/{self.api_max_retries} in {delay:.1f}s"
+                    f"OpenAI call error: {e}. Retry {attempt}/{self.api_max_retries} in {delay:.1f}s",
                 )
                 time.sleep(delay)
 
     def _extract_reasoning_summary(
-        self, response: Any, game: BusinessGame, attempts: int
+        self, response: Any, game: BusinessGame, attempts: int,
     ) -> None:
         if not (self.is_reasoning_model and hasattr(response, "output")):
             return
@@ -452,13 +461,13 @@ class OpenAIPlayer:
                         "effort": response.reasoning.effort
                         if hasattr(response, "reasoning")
                         else None,
-                    }
+                    },
                 )
                 if game.current_day == 1 and attempts == 1:
                     logger.info(
                         f"Captured reasoning summary: {reasoning_text[:200]}..."
                         if reasoning_text
-                        else "No reasoning text"
+                        else "No reasoning text",
                     )
 
     def _update_token_usage(self, response: Any) -> None:
@@ -469,10 +478,10 @@ class OpenAIPlayer:
         # The Responses API uses different field names than Chat Completions API
         # Try both field names to support both APIs
         input_tokens = getattr(usage, "input_tokens", 0) or getattr(
-            usage, "prompt_tokens", 0
+            usage, "prompt_tokens", 0,
         )
         output_tokens = getattr(usage, "output_tokens", 0) or getattr(
-            usage, "completion_tokens", 0
+            usage, "completion_tokens", 0,
         )
         total_tokens = getattr(usage, "total_tokens", 0)
 
@@ -482,20 +491,20 @@ class OpenAIPlayer:
 
         # Handle token details (different field names in different APIs)
         if hasattr(usage, "input_tokens_details") or hasattr(
-            usage, "prompt_tokens_details"
+            usage, "prompt_tokens_details",
         ):
             details: Any = getattr(usage, "input_tokens_details", None) or getattr(
-                usage, "prompt_tokens_details", None
+                usage, "prompt_tokens_details", None,
             )
             if details:
                 cached = getattr(details, "cached_tokens", 0)
                 self.total_token_usage["cached_input_tokens"] += cached
 
         if hasattr(usage, "output_tokens_details") or hasattr(
-            usage, "completion_tokens_details"
+            usage, "completion_tokens_details",
         ):
             details = getattr(usage, "output_tokens_details", None) or getattr(
-                usage, "completion_tokens_details", None
+                usage, "completion_tokens_details", None,
             )
             if details:
                 reasoning = getattr(details, "reasoning_tokens", 0)
@@ -508,7 +517,7 @@ class OpenAIPlayer:
         attempts: int,
         all_tool_calls_this_turn: list[str],
     ) -> tuple[
-        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None
+        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None,
     ]:
         tool_calls_made: list[str] = []
         tool_results: list[dict[str, Any]] = []
@@ -524,7 +533,7 @@ class OpenAIPlayer:
                 tool_calls_made.append(item.name)
                 all_tool_calls_this_turn.append(item.name)
                 tool_results.append(
-                    {"name": item.name, "result": result, "id": item.call_id}
+                    {"name": item.name, "result": result, "id": item.call_id},
                 )
                 if item.name == "open_for_business":
                     result_dict = json.loads(result)
@@ -550,7 +559,7 @@ class OpenAIPlayer:
                     assistant_message["content"] += "\n" + item.text
                 else:
                     assistant_message["content"].append(
-                        {"type": "text", "text": item.text}
+                        {"type": "text", "text": item.text},
                     )
 
         return tool_calls_made, tool_results, assistant_message, None
@@ -562,7 +571,7 @@ class OpenAIPlayer:
         attempts: int,
         all_tool_calls_this_turn: list[str],
     ) -> tuple[
-        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None
+        list[str], list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None,
     ]:
         """Process response from Responses API with conversation state."""
         tool_calls_made: list[str] = []
@@ -579,7 +588,7 @@ class OpenAIPlayer:
                 tool_calls_made.append(item.name)
                 all_tool_calls_this_turn.append(item.name)
                 tool_results.append(
-                    {"name": item.name, "result": result, "id": item.call_id}
+                    {"name": item.name, "result": result, "id": item.call_id},
                 )
                 if item.name == "open_for_business":
                     result_dict = json.loads(result)
@@ -605,13 +614,13 @@ class OpenAIPlayer:
                     assistant_message["content"] += "\n" + item.text
                 else:
                     assistant_message["content"].append(
-                        {"type": "text", "text": item.text}
+                        {"type": "text", "text": item.text},
                     )
 
         return tool_calls_made, tool_results, assistant_message, None
 
     def _append_tool_results_to_conversation(
-        self, tool_results: list[dict[str, Any]], conversation: list[dict[str, Any]]
+        self, tool_results: list[dict[str, Any]], conversation: list[dict[str, Any]],
     ) -> None:
         """Legacy: Append tool results to local conversation list (for backward compatibility)."""
         results_message = "Here are the results of the tool calls:\n\n"
@@ -627,9 +636,10 @@ class OpenAIPlayer:
 
         Returns:
             Cost breakdown and total
+
         """
         pricing = self.model_pricing.get(
-            self.model_name, {"input": 1.0, "cached_input": 0.5, "output": 2.0}
+            self.model_name, {"input": 1.0, "cached_input": 0.5, "output": 2.0},
         )
 
         # Calculate costs (pricing is per 1M tokens)

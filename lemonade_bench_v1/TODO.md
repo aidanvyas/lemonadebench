@@ -1,0 +1,2 @@
+- [ ] Fix all ruff issues completely
+- [ ] Fix all ty issues completely

@@ -7,4 +7,4 @@ from .openai_player import OpenAIPlayer
 
 __version__ = "0.5.0"
 
-__all__ = ["BusinessGame", "GameRecorder", "BenchmarkRecorder", "OpenAIPlayer"]
+__all__ = ["BenchmarkRecorder", "BusinessGame", "GameRecorder", "OpenAIPlayer"]
