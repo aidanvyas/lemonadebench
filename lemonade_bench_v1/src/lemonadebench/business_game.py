@@ -28,6 +28,11 @@ DEFAULT_AD_VAR_LO = 0.90
 DEFAULT_AD_VAR_HI = 1.10
 DEFAULT_AD_LIFETIME_DAYS = 7  # campaign contributes 0 once age >= this
 
+# Loan parameters (rate is daily; range exposed to the model).
+DEFAULT_LOAN_CAP = to_decimal("10000.00")
+DEFAULT_LOAN_RATE_LO = to_decimal("0.009")  # 0.9%/day
+DEFAULT_LOAN_RATE_HI = to_decimal("0.011")  # 1.1%/day
+
 
 class Inventory:
     """Manages perishable inventory with FIFO expiration tracking."""
@@ -343,6 +348,9 @@ class BusinessGame:
         ad_var_lo: float = DEFAULT_AD_VAR_LO,
         ad_var_hi: float = DEFAULT_AD_VAR_HI,
         ad_lifetime_days: int = DEFAULT_AD_LIFETIME_DAYS,
+        loan_cap: Decimal | float = DEFAULT_LOAN_CAP,
+        loan_rate_lo: Decimal | float = DEFAULT_LOAN_RATE_LO,
+        loan_rate_hi: Decimal | float = DEFAULT_LOAN_RATE_HI,
     ) -> None:
         """Initialize the business game.
 
@@ -361,6 +369,9 @@ class BusinessGame:
             ad_var_lo, ad_var_hi: Uniform range on goodwill earned per campaign.
             ad_lifetime_days: Each campaign contributes 0 once its age reaches
                 this many days (hard cutoff on top of the multiplicative decay).
+            loan_cap: Maximum outstanding loan balance.
+            loan_rate_lo, loan_rate_hi: Daily interest rate range. Each morning
+                a fresh rate is drawn from Uniform(lo, hi).
 
         """
         self.total_days = days
@@ -386,6 +397,17 @@ class BusinessGame:
         self.ad_lifetime_days = ad_lifetime_days
         self.ad_campaigns: list[tuple[int, float]] = []
         self.today_ad_spend: Decimal = to_decimal(0).quantize(TWOPLACES)
+
+        # Loan state. Single revolving balance. today_loan_rate is drawn each
+        # morning from Uniform(loan_rate_lo, loan_rate_hi) and exposed to the
+        # model. yesterday_interest_charged is shown for transparency.
+        self.loan_cap = to_decimal(loan_cap).quantize(TWOPLACES)
+        self.loan_rate_lo = to_decimal(loan_rate_lo)
+        self.loan_rate_hi = to_decimal(loan_rate_hi)
+        self.loan_balance: Decimal = to_decimal(0).quantize(TWOPLACES)
+        self.today_loan_rate: Decimal | None = None
+        self.yesterday_interest_charged: Decimal = to_decimal(0).quantize(TWOPLACES)
+        self.total_interest_charged: Decimal = to_decimal(0).quantize(TWOPLACES)
 
         # Initialize components
         self.inventory = Inventory()
@@ -450,6 +472,28 @@ class BusinessGame:
         # Reset today's ad-spend bucket. Goodwill from prior campaigns
         # decays by age in simulate_day, no morning decay needed here.
         self.today_ad_spend = to_decimal(0).quantize(TWOPLACES)
+
+        # Draw today's loan rate and charge interest on outstanding balance.
+        rate_float = random.uniform(
+            float(self.loan_rate_lo),
+            float(self.loan_rate_hi),
+        )
+        self.today_loan_rate = to_decimal(rate_float).quantize(to_decimal("0.0001"))
+        if self.loan_balance > 0:
+            interest = (self.loan_balance * self.today_loan_rate).quantize(TWOPLACES)
+            if self.cash >= interest:
+                self.cash = (self.cash - interest).quantize(TWOPLACES)
+            else:
+                # Pay what we can; rest compounds onto the balance.
+                short = interest - self.cash
+                self.cash = to_decimal(0).quantize(TWOPLACES)
+                self.loan_balance = (self.loan_balance + short).quantize(TWOPLACES)
+            self.yesterday_interest_charged = interest
+            self.total_interest_charged = (
+                self.total_interest_charged + interest
+            ).quantize(TWOPLACES)
+        else:
+            self.yesterday_interest_charged = to_decimal(0).quantize(TWOPLACES)
 
         # Reset daily state
         self.price_set = False
@@ -686,6 +730,86 @@ class BusinessGame:
             ),
         }
 
+    def take_loan(self, amount: int) -> dict[str, Any]:
+        """Borrow cash. Increases both cash and loan_balance.
+
+        Args:
+            amount: Dollars to borrow (positive integer).
+
+        Returns:
+            Dict with success status; rejects if non-positive or if borrowing
+            would push outstanding balance over the cap.
+
+        """
+        if amount <= 0:
+            return {
+                "success": False,
+                "error": "Loan amount must be a positive integer.",
+            }
+        amt = to_decimal(amount).quantize(TWOPLACES)
+        new_balance = self.loan_balance + amt
+        if new_balance > self.loan_cap:
+            return {
+                "success": False,
+                "error": (
+                    f"Loan cap is ${self.loan_cap:.2f}. "
+                    f"Outstanding balance is ${self.loan_balance:.2f}; "
+                    f"can borrow at most ${(self.loan_cap - self.loan_balance):.2f} "
+                    f"more."
+                ),
+            }
+        self.cash = (self.cash + amt).quantize(TWOPLACES)
+        self.loan_balance = new_balance.quantize(TWOPLACES)
+        return {
+            "success": True,
+            "message": (
+                f"Borrowed ${amt:.2f}. Outstanding balance: "
+                f"${self.loan_balance:.2f}. Cash: ${self.cash:.2f}."
+            ),
+        }
+
+    def repay_loan(self, amount: int) -> dict[str, Any]:
+        """Repay loan from cash. Decreases both cash and loan_balance.
+
+        Args:
+            amount: Dollars to repay (positive integer).
+
+        Returns:
+            Dict with success status; rejects if non-positive, if cash is
+            insufficient, or if repayment would exceed the outstanding balance.
+
+        """
+        if amount <= 0:
+            return {
+                "success": False,
+                "error": "Repayment amount must be a positive integer.",
+            }
+        amt = to_decimal(amount).quantize(TWOPLACES)
+        if amt > self.loan_balance:
+            return {
+                "success": False,
+                "error": (
+                    f"Repayment ${amt:.2f} exceeds outstanding balance "
+                    f"${self.loan_balance:.2f}."
+                ),
+            }
+        if amt > self.cash:
+            return {
+                "success": False,
+                "error": (
+                    f"Insufficient cash. Need ${amt:.2f}, have ${self.cash:.2f}."
+                ),
+            }
+        self.cash = (self.cash - amt).quantize(TWOPLACES)
+        self.loan_balance = (self.loan_balance - amt).quantize(TWOPLACES)
+        return {
+            "success": True,
+            "message": (
+                f"Repaid ${amt:.2f}. Outstanding balance: "
+                f"${self.loan_balance:.2f}. Cash: ${self.cash:.2f}."
+            ),
+        }
+
     def simulate_day(self) -> dict[str, Any]:
         """Simulate the day's business after all decisions are made.
 
@@ -835,8 +959,12 @@ class BusinessGame:
         utilities = self.utilities_cost_per_hour
         total = labor + utilities
         auto_cost = self.automation_cost
+        loan_cap = self.loan_cap
+        rate_lo_pct = self.loan_rate_lo * to_decimal(100)
+        rate_hi_pct = self.loan_rate_hi * to_decimal(100)
         return f"""You run a lemonade stand for {self.total_days} days. \
-Your goal is to maximize total profit (cash in bank after {self.total_days} days).
+Your final score is cash on hand minus outstanding loan balance after \
+{self.total_days} days.
 
 BUSINESS MECHANICS:
 - Starting capital: $1000
@@ -846,6 +974,12 @@ BUSINESS MECHANICS:
 portion. Utilities still apply.
 - Advertising: spend cash on ads to boost demand. Effects are temporary, \
 have diminishing returns, and ROI is uncertain — you'll need to experiment.
+- Loans: borrow up to ${loan_cap:.2f} outstanding. Daily interest rate is \
+drawn from {rate_lo_pct:.1f}%–{rate_hi_pct:.1f}% and is shown each morning. \
+Interest is charged each morning on the outstanding balance. If cash is \
+insufficient, the unpaid interest compounds onto the balance. \
+Final score is cash minus outstanding balance, so a loan you don't repay \
+fully reduces your score one-for-one.
 - Recipe: 1 lemonade = 1 cup + 1 lemon + 1 sugar + 1 water (all required)
 - You can only sell lemonade if you have ALL ingredients in stock
 
@@ -861,7 +995,7 @@ INVENTORY MANAGEMENT:
 DAILY WORKFLOW:
 1. Morning: Check inventory and supply prices
 2. Decisions: Order supplies, set price and operating hours, optionally \
-purchase automation, optionally buy advertising
+purchase automation, optionally buy advertising, optionally take or repay loans
 3. IMPORTANT: Call open_for_business() after setting price and hours
 4. Evening: Review profit/loss and customer data
 
@@ -876,6 +1010,9 @@ AVAILABLE TOOLS:
 for the rest of the game
 - purchase_advertising(spend): Buy ads (positive integer dollars). \
 Affects today's demand. Multiple calls in a single day stack in dollar amount.
+- take_loan(amount): Borrow cash. Outstanding balance capped at \
+${loan_cap:.2f}. Subject to daily interest at today's rate.
+- repay_loan(amount): Pay down loan from cash. Reduces balance one-for-one.
 - open_for_business(): REQUIRED - Open the stand after setting price and hours
 
 IMPORTANT: You MUST call open_for_business() after setting your price and \
@@ -900,9 +1037,20 @@ operating hours. The stand will not operate until you do this."""
             else ""
         )
         automation_status = "Yes" if self.has_automation else "No"
+        rate_pct = (
+            self.today_loan_rate * to_decimal(100)
+            if self.today_loan_rate is not None
+            else to_decimal(0)
+        )
+        loan_line = (
+            f"Loan: ${self.loan_balance:.2f} outstanding "
+            f"@ {rate_pct:.2f}%/day today "
+            f"(interest yesterday: ${self.yesterday_interest_charged:.2f})"
+        )
         summary = f"""Day {self.current_day} of {self.total_days}.{profit_msg}
 Current cash: ${self.cash:.2f}
 Automation: {automation_status}
+{loan_line}
 {self._get_historical_table()}"""
 
         # Only include tool reminder on first attempt of the day
@@ -979,11 +1127,14 @@ Automation: {automation_status}
         else:
             avg_daily_profit = to_decimal("0")
 
+        net_value = (self.cash - self.loan_balance).quantize(TWOPLACES)
         return {
             "days_played": self.current_day,
             "final_cash": self.cash,
-            "total_profit": self.cash
-            - self.starting_cash,  # Profit over starting capital
+            "loan_balance": self.loan_balance,
+            "net_value": net_value,  # cash - debt; the score
+            "total_interest_charged": self.total_interest_charged,
+            "total_profit": net_value - self.starting_cash,
             "total_revenue": total_revenue,
             "total_operating_cost": total_operating_cost,
             "total_customers": total_customers,

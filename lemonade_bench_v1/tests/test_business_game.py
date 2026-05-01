@@ -291,6 +291,8 @@ class TestBusinessGame:
         assert "100 days" in system_prompt
         assert "purchase_automation" in system_prompt
         assert "purchase_advertising" in system_prompt
+        assert "take_loan" in system_prompt
+        assert "repay_loan" in system_prompt
         # Pin the cost numbers so any constant change must update the prompt
         assert "$3.00 labor" in system_prompt
         assert "$2.00 utilities" in system_prompt
@@ -450,6 +452,97 @@ class TestBusinessGame:
         game.set_operating_hours(10, 18)
         game.simulate_day()
         assert game.ad_goodwill == 0
+
+    def test_take_loan_increases_cash_and_balance(self):
+        """take_loan deposits cash and grows the loan balance one-for-one."""
+        game = BusinessGame()
+        game.start_new_day()
+        result = game.take_loan(2000)
+        assert result["success"] is True
+        assert game.cash == Decimal(3000)
+        assert game.loan_balance == Decimal(2000)
+
+    def test_take_loan_rejects_over_cap(self):
+        """take_loan rejects amounts that would exceed the cap."""
+        game = BusinessGame(loan_cap=5000)
+        game.start_new_day()
+        game.take_loan(5000)
+        result = game.take_loan(1)
+        assert result["success"] is False
+        assert game.loan_balance == Decimal(5000)
+
+    def test_take_loan_rejects_zero_or_negative(self):
+        game = BusinessGame()
+        game.start_new_day()
+        assert game.take_loan(0)["success"] is False
+        assert game.take_loan(-100)["success"] is False
+        assert game.loan_balance == Decimal(0)
+
+    def test_repay_loan_reduces_balance_and_cash(self):
+        game = BusinessGame()
+        game.start_new_day()
+        game.take_loan(2000)  # cash=3000, balance=2000
+        result = game.repay_loan(500)
+        assert result["success"] is True
+        assert game.cash == Decimal(2500)
+        assert game.loan_balance == Decimal(1500)
+
+    def test_repay_loan_rejects_over_balance(self):
+        game = BusinessGame()
+        game.start_new_day()
+        game.take_loan(500)
+        result = game.repay_loan(1000)
+        assert result["success"] is False
+        assert game.loan_balance == Decimal(500)
+
+    def test_repay_loan_rejects_over_cash(self):
+        game = BusinessGame(starting_cash=100)
+        game.start_new_day()
+        game.take_loan(500)  # cash=600, balance=500
+        result = game.repay_loan(700)
+        assert result["success"] is False  # 700 > 500 outstanding (caught first)
+
+    def test_loan_interest_charged_each_morning(self):
+        """Daily interest accrues against cash on the next start_new_day."""
+        game = BusinessGame()
+        game.start_new_day()
+        game.take_loan(1000)  # cash=2000, balance=1000
+        cash_before_morning = game.cash
+
+        # Advance to next day; interest should fire.
+        game.start_new_day()
+        rate = game.today_loan_rate
+        assert rate is not None
+        # Interest = balance * rate, paid from cash since cash is plentiful.
+        expected = (Decimal(1000) * rate).quantize(Decimal("0.01"))
+        assert game.cash == cash_before_morning - expected
+        assert game.loan_balance == Decimal(1000)
+        assert game.yesterday_interest_charged == expected
+
+    def test_loan_interest_compounds_when_cash_short(self):
+        """If cash can't cover interest, the shortfall compounds onto balance."""
+        game = BusinessGame(starting_cash=10)
+        game.start_new_day()
+        game.take_loan(5000)  # cash=5010, balance=5000
+        # Drain cash so day-2 interest exceeds it.
+        game.cash = Decimal(1)
+        game.start_new_day()
+        # Interest on $5000 at ~1% is much more than $1 — cash should be 0,
+        # the shortfall added to balance.
+        assert game.cash == Decimal(0)
+        assert game.loan_balance > Decimal(5000)
+
+    def test_final_results_uses_cash_minus_debt(self):
+        """net_value = cash - loan_balance and is the canonical score."""
+        game = BusinessGame()
+        game.start_new_day()
+        game.take_loan(500)  # cash=1500, balance=500
+        results = game.get_final_results()
+        assert results["final_cash"] == Decimal(1500)
+        assert results["loan_balance"] == Decimal(500)
+        assert results["net_value"] == Decimal(1000)
+        # total_profit measured against starting cash, after subtracting debt.
+        assert results["total_profit"] == Decimal(0)
 
     def test_simulate_day_after_automation_drops_labor(self):
         """After automation, operating cost charges only utilities ($2/hr)."""
