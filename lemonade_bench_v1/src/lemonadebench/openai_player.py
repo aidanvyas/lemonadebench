@@ -17,6 +17,7 @@ from .tool_schemas import (
     GetHistoricalSupplyCostsParams,
     OpenForBusinessParams,
     OrderSuppliesParams,
+    PurchaseAdvertisingParams,
     PurchaseAutomationParams,
     SetOperatingHoursParams,
     SetPriceParams,
@@ -161,6 +162,15 @@ class OpenAIPlayer:
                 PurchaseAutomationParams,
             ),
             self._build_tool(
+                "purchase_advertising",
+                (
+                    "Spend cash on advertising today. Multiple calls in a "
+                    "single day stack in dollar amount. Effects are "
+                    "temporary; ROI is uncertain — experiment to learn."
+                ),
+                PurchaseAdvertisingParams,
+            ),
+            self._build_tool(
                 "open_for_business",
                 "Open the stand for business (must set price and hours first)",
                 OpenForBusinessParams,
@@ -231,6 +241,8 @@ class OpenAIPlayer:
                 result = game.get_historical_supply_costs()
             elif tool_name == "purchase_automation":
                 result = game.purchase_automation()
+            elif tool_name == "purchase_advertising":
+                result = game.purchase_advertising(**args)
             elif tool_name == "open_for_business":
                 result = game.open_for_business()
             else:

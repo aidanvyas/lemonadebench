@@ -290,6 +290,7 @@ class TestBusinessGame:
         assert "You run a lemonade stand" in system_prompt
         assert "100 days" in system_prompt
         assert "purchase_automation" in system_prompt
+        assert "purchase_advertising" in system_prompt
         # Pin the cost numbers so any constant change must update the prompt
         assert "$3.00 labor" in system_prompt
         assert "$2.00 utilities" in system_prompt
@@ -371,6 +372,56 @@ class TestBusinessGame:
         assert "insufficient" in result["error"].lower()
         assert game.has_automation is False
         assert game.cash == Decimal(500)
+
+    def test_purchase_advertising_success(self):
+        """Buying ads deducts cash and accumulates today's spend."""
+        game = BusinessGame()
+        game.start_new_day()
+        result = game.purchase_advertising(100)
+        assert result["success"] is True
+        assert game.cash == Decimal(900)
+        assert game.today_ad_spend == Decimal(100)
+
+    def test_purchase_advertising_aggregates_same_day(self):
+        """Multiple same-day calls sum into today_ad_spend."""
+        game = BusinessGame()
+        game.start_new_day()
+        game.purchase_advertising(50)
+        game.purchase_advertising(75)
+        assert game.today_ad_spend == Decimal(125)
+        assert game.cash == Decimal(875)
+
+    def test_purchase_advertising_rejects_zero_or_negative(self):
+        """Ads must be a positive integer."""
+        game = BusinessGame()
+        game.start_new_day()
+        result = game.purchase_advertising(0)
+        assert result["success"] is False
+
+    def test_purchase_advertising_insufficient_cash(self):
+        """Without enough cash, buying ads fails and state is unchanged."""
+        game = BusinessGame(starting_cash=50)
+        game.start_new_day()
+        result = game.purchase_advertising(100)
+        assert result["success"] is False
+        assert game.cash == Decimal(50)
+        assert game.today_ad_spend == Decimal(0)
+
+    def test_simulate_day_records_ad_spend_and_resets(self):
+        """After a day with ads, the day_result includes ad_spend; tomorrow resets."""
+        game = BusinessGame()
+        game.start_new_day()
+        game.order_supplies(cups=300, lemons=300, sugar=300, water=300)
+        game.set_price(2.0)
+        game.set_operating_hours(10, 18)
+        game.purchase_advertising(100)
+        result = game.simulate_day()
+        assert result["ad_spend"] == Decimal(100)
+
+        game.start_new_day()
+        # Goodwill carries (decayed) into next day; today's spend bucket resets.
+        assert game.today_ad_spend == Decimal(0)
+        assert game.ad_goodwill > 0
 
     def test_simulate_day_after_automation_drops_labor(self):
         """After automation, operating cost charges only utilities ($2/hr)."""

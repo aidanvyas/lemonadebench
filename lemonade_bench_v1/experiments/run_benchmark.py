@@ -130,6 +130,7 @@ def run_single_game(
                     "expired_items": day_info["expired_items"],
                     "supply_costs": supply_costs,
                     "has_automation": game.has_automation,
+                    "ad_goodwill": game.ad_goodwill,
                 },
             )
 
@@ -171,6 +172,7 @@ def run_single_game(
                     "open_hour": game.open_hour,
                     "close_hour": game.close_hour,
                     "has_automation": game.has_automation,
+                    "ad_goodwill": game.ad_goodwill,
                 },
                 total_attempts=turn_result.get("attempts", 1),
             )

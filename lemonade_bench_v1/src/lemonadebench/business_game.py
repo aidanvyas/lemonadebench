@@ -1,5 +1,6 @@
 """Main game engine for the lemonade stand business simulation."""
 
+import math
 import random
 from collections import deque
 from decimal import ROUND_HALF_UP, Decimal, getcontext
@@ -18,6 +19,13 @@ DEFAULT_UTILITIES_COST_PER_HOUR = to_decimal("2.00")
 DEFAULT_AUTOMATION_COST = to_decimal("1000.00")
 DEFAULT_TOTAL_DAYS = 100
 LEMONADE_RECIPE = {"cups": 1, "lemons": 1, "sugar": 1, "water": 1}
+
+# Advertising parameters (hidden from the model — must be inferred from sales).
+DEFAULT_AD_SQRT_SCALE = 10.0
+DEFAULT_AD_MULT_CAP = 0.20
+DEFAULT_AD_DECAY = 0.80
+DEFAULT_AD_VAR_LO = 0.90
+DEFAULT_AD_VAR_HI = 1.10
 
 
 class Inventory:
@@ -328,6 +336,11 @@ class BusinessGame:
         labor_cost_per_hour: Decimal | float = DEFAULT_LABOR_COST_PER_HOUR,
         utilities_cost_per_hour: Decimal | float = DEFAULT_UTILITIES_COST_PER_HOUR,
         automation_cost: Decimal | float = DEFAULT_AUTOMATION_COST,
+        ad_sqrt_scale: float = DEFAULT_AD_SQRT_SCALE,
+        ad_mult_cap: float = DEFAULT_AD_MULT_CAP,
+        ad_decay: float = DEFAULT_AD_DECAY,
+        ad_var_lo: float = DEFAULT_AD_VAR_LO,
+        ad_var_hi: float = DEFAULT_AD_VAR_HI,
     ) -> None:
         """Initialize the business game.
 
@@ -340,6 +353,10 @@ class BusinessGame:
                 of automation.
             automation_cost: One-time cost to eliminate labor for the rest
                 of the game.
+            ad_sqrt_scale: Goodwill earned per sqrt(spend / 100).
+            ad_mult_cap: Maximum demand multiplier above 1.0 (saturation cap).
+            ad_decay: Daily multiplicative decay applied to goodwill.
+            ad_var_lo, ad_var_hi: Uniform range on goodwill earned per campaign.
 
         """
         self.total_days = days
@@ -352,6 +369,15 @@ class BusinessGame:
         )
         self.automation_cost = to_decimal(automation_cost).quantize(TWOPLACES)
         self.has_automation: bool = False
+
+        # Advertising state — all hidden from the model
+        self.ad_sqrt_scale = ad_sqrt_scale
+        self.ad_mult_cap = ad_mult_cap
+        self.ad_decay = ad_decay
+        self.ad_var_lo = ad_var_lo
+        self.ad_var_hi = ad_var_hi
+        self.ad_goodwill: float = 0.0
+        self.today_ad_spend: Decimal = to_decimal(0).quantize(TWOPLACES)
 
         # Initialize components
         self.inventory = Inventory()
@@ -399,6 +425,10 @@ class BusinessGame:
         self.supply_cost_history.append(
             {"day": self.current_day, **self.today_supply_costs},
         )
+
+        # Decay yesterday's advertising goodwill, reset today's spend bucket
+        self.ad_goodwill *= self.ad_decay
+        self.today_ad_spend = to_decimal(0).quantize(TWOPLACES)
 
         # Reset daily state
         self.price_set = False
@@ -596,6 +626,45 @@ class BusinessGame:
             ),
         }
 
+    def purchase_advertising(self, spend: int) -> dict[str, Any]:
+        """Spend cash on an ad campaign for today.
+
+        Multiple calls on the same day aggregate (their dollar amounts sum
+        before the diminishing-returns curve is applied).
+
+        Args:
+            spend: Dollars to spend (positive integer).
+
+        Returns:
+            Dict with success status; effectiveness must be inferred from
+            subsequent customer counts (no internals exposed).
+
+        """
+        if spend <= 0:
+            return {
+                "success": False,
+                "error": "Advertising spend must be a positive integer.",
+            }
+        spend_dec = to_decimal(spend).quantize(TWOPLACES)
+        if self.cash < spend_dec:
+            return {
+                "success": False,
+                "error": (
+                    f"Insufficient cash. Need ${spend_dec:.2f}, have ${self.cash:.2f}."
+                ),
+            }
+
+        self.cash = (self.cash - spend_dec).quantize(TWOPLACES)
+        self.today_ad_spend = (self.today_ad_spend + spend_dec).quantize(TWOPLACES)
+        return {
+            "success": True,
+            "message": (
+                f"Spent ${spend_dec:.2f} on advertising today "
+                f"(today's total ad spend: ${self.today_ad_spend:.2f}). "
+                f"Cash remaining: ${self.cash:.2f}."
+            ),
+        }
+
     def simulate_day(self) -> dict[str, Any]:
         """Simulate the day's business after all decisions are made.
 
@@ -603,12 +672,29 @@ class BusinessGame:
             Day's results
 
         """
-        # Calculate customers for each hour
+        # Roll today's ad spend into goodwill (sqrt scaling + variability) so
+        # ads bought this morning affect today's demand.
+        ad_spend_today = self.today_ad_spend
+        if ad_spend_today > 0:
+            self.ad_goodwill += (
+                math.sqrt(float(ad_spend_today) / 100)
+                * self.ad_sqrt_scale
+                * random.uniform(self.ad_var_lo, self.ad_var_hi)
+            )
+
+        # Demand multiplier saturates at (1 + ad_mult_cap).
+        ad_multiplier = 1 + self.ad_mult_cap * (1 - math.exp(-self.ad_goodwill))
+
+        # Calculate customers for each hour, scaled by today's ad multiplier
         hourly_customers = self.demand_model.calculate_daily_customers(
             float(self.price),
             self.open_hour,
             self.close_hour,
         )
+        if ad_multiplier != 1.0:
+            hourly_customers = {
+                h: round(c * ad_multiplier) for h, c in hourly_customers.items()
+            }
 
         # Simulate sales hour by hour
         hourly_sales = {}
@@ -671,6 +757,7 @@ class BusinessGame:
             "profit": profit,
             "cash": self.cash,
             "hourly_sales": hourly_sales,
+            "ad_spend": ad_spend_today,
         }
 
         # Store in history
@@ -727,6 +814,8 @@ BUSINESS MECHANICS:
 (${labor:.2f} labor + ${utilities:.2f} utilities)
 - Automation: pay ${auto_cost:.2f} once to permanently eliminate the labor \
 portion. Utilities still apply.
+- Advertising: spend cash on ads to boost demand. Effects are temporary, \
+have diminishing returns, and ROI is uncertain — you'll need to experiment.
 - Recipe: 1 lemonade = 1 cup + 1 lemon + 1 sugar + 1 water (all required)
 - You can only sell lemonade if you have ALL ingredients in stock
 
@@ -742,7 +831,7 @@ INVENTORY MANAGEMENT:
 DAILY WORKFLOW:
 1. Morning: Check inventory and supply prices
 2. Decisions: Order supplies, set price and operating hours, optionally \
-purchase automation
+purchase automation, optionally buy advertising
 3. IMPORTANT: Call open_for_business() after setting price and hours
 4. Evening: Review profit/loss and customer data
 
@@ -755,6 +844,8 @@ AVAILABLE TOOLS:
 - set_operating_hours(open_hour, close_hour): Set today's operating hours
 - purchase_automation(): One-time purchase that eliminates labor cost \
 for the rest of the game
+- purchase_advertising(spend): Buy ads (positive integer dollars). \
+Affects today's demand. Multiple calls in a single day stack in dollar amount.
 - open_for_business(): REQUIRED - Open the stand after setting price and hours
 
 IMPORTANT: You MUST call open_for_business() after setting your price and \
@@ -805,17 +896,22 @@ Automation: {automation_status}
             return ""
 
         table = "\nHISTORICAL PERFORMANCE:\n"
-        table += "Day | Price | Profit     | Customers | Hours Open | Ran Out\n"
-        table += "----|-------|------------|-----------|------------|--------\n"
+        table += (
+            "Day | Price | Profit     | Customers | Hours Open | Ad Spend | Ran Out\n"
+        )
+        table += (
+            "----|-------|------------|-----------|------------|----------|--------\n"
+        )
 
         # Show ALL days
         for day in self.history:
             ran_out = "Yes" if day["customers_lost"] > 0 else "No"
             hours = f"{day['open_hour']}-{day['close_hour']}"
+            ad_spend = day.get("ad_spend", to_decimal(0))
             table += (
                 f"{day['day']:3} | ${day['price']:5.2f} | "
                 f"${day['profit']:9.2f} | {day['customers_served']:9} | "
-                f"{hours:^10} | {ran_out:^7}\n"
+                f"{hours:^10} | ${ad_spend:7.2f} | {ran_out:^7}\n"
             )
 
         return table
