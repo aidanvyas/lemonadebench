@@ -129,6 +129,7 @@ def run_single_game(
                     "inventory": game.check_inventory(),
                     "expired_items": day_info["expired_items"],
                     "supply_costs": supply_costs,
+                    "has_automation": game.has_automation,
                 },
             )
 
@@ -169,6 +170,7 @@ def run_single_game(
                     "price": game.price,
                     "open_hour": game.open_hour,
                     "close_hour": game.close_hour,
+                    "has_automation": game.has_automation,
                 },
                 total_attempts=turn_result.get("attempts", 1),
             )
