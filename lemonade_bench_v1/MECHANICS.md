@@ -105,8 +105,8 @@ A `purchase_advertising(spend)` tool that lets the model spend cash on ads, boos
 2. **Goodwill → demand multiplier** each day:
    $$\text{multiplier} = 1 + c \cdot (1 - e^{-\text{goodwill}})$$
    where $c$ is `mult_cap` — the maximum boost. Saturates at $1+c$ no matter how much goodwill accumulates.
-3. **Daily decay**: each morning, $\text{goodwill} \mathrel{*}= 0.80$ (20% bleeds off).
-4. **Effect on demand**: that day's customer counts (after the existing per-hour noise) are scaled by the multiplier.
+3. **Per-campaign decay + 7-day cutoff**: each campaign at age $d$ contributes $\text{goodwill} \cdot 0.80^d$ to current goodwill. Once $d \ge 7$, the campaign drops out completely (zero contribution).
+4. **Effect on demand**: that day's customer counts (after the existing per-hour noise) are scaled by the multiplier derived from total active goodwill across all live campaigns.
 
 ### What the model sees vs. doesn't see
 
@@ -117,13 +117,20 @@ A `purchase_advertising(spend)` tool that lets the model spend cash on ads, boos
 
 Multiple `purchase_advertising` calls in the same day **stack in dollar amount**, then the diminishing-returns curve is applied once at end of day. So ten $20 calls behaves identically to one $200 call. This prevents exploiting square-root concavity by splitting one budget into many small calls.
 
+### 7-day campaign lifetime
+
+Each $purchase_advertising$ call creates a new campaign tracked individually. A campaign at age $d$ days contributes $\text{goodwill} \cdot \text{decay}^d$ to current total goodwill, but **stops contributing entirely once age reaches 7 days**. So a single ad spend has zero residual effect by day 8.
+
+Multiple campaigns from different days sum their contributions into total goodwill, which then maps through the saturation curve to today's multiplier.
+
 ### Parameters (current shipped values)
 
 | Parameter | Value | What it controls |
 |---|---:|---|
 | `sqrt_scale` | 10.0 | How quickly goodwill saturates per dollar spent |
 | `mult_cap` | 0.20 | Maximum demand boost — caps multiplier at 1.20× |
-| `decay` | 0.80 | 20% of goodwill bleeds off each morning (~7-day half-life) |
+| `decay` | 0.80 | Per-campaign daily decay (geometric until cutoff) |
+| `lifetime_days` | 7 | Each campaign contributes 0 once age reaches this |
 | `var_lo`, `var_hi` | 0.9, 1.1 | ±10% variability on goodwill earned |
 
 Calibration sweep showed marginal ROI hits zero around $200 spend; peak total profit at $200 is roughly $1,900 over a 30-day window. See `experiments/calibrate_advertising.py` to re-tune.
