@@ -290,6 +290,10 @@ class TestBusinessGame:
         assert "You run a lemonade stand" in system_prompt
         assert "100 days" in system_prompt
         assert "purchase_automation" in system_prompt
+        # Pin the cost numbers so any constant change must update the prompt
+        assert "$3.00 labor" in system_prompt
+        assert "$2.00 utilities" in system_prompt
+        assert "$1000.00" in system_prompt
 
         # Start day 1
         game.start_new_day()
@@ -348,6 +352,14 @@ class TestBusinessGame:
         assert result["success"] is False
         assert "already" in result["error"].lower()
         assert game.cash == cash_after_first
+
+    def test_purchase_automation_exact_cash(self):
+        """Buying automation with exactly the right cash succeeds, leaves $0."""
+        game = BusinessGame(starting_cash=Decimal(1000))
+        result = game.purchase_automation()
+        assert result["success"] is True
+        assert game.has_automation is True
+        assert game.cash == Decimal(0)
 
     def test_purchase_automation_insufficient_cash(self):
         """Without enough cash, purchase fails and state is unchanged."""
