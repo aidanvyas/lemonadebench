@@ -259,7 +259,9 @@ class DemandModel:
         return self.HOURLY_MULTIPLIERS[hour]
 
     def calculate_customers(
-        self, price: float, hour: int,
+        self,
+        price: float,
+        hour: int,
     ) -> int:
         """Calculate actual number of customers for a given hour.
 
@@ -421,7 +423,11 @@ class BusinessGame:
         }
 
     def order_supplies(
-        self, cups: int = 0, lemons: int = 0, sugar: int = 0, water: int = 0,
+        self,
+        cups: int = 0,
+        lemons: int = 0,
+        sugar: int = 0,
+        water: int = 0,
     ) -> dict[str, Any]:
         """Order supplies for immediate delivery.
 
@@ -484,8 +490,7 @@ class BusinessGame:
             return {
                 "success": False,
                 "error": (
-                    f"Close hour ({close_hour}) must be after "
-                    f"open hour ({open_hour})."
+                    f"Close hour ({close_hour}) must be after open hour ({open_hour})."
                 ),
             }
 
@@ -769,7 +774,8 @@ Current cash: ${self.cash:.2f}
         """
         total_revenue = sum((day["revenue"] for day in self.history), to_decimal("0"))
         total_operating_cost = sum(
-            (day["operating_cost"] for day in self.history), to_decimal("0"),
+            (day["operating_cost"] for day in self.history),
+            to_decimal("0"),
         )
         total_customers = sum(day["customers_served"] for day in self.history)
         total_lost_sales = sum(day["customers_lost"] for day in self.history)

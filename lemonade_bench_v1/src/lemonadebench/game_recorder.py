@@ -69,7 +69,7 @@ class GameRecorder:
     """Records all game interactions, API calls, and state changes."""
 
     def __init__(
-        self, model: str, game_number: int, parameters: dict[str, Any]
+        self, model: str, game_number: int, parameters: dict[str, Any],
     ) -> None:
         """Initialize recorder for a specific game.
 
@@ -77,6 +77,7 @@ class GameRecorder:
             model: Model name being tested
             game_number: Game number in the benchmark
             parameters: Benchmark parameters (days, starting_cash, seed, etc.)
+
         """
         self.model = model
         self.game_number = game_number
@@ -108,6 +109,7 @@ class GameRecorder:
         Args:
             day_number: Day number (1-based)
             game_state: Complete game state before day starts
+
         """
         self.current_day = day_number
         self.current_attempt = 0
@@ -139,6 +141,7 @@ class GameRecorder:
             tool_executions: List of tool calls and results
             duration_ms: Time taken for API call
             conversation_id: Optional conversation ID for stateful API usage
+
         """
         if self.current_day_data is None:
             raise ValueError("Must call start_day() before recording interactions")
@@ -167,7 +170,7 @@ class GameRecorder:
         # Update token counts
         if "usage" in response_data:
             self.game_data["total_tokens"] += response_data["usage"].get(
-                "total_tokens", 0
+                "total_tokens", 0,
             )
 
     def _extract_response_data(self, response: Any) -> dict[str, Any]:
@@ -203,7 +206,7 @@ class GameRecorder:
                                 {
                                     "type": getattr(content, "type", None),
                                     "text": getattr(content, "text", None),
-                                }
+                                },
                             )
                     output_item["content"] = content_list
 
@@ -229,13 +232,13 @@ class GameRecorder:
             # Get reasoning tokens if available
             if hasattr(usage, "output_tokens_details"):
                 usage_data["reasoning_tokens"] = getattr(
-                    usage.output_tokens_details, "reasoning_tokens", 0
+                    usage.output_tokens_details, "reasoning_tokens", 0,
                 )
 
             # Get cached tokens if available
             if hasattr(usage, "prompt_tokens_details"):
                 usage_data["cached_tokens"] = getattr(
-                    usage.prompt_tokens_details, "cached_tokens", 0
+                    usage.prompt_tokens_details, "cached_tokens", 0,
                 )
 
             data["usage"] = usage_data
@@ -248,6 +251,7 @@ class GameRecorder:
         Args:
             game_state_after: Complete game state after day ends
             total_attempts: Total attempts made this day
+
         """
         if self.current_day_data is None:
             raise ValueError("No day in progress")
@@ -270,6 +274,7 @@ class GameRecorder:
         Args:
             results: Final game results
             total_cost: Total API cost for this game
+
         """
         self.game_data["final_results"] = results
         self.game_data["total_cost"] = total_cost
@@ -287,6 +292,7 @@ class GameRecorder:
 
         Args:
             filepath: Path to save the JSON file
+
         """
         try:
             GameRecording.parse_obj(self.game_data)
@@ -305,6 +311,7 @@ class BenchmarkRecorder:
 
         Args:
             parameters: Benchmark parameters (models, games, days, etc.)
+
         """
         self.parameters = parameters
         self.start_time = datetime.now()
@@ -325,6 +332,7 @@ class BenchmarkRecorder:
 
         Args:
             game_record: Completed ``GameRecorder`` instance or raw game data
+
         """
         if isinstance(game_record, GameRecorder):
             self.benchmark_data["games"].append(game_record.get_recording())
@@ -347,6 +355,7 @@ class BenchmarkRecorder:
 
         Args:
             filepath: Path to save the JSON file
+
         """
         recording = self.finalize()
         try:

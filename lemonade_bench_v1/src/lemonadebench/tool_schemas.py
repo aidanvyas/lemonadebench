@@ -20,11 +20,9 @@ class OrderSuppliesParams(BaseModel):
 class SetOperatingHoursParams(BaseModel):
     """Parameters for the set_operating_hours tool."""
 
-    open_hour: int = Field(
-        ge=0, le=23, description="Opening hour (0-23)"
-    )
+    open_hour: int = Field(ge=0, le=23, description="Opening hour (0-23)")
     close_hour: int = Field(
-        ge=1, le=24, description="Closing hour (1-24, must be > open_hour)"
+        ge=1, le=24, description="Closing hour (1-24, must be > open_hour)",
     )
 
 
@@ -37,22 +35,18 @@ class SetPriceParams(BaseModel):
 class CheckMorningPricesParams(BaseModel):
     """Parameters for the check_morning_prices tool (no parameters)."""
 
-    pass
 
 
 class CheckInventoryParams(BaseModel):
     """Parameters for the check_inventory tool (no parameters)."""
 
-    pass
 
 
 class GetHistoricalSupplyCostsParams(BaseModel):
     """Parameters for the get_historical_supply_costs tool (no parameters)."""
 
-    pass
 
 
 class OpenForBusinessParams(BaseModel):
     """Parameters for the open_for_business tool (no parameters)."""
 
-    pass

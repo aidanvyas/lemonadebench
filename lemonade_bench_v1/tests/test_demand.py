@@ -54,9 +54,7 @@ class TestDemandModel:
         # Run multiple times to check variation
         results = []
         for _ in range(10):
-            customers = model.calculate_customers(
-                price=2.0, hour=12
-            )
+            customers = model.calculate_customers(price=2.0, hour=12)
             results.append(customers)
 
         # Should have some variation
@@ -72,7 +70,7 @@ class TestDemandModel:
 
         # Open 9am-5pm
         customers = model.calculate_daily_customers(
-            price=2.0, open_hour=9, close_hour=17
+            price=2.0, open_hour=9, close_hour=17,
         )
 
         # Should have 8 hours of data
@@ -94,9 +92,7 @@ class TestDemandModel:
         assert base == 60  # 50 - 10*(-1) = 60
 
         # Very high price
-        customers = model.calculate_customers(
-            price=100, hour=12
-        )
+        customers = model.calculate_customers(price=100, hour=12)
         assert customers == 0
 
         # Operating outside normal hours

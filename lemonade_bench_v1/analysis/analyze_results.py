@@ -8,10 +8,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 from pydantic import ValidationError
 
 from src.lemonadebench.game_recorder import BenchmarkRecording
-import matplotlib.pyplot as plt
+
 
 def num(value: Any, default: float = 0.0) -> float:
     """Best-effort numeric conversion for strings/Decimals."""
@@ -21,6 +22,7 @@ def num(value: Any, default: float = 0.0) -> float:
         return float(str(value))
     except Exception:
         return default
+
 
 # Game constants
 REFERENCE_PRICE = 2.69  # User-specified reference price for pricing loss calculations
@@ -62,7 +64,7 @@ HOUR_MULTIPLIERS = {
 
 
 def calculate_business_metrics_final(
-    model: str, stats: dict[str, Any], full_data: list[dict[str, Any]]
+    model: str, stats: dict[str, Any], full_data: list[dict[str, Any]],
 ) -> dict[str, float]:
     """Calculate final business efficiency metrics with user-specified sign conventions."""
     # Find the game data for this model
@@ -152,7 +154,7 @@ def calculate_business_metrics_final(
             if customers_lost > 0:
                 # Use the actual price for this day
                 actual_price = num(
-                    day_data.get("game_state_after", {}).get("price", 0), 0
+                    day_data.get("game_state_after", {}).get("price", 0), 0,
                 )
                 if actual_price > 0.0:
                     # Profit margin at actual price
@@ -165,7 +167,7 @@ def calculate_business_metrics_final(
         day_result = day_data.get("game_state_after", {}).get("day_result", {})
         if day_result:
             actual_price = num(
-                day_data.get("game_state_after", {}).get("price", 0), REFERENCE_PRICE
+                day_data.get("game_state_after", {}).get("price", 0), REFERENCE_PRICE,
             )
             start_hour = int(num(day_result.get("open_hour", 0), 0))
             end_hour = int(num(day_result.get("close_hour", 0), 0))
@@ -190,7 +192,7 @@ def calculate_business_metrics_final(
 
                 # Use actual customers served
                 actual_customers_served = int(
-                    num(day_result.get("customers_served", 0), 0)
+                    num(day_result.get("customers_served", 0), 0),
                 )
                 actual_sales = actual_customers_served
                 actual_revenue = actual_sales * actual_price
@@ -244,7 +246,7 @@ def calculate_business_metrics_final(
         day_result = day_data.get("game_state_after", {}).get("day_result", {})
         if day_result:
             actual_price = num(
-                day_data.get("game_state_after", {}).get("price", 0), REFERENCE_PRICE
+                day_data.get("game_state_after", {}).get("price", 0), REFERENCE_PRICE,
             )
             start_hour = int(num(day_result.get("open_hour", 0), 0))
             end_hour = int(num(day_result.get("close_hour", 0), 0))
@@ -269,7 +271,7 @@ def calculate_business_metrics_final(
 
                 # Use actual customers served as the achieved constraint
                 actual_customers_served = int(
-                    num(day_result.get("customers_served", 0), 0)
+                    num(day_result.get("customers_served", 0), 0),
                 )
                 actual_sales = actual_customers_served  # What they actually achieved
                 actual_revenue = actual_sales * actual_price
@@ -336,7 +338,6 @@ def calculate_business_metrics_final(
 
 def generate_comprehensive_plots(data: dict[str, Any], output_dir: str) -> None:
     """Generate average profit trajectory plot."""
-
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -423,10 +424,9 @@ def generate_comprehensive_plots(data: dict[str, Any], output_dir: str) -> None:
 
 
 def generate_computational_requirements_table(
-    model_stats: dict[str, Any], output_file: str, data: list[dict[str, Any]]
+    model_stats: dict[str, Any], output_file: str, data: list[dict[str, Any]],
 ) -> None:
     """Generate LaTeX table with computational requirements and detailed tool usage."""
-
     header = r"""\begin{table}[h]
 \centering
 \caption{LemonadeBench v0.5 - Computational Requirements and Tool Usage}
@@ -451,15 +451,15 @@ def generate_computational_requirements_table(
             tool_counts = {
                 "check_inventory": stats["tool_usage"].get("check_inventory", 0),
                 "check_morning_prices": stats["tool_usage"].get(
-                    "check_morning_prices", 0
+                    "check_morning_prices", 0,
                 ),
                 "order_supplies": stats["tool_usage"].get("order_supplies", 0),
                 "set_price": stats["tool_usage"].get("set_price", 0),
                 "set_operating_hours": stats["tool_usage"].get(
-                    "set_operating_hours", 0
+                    "set_operating_hours", 0,
                 ),
                 "get_historical_supply_costs": stats["tool_usage"].get(
-                    "get_historical_supply_costs", 0
+                    "get_historical_supply_costs", 0,
                 ),
                 "open_for_business": stats["tool_usage"].get("open_for_business", 0),
             }
@@ -504,10 +504,9 @@ def generate_computational_requirements_table(
 
 
 def generate_comprehensive_latex_table(
-    model_stats: dict[str, Any], output_file: str, data: list[dict[str, Any]]
+    model_stats: dict[str, Any], output_file: str, data: list[dict[str, Any]],
 ) -> None:
     """Generate LaTeX table with business efficiency metrics."""
-
     header = r"""\begin{table}[h]
 \centering
 \caption{LemonadeBench v0.5 - Business Efficiency Analysis}
@@ -633,7 +632,7 @@ def analyze_comprehensive_format(data: list[dict[str, Any]], filename: str):
 
             print("\nTool usage:")
             for tool, count in sorted(
-                stats["tool_usage"].items(), key=lambda x: x[1], reverse=True
+                stats["tool_usage"].items(), key=lambda x: x[1], reverse=True,
             ):
                 print(f"  {tool}: {count}")
 
@@ -641,10 +640,10 @@ def analyze_comprehensive_format(data: list[dict[str, Any]], filename: str):
     print("\n\nBusiness Efficiency Breakdown (FINAL):")
     print("=" * 120)
     print(
-        "| Model | Profit ($) | Purchasing | Expired | Excess | Scheduling | Pricing | Stockout |"
+        "| Model | Profit ($) | Purchasing | Expired | Excess | Scheduling | Pricing | Stockout |",
     )
     print(
-        "|-------|------------|------------|---------|--------|------------|---------|----------|"
+        "|-------|------------|------------|---------|--------|------------|---------|----------|",
     )
 
     # Store for LaTeX generation
@@ -661,7 +660,7 @@ def analyze_comprehensive_format(data: list[dict[str, Any]], filename: str):
                 f"| {model:<12} | {avg_profit:>10.2f} | "
                 f"{efficiency['purchasing']:>+10.2f} | {efficiency['expired']:>7.2f} | "
                 f"{efficiency['excess']:>6.2f} | {efficiency['scheduling']:>+10.2f} | "
-                f"{efficiency['pricing']:>7.2f} | {efficiency['stockout']:>8.2f} |"
+                f"{efficiency['pricing']:>7.2f} | {efficiency['stockout']:>8.2f} |",
             )
 
             efficiency_data.append({"model": model, "profit": avg_profit, **efficiency})
@@ -705,10 +704,10 @@ def generate_efficiency_latex(data: list[dict[str, Any]], filename: str):
         f.write("\\begin{tabular}{lccccccc}\n")
         f.write("\\hline\n")
         f.write(
-            "\\textbf{Model} & \\textbf{Profit (\\$)} & \\textbf{Purchasing} & \\textbf{Expired} & "
+            "\\textbf{Model} & \\textbf{Profit (\\$)} & \\textbf{Purchasing} & \\textbf{Expired} & ",
         )
         f.write(
-            "\\textbf{Excess} & \\textbf{Scheduling} & \\textbf{Pricing} & \\textbf{Stockout} \\\\\n"
+            "\\textbf{Excess} & \\textbf{Scheduling} & \\textbf{Pricing} & \\textbf{Stockout} \\\\\n",
         )
         f.write("\\hline\n")
 
@@ -736,12 +735,15 @@ def generate_efficiency_latex(data: list[dict[str, Any]], filename: str):
 
     print(f"\nLaTeX table saved to: {latex_file}")
 
+
 def analyze_results(filename: str | None = None) -> None:
     """Main analysis function."""
     if filename is None:
         parser = argparse.ArgumentParser(description="Analyze v0.5 benchmark results")
         parser.add_argument("--file", help="Specific results file to analyze")
-        parser.add_argument("--latest", action="store_true", help="Analyze the latest results file")
+        parser.add_argument(
+            "--latest", action="store_true", help="Analyze the latest results file",
+        )
         args = parser.parse_args()
 
         results_dir = Path("results/json")

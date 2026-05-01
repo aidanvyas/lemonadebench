@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 
-def to_decimal(value: int | float | str | Decimal) -> Decimal:
+def to_decimal(value: float | str | Decimal) -> Decimal:
     """Convert various numeric types to Decimal without float encoding errors.
 
     By converting to string first, we avoid float precision issues:
