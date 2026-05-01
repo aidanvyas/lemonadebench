@@ -15,13 +15,16 @@ class TestBusinessGame:
         assert game.total_days == 100
         assert game.current_day == 0
         assert game.cash == Decimal(100)
-        assert game.hourly_operating_cost == Decimal(5)
+        assert game.labor_cost_per_hour == Decimal(3)
+        assert game.utilities_cost_per_hour == Decimal(2)
+        assert game.automation_cost == Decimal(1000)
+        assert game.has_automation is False
         assert game.yesterday_profit is None
 
         # Test default starting cash and days
         default_game = BusinessGame()
         assert default_game.cash == Decimal(1000)
-        assert default_game.total_days == 30
+        assert default_game.total_days == 100
 
     def test_start_new_day(self):
         """Test starting a new day."""
@@ -139,7 +142,8 @@ class TestBusinessGame:
         assert result["price"] == Decimal("2.0")
         assert result["hours_open"] == 4
         assert result["customers_served"] >= 0
-        assert result["operating_cost"] == Decimal(20)  # 4 hours * $5
+        # 4 hours * ($3 labor + $2 utilities) = $20
+        assert result["operating_cost"] == Decimal(20)
         assert "profit" in result
         assert "hourly_sales" in result
 
@@ -284,7 +288,8 @@ class TestBusinessGame:
         # System instructions should have game rules
         system_prompt = game.get_system_instructions()
         assert "You run a lemonade stand" in system_prompt
-        assert "30 days" in system_prompt
+        assert "100 days" in system_prompt
+        assert "purchase_automation" in system_prompt
 
         # Start day 1
         game.start_new_day()
@@ -295,7 +300,8 @@ class TestBusinessGame:
         # Day 2 summary should have current state
         game.start_new_day()
         day_summary = game.get_day_summary()
-        assert "Day 2 of 30" in day_summary
+        assert "Day 2 of 100" in day_summary
+        assert "Automation: No" in day_summary
         assert "You made $" in day_summary
 
     def test_final_results(self):
@@ -319,3 +325,51 @@ class TestBusinessGame:
         assert results["total_customers"] >= 0
         assert "average_daily_profit" in results
         assert "inventory_value" in results
+
+    def test_purchase_automation_success(self):
+        """Purchasing automation deducts cash and flips the flag."""
+        game = BusinessGame()
+        starting_cash = game.cash
+
+        result = game.purchase_automation()
+
+        assert result["success"] is True
+        assert game.has_automation is True
+        assert game.cash == starting_cash - Decimal(1000)
+
+    def test_purchase_automation_double_purchase_rejected(self):
+        """A second purchase fails and leaves cash unchanged."""
+        game = BusinessGame()
+        game.purchase_automation()
+        cash_after_first = game.cash
+
+        result = game.purchase_automation()
+
+        assert result["success"] is False
+        assert "already" in result["error"].lower()
+        assert game.cash == cash_after_first
+
+    def test_purchase_automation_insufficient_cash(self):
+        """Without enough cash, purchase fails and state is unchanged."""
+        game = BusinessGame(starting_cash=Decimal(500))
+
+        result = game.purchase_automation()
+
+        assert result["success"] is False
+        assert "insufficient" in result["error"].lower()
+        assert game.has_automation is False
+        assert game.cash == Decimal(500)
+
+    def test_simulate_day_after_automation_drops_labor(self):
+        """After automation, operating cost charges only utilities ($2/hr)."""
+        game = BusinessGame()
+        game.purchase_automation()
+        game.start_new_day()
+        game.order_supplies(cups=100, lemons=100, sugar=100, water=100)
+        game.set_operating_hours(10, 14)  # 4 hours
+        game.set_price(2.0)
+
+        result = game.simulate_day()
+
+        # 4 hours * $2 utilities = $8 (labor eliminated)
+        assert result["operating_cost"] == Decimal(8)

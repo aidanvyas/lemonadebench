@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark runner for LemonadeBench v0.5 - Business simulation with inventory management."""
+"""Benchmark runner for LemonadeBench v0.5 (business simulation)."""
 
 import argparse
 import json
@@ -53,7 +53,7 @@ class DecimalEncoder(json.JSONEncoder):
 def run_single_game(
     model_name: str,
     game_number: int,
-    days: int = 30,
+    days: int = 100,
     starting_cash: float = 1000,
     seed: int | None = None,
     results_dir: Path | None = None,
@@ -146,8 +146,9 @@ def run_single_game(
             turn_attempts.append(turn_result.get("attempts", 1))
 
             if not turn_result["success"]:
+                err = turn_result.get("error")
                 logger.error(
-                    f"  Failed to complete day {game.current_day}: {turn_result.get('error')}",
+                    f"  Failed to complete day {game.current_day}: {err}",
                 )
                 break
 
@@ -188,7 +189,8 @@ def run_single_game(
 
         # Record final results
         recorder.record_final_results(
-            results=final_results, total_cost=cost_info["total_cost"],
+            results=final_results,
+            total_cost=cost_info["total_cost"],
         )
 
         logger.info(
@@ -340,9 +342,17 @@ def main():
         description="Run LemonadeBench v0.5 - Business Simulation",
     )
     parser.add_argument(
-        "--games", type=int, default=1, help="Number of games to run per model",
+        "--games",
+        type=int,
+        default=1,
+        help="Number of games to run per model",
     )
-    parser.add_argument("--days", type=int, default=30, help="Number of days per game")
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=100,
+        help="Number of days per game",
+    )
     parser.add_argument(
         "--models",
         nargs="+",
@@ -350,13 +360,21 @@ def main():
         help="Models to test (RESTRICTED: only gpt-5-nano supported)",
     )
     parser.add_argument(
-        "--starting-cash", type=float, default=1000, help="Starting cash for each game",
+        "--starting-cash",
+        type=float,
+        default=1000,
+        help="Starting cash for each game",
     )
     parser.add_argument(
-        "--seed", type=int, default=None, help="Random seed for reproducibility",
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility",
     )
     parser.add_argument(
-        "--no-analysis", action="store_true", help="Skip automatic analysis generation",
+        "--no-analysis",
+        action="store_true",
+        help="Skip automatic analysis generation",
     )
     parser.add_argument(
         "--workers",
@@ -476,9 +494,8 @@ def main():
             logger.info(
                 f"  Average customers: {model_results['total_customers']['mean']:.0f}",
             )
-            logger.info(
-                f"  Average stockout rate: {model_results['stockout_rate']['mean']:.1%}",
-            )
+            stockout_mean = model_results["stockout_rate"]["mean"]
+            logger.info(f"  Average stockout rate: {stockout_mean:.1%}")
             logger.info(f"  Total cost: ${model_results['total_cost']:.4f}")
 
     # Save results
@@ -486,8 +503,11 @@ def main():
     models_str = "-".join(args.models) if len(args.models) > 1 else args.models[0]
 
     # Save comprehensive recording
-    recording_filename = f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}_full.json"
-    filename = f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}.json"
+    base = (
+        f"results/json/{models_str}_{args.games}games_{args.days}days_v05_{timestamp}"
+    )
+    recording_filename = f"{base}_full.json"
+    filename = f"{base}.json"
 
     Path("results/json").mkdir(parents=True, exist_ok=True)
 
@@ -526,9 +546,11 @@ def main():
     # Print comparison if multiple models
     if len(args.models) > 1:
         logger.info("\nModel Comparison:")
-        logger.info(
-            f"{'Model':<15} {'Avg Profit':<12} {'Customers':<10} {'Stockouts':<10} {'Cost/Game':<10}",
+        header = (
+            f"{'Model':<15} {'Avg Profit':<12} {'Customers':<10} "
+            f"{'Stockouts':<10} {'Cost/Game':<10}"
         )
+        logger.info(header)
         logger.info("-" * 60)
 
         for model, results in all_results.items():
